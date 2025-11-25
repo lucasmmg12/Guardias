@@ -28,8 +28,7 @@ export default function RootLayout({
             >
                 {/* Overlay oscuro para mejor legibilidad */}
                 <div
-                    className="fixed inset-0 bg-gradient-to-br from-gray-900/85 via-gray-800/90 to-black/85 pointer-events-none z-0"
-                    style={{ backdropFilter: 'blur(2px)' }}
+                    className="fixed inset-0 bg-black/60 backdrop-blur-sm pointer-events-none z-0"
                 />
 
                 {/* Contenido */}

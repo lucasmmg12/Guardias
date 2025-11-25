@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { UploadExcel } from '@/components/custom/UploadExcel'
 import { GuardiasProcessor } from '@/lib/guardias-processor'
-import { AlertCircle, CheckCircle2 } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Sparkles } from 'lucide-react'
+import Link from 'next/link'
 
 export default function GinecologiaPage() {
     const [medicos, setMedicos] = useState<any[]>([])
@@ -60,23 +61,63 @@ export default function GinecologiaPage() {
     }
 
     return (
-        <div className="min-h-screen p-8 pb-20">
-            <div className="max-w-6xl mx-auto space-y-8">
-                {/* Header */}
-                <div>
-                    <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent mb-2">
-                        Módulo Ginecología
-                    </h1>
-                    <p className="text-gray-400">
-                        Procesamiento de liquidaciones por hora
-                    </p>
+        <div className="min-h-screen relative p-8 pb-20 overflow-hidden">
+            {/* Efectos de luz verde */}
+            <div className="absolute top-20 left-20 w-96 h-96 bg-green-500/20 rounded-full blur-3xl animate-pulse"></div>
+            <div className="absolute bottom-20 right-20 w-96 h-96 bg-green-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+
+            <div className="max-w-6xl mx-auto space-y-8 relative z-10">
+                {/* Header con Logo */}
+                <div className="flex items-center justify-between mb-8">
+                    <div>
+                        <div className="flex items-center gap-4 mb-4">
+                            <Link href="/" className="hover:opacity-80 transition-opacity">
+                                <img 
+                                    src="/logogrow.png" 
+                                    alt="Grow Labs" 
+                                    className="h-16 w-auto drop-shadow-2xl"
+                                    style={{
+                                        filter: 'drop-shadow(0 0 20px rgba(34, 197, 94, 0.5))'
+                                    }}
+                                />
+                            </Link>
+                            <div>
+                                <h1 className="text-4xl font-bold mb-2 tracking-tight">
+                                    <span className="bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">
+                                        Módulo Ginecología
+                                    </span>
+                                </h1>
+                                <p className="text-gray-400 flex items-center gap-2">
+                                    <Sparkles className="h-4 w-4 text-blue-400" />
+                                    Procesamiento de liquidaciones por hora
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Upload Excel Card */}
-                <div className="glass-effect glow-blue p-8 rounded-xl">
-                    <h2 className="text-2xl font-bold text-blue-400 mb-6">
-                        📤 Cargar Liquidación
-                    </h2>
+                <div 
+                    className="relative rounded-2xl shadow-2xl overflow-hidden p-8"
+                    style={{
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        backdropFilter: 'blur(20px)',
+                        border: '1px solid rgba(59, 130, 246, 0.3)',
+                        boxShadow: '0 8px 32px 0 rgba(59, 130, 246, 0.3)',
+                    }}
+                >
+                    {/* Borde brillante animado */}
+                    <div 
+                        className="absolute inset-0 rounded-2xl"
+                        style={{
+                            background: 'linear-gradient(45deg, transparent, rgba(59, 130, 246, 0.3), transparent)',
+                            animation: 'borderGlow 3s ease-in-out infinite',
+                        }}
+                    ></div>
+                    <div className="relative">
+                        <h2 className="text-2xl font-bold text-blue-400 mb-6">
+                            📤 Cargar Liquidación
+                        </h2>
 
                     <UploadExcel onUpload={handleUpload} isProcessing={isProcessing} />
 
@@ -133,11 +174,20 @@ export default function GinecologiaPage() {
                             )}
                         </div>
                     )}
+                    </div>
                 </div>
 
                 <div className="grid md:grid-cols-3 gap-8">
                     {/* Médicos Activos */}
-                    <div className="md:col-span-2 glass-effect p-6 rounded-xl">
+                    <div 
+                        className="md:col-span-2 p-6 rounded-xl"
+                        style={{
+                            background: 'rgba(255, 255, 255, 0.1)',
+                            backdropFilter: 'blur(20px)',
+                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                            boxShadow: '0 8px 32px 0 rgba(59, 130, 246, 0.2)',
+                        }}
+                    >
                         <h3 className="text-xl font-semibold text-gray-200 mb-4 flex items-center gap-2">
                             👨‍⚕️ Médicos Activos
                             <span className="text-sm font-normal text-gray-500 bg-gray-800 px-2 py-0.5 rounded-full">
@@ -186,7 +236,15 @@ export default function GinecologiaPage() {
                     </div>
 
                     {/* Reglas de Negocio */}
-                    <div className="glass-effect p-6 rounded-xl h-fit">
+                    <div 
+                        className="p-6 rounded-xl h-fit"
+                        style={{
+                            background: 'rgba(255, 255, 255, 0.1)',
+                            backdropFilter: 'blur(20px)',
+                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                            boxShadow: '0 8px 32px 0 rgba(59, 130, 246, 0.2)',
+                        }}
+                    >
                         <h3 className="text-xl font-semibold text-gray-200 mb-4">
                             📋 Reglas Vigentes
                         </h3>
@@ -214,6 +272,21 @@ export default function GinecologiaPage() {
                     </div>
                 </div>
             </div>
+
+            <style jsx>{`
+                @keyframes borderGlow {
+                    0%, 100% {
+                        opacity: 0.3;
+                    }
+                    50% {
+                        opacity: 0.8;
+                    }
+                }
+                
+                .delay-1000 {
+                    animation-delay: 1000ms;
+                }
+            `}</style>
         </div>
     )
 }
