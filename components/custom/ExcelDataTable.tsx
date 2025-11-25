@@ -74,23 +74,25 @@ export function ExcelDataTable({ data, onCellUpdate }: ExcelDataTableProps) {
         backdropFilter: 'blur(20px)',
         border: '1px solid rgba(255, 255, 255, 0.1)',
       }}>
-        <table className="w-full border-collapse">
+        <table className="w-full border-collapse text-xs">
           <thead>
             <tr className="border-b border-white/10">
               {data.headers.map((header, index) => (
                 <th
                   key={index}
-                  className="px-4 py-3 text-left text-sm font-semibold text-gray-300 bg-white/5"
+                  className="px-2 py-2 text-left text-xs font-semibold text-gray-300 bg-white/5 whitespace-nowrap"
                   style={{
                     position: 'sticky',
                     top: 0,
                     zIndex: 10,
+                    minWidth: '120px',
+                    maxWidth: '200px',
                   }}
                 >
-                  <div className="flex items-center gap-2">
-                    {header}
+                  <div className="flex items-center gap-1.5">
+                    <span className="truncate">{header}</span>
                     {isEditable(header) && (
-                      <span className="text-xs text-green-400 bg-green-400/20 px-2 py-0.5 rounded">
+                      <span className="text-[10px] text-green-400 bg-green-400/20 px-1.5 py-0.5 rounded flex-shrink-0">
                         Editable
                       </span>
                     )}
@@ -102,7 +104,7 @@ export function ExcelDataTable({ data, onCellUpdate }: ExcelDataTableProps) {
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={data.headers.length} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={data.headers.length} className="px-4 py-8 text-center text-gray-400 text-sm">
                   No hay datos para mostrar
                 </td>
               </tr>
@@ -121,7 +123,11 @@ export function ExcelDataTable({ data, onCellUpdate }: ExcelDataTableProps) {
                     return (
                       <td
                         key={colIndex}
-                        className="px-4 py-2 text-sm text-gray-300"
+                        className="px-2 py-1.5 text-xs text-gray-300"
+                        style={{
+                          minWidth: '120px',
+                          maxWidth: '200px',
+                        }}
                       >
                         {editable ? (
                           <InlineEditCell
@@ -134,11 +140,11 @@ export function ExcelDataTable({ data, onCellUpdate }: ExcelDataTableProps) {
                             className={isSaving ? 'opacity-50' : ''}
                           />
                         ) : (
-                          <div className="px-2 py-1">
+                          <div className="px-1 py-0.5 truncate" title={value ? String(value) : ''}>
                             {value === null || value === '' ? (
-                              <span className="text-gray-500 italic text-xs">-</span>
+                              <span className="text-gray-500 italic text-[10px]">-</span>
                             ) : (
-                              String(value)
+                              <span className="truncate block">{String(value)}</span>
                             )}
                           </div>
                         )}
