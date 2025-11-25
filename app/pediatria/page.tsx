@@ -1,0 +1,226 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { supabase } from '@/lib/supabase/client'
+import { UploadExcel } from '@/components/custom/UploadExcel'
+import { GuardiasProcessor } from '@/lib/guardias-processor'
+import { AlertCircle, CheckCircle2 } from 'lucide-react'
+
+export default function PediatriaPage() {
+    const [medicos, setMedicos] = useState<any[]>([])
+    const [loading, setLoading] = useState(true)
+    const [isProcessing, setIsProcessing] = useState(false)
+    const [result, setResult] = useState<any>(null)
+
+    useEffect(() => {
+        loadMedicos()
+    }, [])
+
+    async function loadMedicos() {
+        try {
+            const { data, error } = await supabase
+                .from('medicos')
+                .select('*')
+                .eq('especialidad', 'Pediatría')
+                .eq('activo', true)
+
+            if (error) throw error
+            setMedicos(data || [])
+        } catch (error) {
+            console.error('Error loading médicos:', error)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const handleUpload = async (file: File) => {
+        setIsProcessing(true)
+        setResult(null)
+
+        try {
+            // Instanciar procesador para Pediatría (mes/año hardcodeados por ahora, luego vendrán de un selector)
+            const processor = new GuardiasProcessor(
+                supabase,
+                'Pediatría',
+                new Date().getMonth() + 1,
+                new Date().getFullYear()
+            )
+
+            const processingResult = await processor.procesarExcel(file)
+            setResult(processingResult)
+
+        } catch (error) {
+            console.error('Error processing file:', error)
+            setResult({
+                error: 'Ocurrió un error inesperado al procesar el archivo.'
+            })
+        } finally {
+            setIsProcessing(false)
+        }
+    }
+
+    return (
+        <div className="min-h-screen p-8 pb-20">
+            <div className="max-w-6xl mx-auto space-y-8">
+                {/* Header */}
+                <div>
+                    <h1 className="text-4xl font-bold bg-gradient-to-r from-green-400 to-emerald-300 bg-clip-text text-transparent mb-2">
+                        Módulo Pediatría
+                    </h1>
+                    <p className="text-gray-400">
+                        Procesamiento de liquidaciones por producción
+                    </p>
+                </div>
+
+                {/* Upload Excel Card */}
+                <div className="glass-effect glow-green p-8 rounded-xl">
+                    <h2 className="text-2xl font-bold text-green-400 mb-6">
+                        📤 Cargar Liquidación
+                    </h2>
+
+                    <UploadExcel onUpload={handleUpload} isProcessing={isProcessing} />
+
+                    {/* Resultados del Procesamiento */}
+                    {result && (
+                        <div className="mt-6 animate-in fade-in slide-in-from-top-4 duration-500">
+                            {result.error ? (
+                                <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 flex items-start gap-3 text-red-400">
+                                    <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" />
+                                    <div>
+                                        <h3 className="font-semibold">Error de Procesamiento</h3>
+                                        <p className="text-sm opacity-90">{result.error}</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-6">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <CheckCircle2 className="w-6 h-6 text-green-400" />
+                                        <h3 className="text-lg font-semibold text-green-400">
+                                            Procesamiento Completado
+                                        </h3>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                                        <div className="bg-black/20 p-3 rounded-lg">
+                                            <div className="text-sm text-gray-400">Total Filas</div>
+                                            <div className="text-2xl font-bold text-white">{result.totalFilas}</div>
+                                        </div>
+                                        <div className="bg-black/20 p-3 rounded-lg">
+                                            <div className="text-sm text-gray-400">Procesadas</div>
+                                            <div className="text-2xl font-bold text-green-400">{result.procesadas}</div>
+                                        </div>
+                                        <div className="bg-black/20 p-3 rounded-lg">
+                                            <div className="text-sm text-gray-400">Errores</div>
+                                            <div className="text-2xl font-bold text-red-400">{result.errores.length}</div>
+                                        </div>
+                                        <div className="bg-black/20 p-3 rounded-lg">
+                                            <div className="text-sm text-gray-400">Advertencias</div>
+                                            <div className="text-2xl font-bold text-yellow-400">{result.advertencias.length}</div>
+                                        </div>
+                                    </div>
+
+                                    {result.errores.length > 0 && (
+                                        <div className="mt-4">
+                                            <h4 className="text-sm font-semibold text-red-400 mb-2">Detalle de Errores:</h4>
+                                            <ul className="text-sm text-red-300/80 space-y-1 max-h-32 overflow-y-auto bg-black/20 p-2 rounded">
+                                                {result.errores.map((err: string, i: number) => (
+                                                    <li key={i}>• {err}</li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                <div className="grid md:grid-cols-3 gap-8">
+                    {/* Médicos Activos */}
+                    <div className="md:col-span-2 glass-effect p-6 rounded-xl">
+                        <h3 className="text-xl font-semibold text-gray-200 mb-4 flex items-center gap-2">
+                            👨‍⚕️ Médicos Activos
+                            <span className="text-sm font-normal text-gray-500 bg-gray-800 px-2 py-0.5 rounded-full">
+                                {medicos.length}
+                            </span>
+                        </h3>
+
+                        {loading ? (
+                            <div className="text-center py-8 text-gray-400">
+                                Cargando médicos...
+                            </div>
+                        ) : medicos.length === 0 ? (
+                            <div className="text-center py-8 text-gray-400">
+                                No hay médicos registrados en Pediatría
+                            </div>
+                        ) : (
+                            <div className="grid sm:grid-cols-2 gap-3">
+                                {medicos.map((medico) => (
+                                    <div
+                                        key={medico.id}
+                                        className="bg-white/5 p-3 rounded-lg hover:bg-white/10 transition-colors border border-white/5"
+                                    >
+                                        <div className="flex items-start justify-between">
+                                            <div>
+                                                <div className="font-medium text-gray-200 text-sm">
+                                                    {medico.nombre}
+                                                </div>
+                                                <div className="text-xs text-gray-500 font-mono mt-1">
+                                                    MN: {medico.matricula}
+                                                </div>
+                                            </div>
+                                            {medico.es_residente ? (
+                                                <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-[10px] uppercase tracking-wider font-semibold rounded">
+                                                    Residente
+                                                </span>
+                                            ) : (
+                                                <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-[10px] uppercase tracking-wider font-semibold rounded">
+                                                    Planta
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Reglas de Negocio */}
+                    <div className="glass-effect p-6 rounded-xl h-fit">
+                        <h3 className="text-xl font-semibold text-gray-200 mb-4">
+                            📋 Reglas Vigentes
+                        </h3>
+                        <div className="space-y-4 text-sm text-gray-300">
+                            <div className="p-3 bg-white/5 rounded-lg border border-white/5">
+                                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Retención</div>
+                                <div className="font-semibold text-white">30%</div>
+                                <div className="text-xs text-gray-400">Sobre monto facturado</div>
+                            </div>
+
+                            <div className="p-3 bg-white/5 rounded-lg border border-white/5">
+                                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Adicionales</div>
+                                <ul className="space-y-1">
+                                    <li className="flex justify-between">
+                                        <span>Damsu</span>
+                                        <span className="text-green-400">+$1,500</span>
+                                    </li>
+                                    <li className="flex justify-between">
+                                        <span>Provincia</span>
+                                        <span className="text-green-400">+$1,200</span>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div className="p-3 bg-white/5 rounded-lg border border-white/5">
+                                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Fórmula</div>
+                                <div className="font-mono text-xs text-gray-400">
+                                    (Monto - 30%) + Adicional
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}

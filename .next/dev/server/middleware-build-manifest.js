@@ -1,0 +1,51 @@
+globalThis.__BUILD_MANIFEST = {
+  "pages": {
+    "/_app": [
+      "static/chunks/7d954_next_dist_compiled_f93a514e._.js",
+      "static/chunks/7d954_next_dist_shared_lib_122847fa._.js",
+      "static/chunks/7d954_next_dist_client_9d2a8495._.js",
+      "static/chunks/7d954_next_dist_dfaef75b._.js",
+      "static/chunks/7d954_next_app_564d100d.js",
+      "static/chunks/[next]_entry_page-loader_ts_995257a0._.js",
+      "static/chunks/7d954_react-dom_33a0d0fe._.js",
+      "static/chunks/7d954_a3fccc11._.js",
+      "static/chunks/[root-of-the-server]__938885fa._.js",
+      "static/chunks/Desktop_Osde_Liquidaciones_Guardias_pages__app_2da965e7._.js",
+      "static/chunks/turbopack-Desktop_Osde_Liquidaciones_Guardias_pages__app_e618f40c._.js"
+    ],
+    "/_error": [
+      "static/chunks/7d954_next_dist_compiled_f93a514e._.js",
+      "static/chunks/7d954_next_dist_shared_lib_54a2c33a._.js",
+      "static/chunks/7d954_next_dist_client_9d2a8495._.js",
+      "static/chunks/7d954_next_dist_62e4a0b9._.js",
+      "static/chunks/7d954_next_error_41ef3422.js",
+      "static/chunks/[next]_entry_page-loader_ts_f86d3cf5._.js",
+      "static/chunks/7d954_react-dom_33a0d0fe._.js",
+      "static/chunks/7d954_a3fccc11._.js",
+      "static/chunks/[root-of-the-server]__90463240._.js",
+      "static/chunks/Desktop_Osde_Liquidaciones_Guardias_pages__error_2da965e7._.js",
+      "static/chunks/turbopack-Desktop_Osde_Liquidaciones_Guardias_pages__error_7a3db021._.js"
+    ]
+  },
+  "devFiles": [],
+  "polyfillFiles": [
+    "static/chunks/7d954_next_dist_build_polyfills_polyfill-nomodule.js"
+  ],
+  "lowPriorityFiles": [],
+  "rootMainFiles": [
+    "static/chunks/[turbopack]_browser_dev_hmr-client_hmr-client_ts_fc9cedae._.js",
+    "static/chunks/7d954_next_dist_compiled_react-dom_30dcc465._.js",
+    "static/chunks/7d954_next_dist_compiled_react-server-dom-turbopack_9337ec52._.js",
+    "static/chunks/7d954_next_dist_compiled_next-devtools_index_d67b699a.js",
+    "static/chunks/7d954_next_dist_compiled_d18c60d6._.js",
+    "static/chunks/7d954_next_dist_client_c761ba1b._.js",
+    "static/chunks/7d954_next_dist_00f41f67._.js",
+    "static/chunks/7d954_@swc_helpers_cjs_2555a1fe._.js",
+    "static/chunks/Desktop_Osde_Liquidaciones_Guardias_a0ff3932._.js",
+    "static/chunks/turbopack-Desktop_Osde_Liquidaciones_Guardias_5c8aa35f._.js"
+  ]
+};
+globalThis.__BUILD_MANIFEST.lowPriorityFiles = [
+"/static/" + process.env.__NEXT_BUILD_ID + "/_buildManifest.js",
+"/static/" + process.env.__NEXT_BUILD_ID + "/_ssgManifest.js"
+];

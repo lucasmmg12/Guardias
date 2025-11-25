@@ -1,0 +1,6 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/ginecologia/page": "app/ginecologia/page.js",
+  "/page": "app/page.js",
+  "/pediatria/page": "app/pediatria/page.js"
+}

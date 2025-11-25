@@ -1,0 +1,659 @@
+[00:00:01.191] Server  LOG      ✓ Ready in 777ms
+[00:00:17.379] Server  ERROR    ⨯ ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css
+Error evaluating Node.js code
+Error: It looks like you're trying to use `tailwindcss` directly as a PostCSS plugin. The PostCSS plugin has moved to a separate package, so to continue using Tailwind CSS with PostCSS you'll need to install `@tailwindcss/postcss` and update your PostCSS configuration.
+    [at at (C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\node_modules\tailwindcss\dist\lib.js:38:1629)]
+    [at <anonymous> (turbopack:///[turbopack-node]/transforms/postcss.ts:56:14)]
+    [at <anonymous>]
+    [at Module.init (turbopack:///[turbopack-node]/transforms/postcss.ts:43:33)]
+    [at run (turbopack:///[turbopack-node]/ipc/evaluate.ts:77:20)]
+
+Import trace:
+  Client Component Browser:
+    ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css [Client Component Browser]
+    ./Desktop/Osde/Liquidaciones/Guardias/app/layout.tsx [Server Component]
+
+
+[00:00:18.750] Browser ERROR   uncaughtError: Error: ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css
+Error evaluating Node.js code
+Error: It looks like you're trying to use `tailwindcss` directly as a PostCSS plugin. The PostCSS plugin has moved to a separate package, so to continue using Tailwind CSS with PostCSS you'll need to install `@tailwindcss/postcss` and update your PostCSS configuration.
+    [at at (C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\node_modules\tailwindcss\dist\lib.js:38:1629)]
+    [at <anonymous> (turbopack:///[turbopack-node]/transforms/postcss.ts:56:14)]
+    [at <anonymous>]
+    [at Module.init (turbopack:///[turbopack-node]/transforms/postcss.ts:43:33)]
+    [at run (turbopack:///[turbopack-node]/ipc/evaluate.ts:77:20)]
+
+Import trace:
+  Client Component Browser:
+    ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css [Client Component Browser]
+    ./Desktop/Osde/Liquidaciones/Guardias/app/layout.tsx [Server Component]
+
+
+[00:00:19.015] Browser ERROR   ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css
+Error evaluating Node.js code
+Error: It looks like you're trying to use `tailwindcss` directly as a PostCSS plugin. The PostCSS plugin has moved to a separate package, so to continue using Tailwind CSS with PostCSS you'll need to install `@tailwindcss/postcss` and update your PostCSS configuration.
+    [at at (C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\node_modules\tailwindcss\dist\lib.js:38:1629)]
+    [at <anonymous> (turbopack:///[turbopack-node]/transforms/postcss.ts:56:14)]
+    [at <anonymous>]
+    [at Module.init (turbopack:///[turbopack-node]/transforms/postcss.ts:43:33)]
+    [at run (turbopack:///[turbopack-node]/ipc/evaluate.ts:77:20)]
+
+Import trace:
+  Client Component Browser:
+    ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css [Client Component Browser]
+    ./Desktop/Osde/Liquidaciones/Guardias/app/layout.tsx [Server Component]
+[00:00:19.220] Browser ERROR   ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css
+Error evaluating Node.js code
+Error: It looks like you're trying to use `tailwindcss` directly as a PostCSS plugin. The PostCSS plugin has moved to a separate package, so to continue using Tailwind CSS with PostCSS you'll need to install `@tailwindcss/postcss` and update your PostCSS configuration.
+    [at at (C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\node_modules\tailwindcss\dist\lib.js:38:1629)]
+    [at <anonymous> (turbopack:///[turbopack-node]/transforms/postcss.ts:56:14)]
+    [at <anonymous>]
+    [at Module.init (turbopack:///[turbopack-node]/transforms/postcss.ts:43:33)]
+    [at run (turbopack:///[turbopack-node]/ipc/evaluate.ts:77:20)]
+
+Import trace:
+  Client Component Browser:
+    ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css [Client Component Browser]
+    ./Desktop/Osde/Liquidaciones/Guardias/app/layout.tsx [Server Component]
+[00:00:36.916] Browser ERROR   ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css
+Error evaluating Node.js code
+Error: It looks like you're trying to use `tailwindcss` directly as a PostCSS plugin. The PostCSS plugin has moved to a separate package, so to continue using Tailwind CSS with PostCSS you'll need to install `@tailwindcss/postcss` and update your PostCSS configuration.
+    [at at (C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\node_modules\tailwindcss\dist\lib.js:38:1629)]
+    [at <anonymous> (turbopack:///[turbopack-node]/transforms/postcss.ts:56:14)]
+    [at <anonymous>]
+    [at Module.init (turbopack:///[turbopack-node]/transforms/postcss.ts:43:33)]
+    [at run (turbopack:///[turbopack-node]/ipc/evaluate.ts:77:20)]
+
+Import trace:
+  Client Component Browser:
+    ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css [Client Component Browser]
+    ./Desktop/Osde/Liquidaciones/Guardias/app/layout.tsx [Server Component]
+[00:00:36.916] Browser ERROR   ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css
+Error evaluating Node.js code
+Error: It looks like you're trying to use `tailwindcss` directly as a PostCSS plugin. The PostCSS plugin has moved to a separate package, so to continue using Tailwind CSS with PostCSS you'll need to install `@tailwindcss/postcss` and update your PostCSS configuration.
+    [at at (C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\node_modules\tailwindcss\dist\lib.js:38:1629)]
+    [at <anonymous> (turbopack:///[turbopack-node]/transforms/postcss.ts:56:14)]
+    [at <anonymous>]
+    [at Module.init (turbopack:///[turbopack-node]/transforms/postcss.ts:43:33)]
+    [at run (turbopack:///[turbopack-node]/ipc/evaluate.ts:77:20)]
+
+Import trace:
+  Client Component Browser:
+    ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css [Client Component Browser]
+    ./Desktop/Osde/Liquidaciones/Guardias/app/layout.tsx [Server Component]
+[00:00:37.099] Browser ERROR   ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css
+Error evaluating Node.js code
+Error: It looks like you're trying to use `tailwindcss` directly as a PostCSS plugin. The PostCSS plugin has moved to a separate package, so to continue using Tailwind CSS with PostCSS you'll need to install `@tailwindcss/postcss` and update your PostCSS configuration.
+    [at at (C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\node_modules\tailwindcss\dist\lib.js:38:1629)]
+    [at <anonymous> (turbopack:///[turbopack-node]/transforms/postcss.ts:56:14)]
+    [at <anonymous>]
+    [at Module.init (turbopack:///[turbopack-node]/transforms/postcss.ts:43:33)]
+    [at run (turbopack:///[turbopack-node]/ipc/evaluate.ts:77:20)]
+
+Import trace:
+  Client Component Browser:
+    ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css [Client Component Browser]
+    ./Desktop/Osde/Liquidaciones/Guardias/app/layout.tsx [Server Component]
+[00:00:37.591] Browser ERROR   ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css
+Error evaluating Node.js code
+Error: It looks like you're trying to use `tailwindcss` directly as a PostCSS plugin. The PostCSS plugin has moved to a separate package, so to continue using Tailwind CSS with PostCSS you'll need to install `@tailwindcss/postcss` and update your PostCSS configuration.
+    [at at (C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\node_modules\tailwindcss\dist\lib.js:38:1629)]
+    [at <anonymous> (turbopack:///[turbopack-node]/transforms/postcss.ts:56:14)]
+    [at <anonymous>]
+    [at Module.init (turbopack:///[turbopack-node]/transforms/postcss.ts:43:33)]
+    [at run (turbopack:///[turbopack-node]/ipc/evaluate.ts:77:20)]
+
+Import trace:
+  Client Component Browser:
+    ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css [Client Component Browser]
+    ./Desktop/Osde/Liquidaciones/Guardias/app/layout.tsx [Server Component]
+[00:00:37.591] Browser ERROR   ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css
+Error evaluating Node.js code
+Error: It looks like you're trying to use `tailwindcss` directly as a PostCSS plugin. The PostCSS plugin has moved to a separate package, so to continue using Tailwind CSS with PostCSS you'll need to install `@tailwindcss/postcss` and update your PostCSS configuration.
+    [at at (C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\node_modules\tailwindcss\dist\lib.js:38:1629)]
+    [at <anonymous> (turbopack:///[turbopack-node]/transforms/postcss.ts:56:14)]
+    [at <anonymous>]
+    [at Module.init (turbopack:///[turbopack-node]/transforms/postcss.ts:43:33)]
+    [at run (turbopack:///[turbopack-node]/ipc/evaluate.ts:77:20)]
+
+Import trace:
+  Client Component Browser:
+    ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css [Client Component Browser]
+    ./Desktop/Osde/Liquidaciones/Guardias/app/layout.tsx [Server Component]
+[00:00:37.591] Browser ERROR   ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css
+Error evaluating Node.js code
+Error: It looks like you're trying to use `tailwindcss` directly as a PostCSS plugin. The PostCSS plugin has moved to a separate package, so to continue using Tailwind CSS with PostCSS you'll need to install `@tailwindcss/postcss` and update your PostCSS configuration.
+    [at at (C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\node_modules\tailwindcss\dist\lib.js:38:1629)]
+    [at <anonymous> (turbopack:///[turbopack-node]/transforms/postcss.ts:56:14)]
+    [at <anonymous>]
+    [at Module.init (turbopack:///[turbopack-node]/transforms/postcss.ts:43:33)]
+    [at run (turbopack:///[turbopack-node]/ipc/evaluate.ts:77:20)]
+
+Import trace:
+  Client Component Browser:
+    ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css [Client Component Browser]
+    ./Desktop/Osde/Liquidaciones/Guardias/app/layout.tsx [Server Component]
+[00:00:37.591] Browser ERROR   ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css
+Error evaluating Node.js code
+Error: It looks like you're trying to use `tailwindcss` directly as a PostCSS plugin. The PostCSS plugin has moved to a separate package, so to continue using Tailwind CSS with PostCSS you'll need to install `@tailwindcss/postcss` and update your PostCSS configuration.
+    [at at (C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\node_modules\tailwindcss\dist\lib.js:38:1629)]
+    [at <anonymous> (turbopack:///[turbopack-node]/transforms/postcss.ts:56:14)]
+    [at <anonymous>]
+    [at Module.init (turbopack:///[turbopack-node]/transforms/postcss.ts:43:33)]
+    [at run (turbopack:///[turbopack-node]/ipc/evaluate.ts:77:20)]
+
+Import trace:
+  Client Component Browser:
+    ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css [Client Component Browser]
+    ./Desktop/Osde/Liquidaciones/Guardias/app/layout.tsx [Server Component]
+[00:00:43.872] Browser ERROR   ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css
+Error evaluating Node.js code
+CssSyntaxError: tailwindcss: C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\app\globals.css:1:1: Cannot apply unknown utility class `border-border`. Are you using CSS modules or similar and missing `@reference`? https://tailwindcss.com/docs/functions-and-directives#reference-directive
+    [at Input.error (turbopack:///[project]/Desktop/Osde/Liquidaciones/Guardias/node_modules/postcss/lib/input.js:135:16)]
+    [at Root.error (turbopack:///[project]/Desktop/Osde/Liquidaciones/Guardias/node_modules/postcss/lib/node.js:146:32)]
+    [at Object.Once (C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\node_modules\@tailwindcss\postcss\dist\index.js:10:6912)]
+    [at process.processTicksAndRejections (node:internal/process/task_queues:105:5)]
+    [at async LazyResult.runAsync (turbopack:///[project]/Desktop/Osde/Liquidaciones/Guardias/node_modules/postcss/lib/lazy-result.js:293:11)]
+    [at async transform (turbopack:///[turbopack-node]/transforms/postcss.ts:70:34)]
+    [at async run (turbopack:///[turbopack-node]/ipc/evaluate.ts:92:23)]
+
+Import trace:
+  Client Component Browser:
+    ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css [Client Component Browser]
+    ./Desktop/Osde/Liquidaciones/Guardias/app/layout.tsx [Server Component]
+[00:01:02.002] Browser ERROR   ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css
+Error evaluating Node.js code
+CssSyntaxError: tailwindcss: C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\app\globals.css:1:1: Cannot apply unknown utility class `border-border`. Are you using CSS modules or similar and missing `@reference`? https://tailwindcss.com/docs/functions-and-directives#reference-directive
+    [at Input.error (turbopack:///[project]/Desktop/Osde/Liquidaciones/Guardias/node_modules/postcss/lib/input.js:135:16)]
+    [at Root.error (turbopack:///[project]/Desktop/Osde/Liquidaciones/Guardias/node_modules/postcss/lib/node.js:146:32)]
+    [at Object.Once (C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\node_modules\@tailwindcss\postcss\dist\index.js:10:6912)]
+    [at process.processTicksAndRejections (node:internal/process/task_queues:105:5)]
+    [at async LazyResult.runAsync (turbopack:///[project]/Desktop/Osde/Liquidaciones/Guardias/node_modules/postcss/lib/lazy-result.js:293:11)]
+    [at async transform (turbopack:///[turbopack-node]/transforms/postcss.ts:70:34)]
+    [at async run (turbopack:///[turbopack-node]/ipc/evaluate.ts:92:23)]
+
+Import trace:
+  Client Component Browser:
+    ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css [Client Component Browser]
+    ./Desktop/Osde/Liquidaciones/Guardias/app/layout.tsx [Server Component]
+[00:01:02.893] Browser ERROR   ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css
+Error evaluating Node.js code
+CssSyntaxError: tailwindcss: C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\app\globals.css:1:1: Cannot apply unknown utility class `border-border`. Are you using CSS modules or similar and missing `@reference`? https://tailwindcss.com/docs/functions-and-directives#reference-directive
+    [at Input.error (turbopack:///[project]/Desktop/Osde/Liquidaciones/Guardias/node_modules/postcss/lib/input.js:135:16)]
+    [at Root.error (turbopack:///[project]/Desktop/Osde/Liquidaciones/Guardias/node_modules/postcss/lib/node.js:146:32)]
+    [at Object.Once (C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\node_modules\@tailwindcss\postcss\dist\index.js:10:6912)]
+    [at process.processTicksAndRejections (node:internal/process/task_queues:105:5)]
+    [at async LazyResult.runAsync (turbopack:///[project]/Desktop/Osde/Liquidaciones/Guardias/node_modules/postcss/lib/lazy-result.js:293:11)]
+    [at async transform (turbopack:///[turbopack-node]/transforms/postcss.ts:70:34)]
+    [at async run (turbopack:///[turbopack-node]/ipc/evaluate.ts:92:23)]
+
+Import trace:
+  Client Component Browser:
+    ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css [Client Component Browser]
+    ./Desktop/Osde/Liquidaciones/Guardias/app/layout.tsx [Server Component]
+[00:01:02.893] Browser ERROR   ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css
+Error evaluating Node.js code
+CssSyntaxError: tailwindcss: C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\app\globals.css:1:1: Cannot apply unknown utility class `border-border`. Are you using CSS modules or similar and missing `@reference`? https://tailwindcss.com/docs/functions-and-directives#reference-directive
+    [at Input.error (turbopack:///[project]/Desktop/Osde/Liquidaciones/Guardias/node_modules/postcss/lib/input.js:135:16)]
+    [at Root.error (turbopack:///[project]/Desktop/Osde/Liquidaciones/Guardias/node_modules/postcss/lib/node.js:146:32)]
+    [at Object.Once (C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\node_modules\@tailwindcss\postcss\dist\index.js:10:6912)]
+    [at process.processTicksAndRejections (node:internal/process/task_queues:105:5)]
+    [at async LazyResult.runAsync (turbopack:///[project]/Desktop/Osde/Liquidaciones/Guardias/node_modules/postcss/lib/lazy-result.js:293:11)]
+    [at async transform (turbopack:///[turbopack-node]/transforms/postcss.ts:70:34)]
+    [at async run (turbopack:///[turbopack-node]/ipc/evaluate.ts:92:23)]
+
+Import trace:
+  Client Component Browser:
+    ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css [Client Component Browser]
+    ./Desktop/Osde/Liquidaciones/Guardias/app/layout.tsx [Server Component]
+[00:01:03.421] Browser ERROR   ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css
+Error evaluating Node.js code
+CssSyntaxError: tailwindcss: C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\app\globals.css:1:1: Cannot apply unknown utility class `border-border`. Are you using CSS modules or similar and missing `@reference`? https://tailwindcss.com/docs/functions-and-directives#reference-directive
+    [at Input.error (turbopack:///[project]/Desktop/Osde/Liquidaciones/Guardias/node_modules/postcss/lib/input.js:135:16)]
+    [at Root.error (turbopack:///[project]/Desktop/Osde/Liquidaciones/Guardias/node_modules/postcss/lib/node.js:146:32)]
+    [at Object.Once (C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\node_modules\@tailwindcss\postcss\dist\index.js:10:6912)]
+    [at process.processTicksAndRejections (node:internal/process/task_queues:105:5)]
+    [at async LazyResult.runAsync (turbopack:///[project]/Desktop/Osde/Liquidaciones/Guardias/node_modules/postcss/lib/lazy-result.js:293:11)]
+    [at async transform (turbopack:///[turbopack-node]/transforms/postcss.ts:70:34)]
+    [at async run (turbopack:///[turbopack-node]/ipc/evaluate.ts:92:23)]
+
+Import trace:
+  Client Component Browser:
+    ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css [Client Component Browser]
+    ./Desktop/Osde/Liquidaciones/Guardias/app/layout.tsx [Server Component]
+[00:01:03.994] Browser ERROR   ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css
+Error evaluating Node.js code
+CssSyntaxError: tailwindcss: C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\app\globals.css:1:1: Cannot apply unknown utility class `border-border`. Are you using CSS modules or similar and missing `@reference`? https://tailwindcss.com/docs/functions-and-directives#reference-directive
+    [at Input.error (turbopack:///[project]/Desktop/Osde/Liquidaciones/Guardias/node_modules/postcss/lib/input.js:135:16)]
+    [at Root.error (turbopack:///[project]/Desktop/Osde/Liquidaciones/Guardias/node_modules/postcss/lib/node.js:146:32)]
+    [at Object.Once (C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\node_modules\@tailwindcss\postcss\dist\index.js:10:6912)]
+    [at process.processTicksAndRejections (node:internal/process/task_queues:105:5)]
+    [at async LazyResult.runAsync (turbopack:///[project]/Desktop/Osde/Liquidaciones/Guardias/node_modules/postcss/lib/lazy-result.js:293:11)]
+    [at async transform (turbopack:///[turbopack-node]/transforms/postcss.ts:70:34)]
+    [at async run (turbopack:///[turbopack-node]/ipc/evaluate.ts:92:23)]
+
+Import trace:
+  Client Component Browser:
+    ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css [Client Component Browser]
+    ./Desktop/Osde/Liquidaciones/Guardias/app/layout.tsx [Server Component]
+[00:01:05.785] Browser ERROR   ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css
+Error evaluating Node.js code
+CssSyntaxError: tailwindcss: C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\app\globals.css:1:1: Cannot apply unknown utility class `border-border`. Are you using CSS modules or similar and missing `@reference`? https://tailwindcss.com/docs/functions-and-directives#reference-directive
+    [at Input.error (turbopack:///[project]/Desktop/Osde/Liquidaciones/Guardias/node_modules/postcss/lib/input.js:135:16)]
+    [at Root.error (turbopack:///[project]/Desktop/Osde/Liquidaciones/Guardias/node_modules/postcss/lib/node.js:146:32)]
+    [at Object.Once (C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\node_modules\@tailwindcss\postcss\dist\index.js:10:6912)]
+    [at process.processTicksAndRejections (node:internal/process/task_queues:105:5)]
+    [at async LazyResult.runAsync (turbopack:///[project]/Desktop/Osde/Liquidaciones/Guardias/node_modules/postcss/lib/lazy-result.js:293:11)]
+    [at async transform (turbopack:///[turbopack-node]/transforms/postcss.ts:70:34)]
+    [at async run (turbopack:///[turbopack-node]/ipc/evaluate.ts:92:23)]
+
+Import trace:
+  Client Component Browser:
+    ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css [Client Component Browser]
+    ./Desktop/Osde/Liquidaciones/Guardias/app/layout.tsx [Server Component]
+[00:01:06.439] Browser ERROR   ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css
+Error evaluating Node.js code
+CssSyntaxError: tailwindcss: C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\app\globals.css:1:1: Cannot apply unknown utility class `border-border`. Are you using CSS modules or similar and missing `@reference`? https://tailwindcss.com/docs/functions-and-directives#reference-directive
+    [at Input.error (turbopack:///[project]/Desktop/Osde/Liquidaciones/Guardias/node_modules/postcss/lib/input.js:135:16)]
+    [at Root.error (turbopack:///[project]/Desktop/Osde/Liquidaciones/Guardias/node_modules/postcss/lib/node.js:146:32)]
+    [at Object.Once (C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\node_modules\@tailwindcss\postcss\dist\index.js:10:6912)]
+    [at process.processTicksAndRejections (node:internal/process/task_queues:105:5)]
+    [at async LazyResult.runAsync (turbopack:///[project]/Desktop/Osde/Liquidaciones/Guardias/node_modules/postcss/lib/lazy-result.js:293:11)]
+    [at async transform (turbopack:///[turbopack-node]/transforms/postcss.ts:70:34)]
+    [at async run (turbopack:///[turbopack-node]/ipc/evaluate.ts:92:23)]
+
+Import trace:
+  Client Component Browser:
+    ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css [Client Component Browser]
+    ./Desktop/Osde/Liquidaciones/Guardias/app/layout.tsx [Server Component]
+[00:01:06.749] Browser ERROR   ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css
+Error evaluating Node.js code
+CssSyntaxError: tailwindcss: C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\app\globals.css:1:1: Cannot apply unknown utility class `border-border`. Are you using CSS modules or similar and missing `@reference`? https://tailwindcss.com/docs/functions-and-directives#reference-directive
+    [at Input.error (turbopack:///[project]/Desktop/Osde/Liquidaciones/Guardias/node_modules/postcss/lib/input.js:135:16)]
+    [at Root.error (turbopack:///[project]/Desktop/Osde/Liquidaciones/Guardias/node_modules/postcss/lib/node.js:146:32)]
+    [at Object.Once (C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\node_modules\@tailwindcss\postcss\dist\index.js:10:6912)]
+    [at process.processTicksAndRejections (node:internal/process/task_queues:105:5)]
+    [at async LazyResult.runAsync (turbopack:///[project]/Desktop/Osde/Liquidaciones/Guardias/node_modules/postcss/lib/lazy-result.js:293:11)]
+    [at async transform (turbopack:///[turbopack-node]/transforms/postcss.ts:70:34)]
+    [at async run (turbopack:///[turbopack-node]/ipc/evaluate.ts:92:23)]
+
+Import trace:
+  Client Component Browser:
+    ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css [Client Component Browser]
+    ./Desktop/Osde/Liquidaciones/Guardias/app/layout.tsx [Server Component]
+[00:01:31.940] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:01:31.940] Browser ERROR   A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+%s%s https://react.dev/link/hydration-mismatch 
+
+  ...
+    <HotReload globalError={[...]} webSocket={WebSocket} staticIndicatorState={{pathname:null, ...}}>
+      <AppDevOverlayErrorBoundary globalError={[...]}>
+        <ReplaySsrOnlyErrors>
+        <DevRootHTTPAccessFallbackBoundary>
+          <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
+            <HTTPAccessFallbackErrorBoundary pathname="/" notFound={<NotAllowedRootHTTPFallbackError>} ...>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <Head>
+                  <__next_root_layout_boundary__>
+                    <SegmentViewNode type="layout" pagePath="/Desktop/O...">
+                      <SegmentTrieNode>
+                      <link>
+                      <script>
+                      <RootLayout>
+                        <html lang="es" className="dark">
+                          <body
+                            className="inter_5972bc34-module__OU16Qa__className min-h-screen relative"
+                            style={{backgroundImage:"url(/fondo...",backgroundSize:"cover",backgroundPosition:"center", ...}}
+-                           data-atm-ext-installed="1.29.12"
+                          >
+                  ...
+
+[00:07:52.705] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:07:52.826] Browser ERROR   A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+%s%s https://react.dev/link/hydration-mismatch 
+
+  ...
+    <HotReload globalError={[...]} webSocket={WebSocket} staticIndicatorState={{pathname:null, ...}}>
+      <AppDevOverlayErrorBoundary globalError={[...]}>
+        <ReplaySsrOnlyErrors>
+        <DevRootHTTPAccessFallbackBoundary>
+          <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
+            <HTTPAccessFallbackErrorBoundary pathname="/" notFound={<NotAllowedRootHTTPFallbackError>} ...>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <Head>
+                  <__next_root_layout_boundary__>
+                    <SegmentViewNode type="layout" pagePath="/Desktop/O...">
+                      <SegmentTrieNode>
+                      <link>
+                      <script>
+                      <RootLayout>
+                        <html lang="es" className="dark">
+                          <body
+                            className="inter_5972bc34-module__OU16Qa__className min-h-screen relative"
+                            style={{backgroundImage:"url(/fondo...",backgroundSize:"cover",backgroundPosition:"center", ...}}
+-                           data-atm-ext-installed="1.29.12"
+-                           data-gptw=""
+                          >
+                  ...
+
+[00:08:33.616] Server  LOG      ✓ Compiled in 70ms
+[00:09:03.591] Server  LOG      ✓ Compiled in 162ms
+[00:09:03.751] Browser ERROR   ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css
+Error evaluating Node.js code
+Error: Cannot find module '@tailwindcss/postcss'
+Require stack:
+- C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\.next\dev\build\chunks\[root-of-the-server]__a863fc26._.js
+- C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\.next\dev\build\chunks\[turbopack]_runtime.js
+- C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\.next\dev\build\postcss.js
+    [at Function._resolveFilename (node:internal/modules/cjs/loader:1401:15)]
+    [at defaultResolveImpl (node:internal/modules/cjs/loader:1057:19)]
+    [at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1062:22)]
+    [at Function._load (node:internal/modules/cjs/loader:1211:37)]
+    [at TracingChannel.traceSync (node:diagnostics_channel:322:14)]
+    [at wrapModuleLoad (node:internal/modules/cjs/loader:235:24)]
+    [at Module.require (node:internal/modules/cjs/loader:1487:12)]
+    [at require (node:internal/modules/helpers:135:16)]
+    [at <anonymous> (turbopack:///[turbopack-node]/transforms/postcss.ts:49:25)]
+    [at <anonymous>]
+
+Import trace:
+  Client Component Browser:
+    ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css [Client Component Browser]
+    ./Desktop/Osde/Liquidaciones/Guardias/app/layout.tsx [Server Component]
+[00:09:03.751] Browser ERROR   ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css
+Error evaluating Node.js code
+Error: Cannot find module '@tailwindcss/postcss'
+Require stack:
+- C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\.next\dev\build\chunks\[root-of-the-server]__a863fc26._.js
+- C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\.next\dev\build\chunks\[turbopack]_runtime.js
+- C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\.next\dev\build\postcss.js
+    [at Function._resolveFilename (node:internal/modules/cjs/loader:1401:15)]
+    [at defaultResolveImpl (node:internal/modules/cjs/loader:1057:19)]
+    [at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1062:22)]
+    [at Function._load (node:internal/modules/cjs/loader:1211:37)]
+    [at TracingChannel.traceSync (node:diagnostics_channel:322:14)]
+    [at wrapModuleLoad (node:internal/modules/cjs/loader:235:24)]
+    [at Module.require (node:internal/modules/cjs/loader:1487:12)]
+    [at require (node:internal/modules/helpers:135:16)]
+    [at <anonymous> (turbopack:///[turbopack-node]/transforms/postcss.ts:49:25)]
+    [at <anonymous>]
+
+Import trace:
+  Client Component Browser:
+    ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css [Client Component Browser]
+    ./Desktop/Osde/Liquidaciones/Guardias/app/layout.tsx [Server Component]
+[00:09:04.151] Browser ERROR   ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css
+Error evaluating Node.js code
+Error: Cannot find module '@tailwindcss/postcss'
+Require stack:
+- C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\.next\dev\build\chunks\[root-of-the-server]__a863fc26._.js
+- C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\.next\dev\build\chunks\[turbopack]_runtime.js
+- C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\.next\dev\build\postcss.js
+    [at Function._resolveFilename (node:internal/modules/cjs/loader:1401:15)]
+    [at defaultResolveImpl (node:internal/modules/cjs/loader:1057:19)]
+    [at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1062:22)]
+    [at Function._load (node:internal/modules/cjs/loader:1211:37)]
+    [at TracingChannel.traceSync (node:diagnostics_channel:322:14)]
+    [at wrapModuleLoad (node:internal/modules/cjs/loader:235:24)]
+    [at Module.require (node:internal/modules/cjs/loader:1487:12)]
+    [at require (node:internal/modules/helpers:135:16)]
+    [at <anonymous> (turbopack:///[turbopack-node]/transforms/postcss.ts:49:25)]
+    [at <anonymous>]
+
+Import trace:
+  Client Component Browser:
+    ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css [Client Component Browser]
+    ./Desktop/Osde/Liquidaciones/Guardias/app/layout.tsx [Server Component]
+[00:09:04.151] Browser ERROR   ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css
+Error evaluating Node.js code
+Error: Cannot find module '@tailwindcss/postcss'
+Require stack:
+- C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\.next\dev\build\chunks\[root-of-the-server]__a863fc26._.js
+- C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\.next\dev\build\chunks\[turbopack]_runtime.js
+- C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\.next\dev\build\postcss.js
+    [at Function._resolveFilename (node:internal/modules/cjs/loader:1401:15)]
+    [at defaultResolveImpl (node:internal/modules/cjs/loader:1057:19)]
+    [at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1062:22)]
+    [at Function._load (node:internal/modules/cjs/loader:1211:37)]
+    [at TracingChannel.traceSync (node:diagnostics_channel:322:14)]
+    [at wrapModuleLoad (node:internal/modules/cjs/loader:235:24)]
+    [at Module.require (node:internal/modules/cjs/loader:1487:12)]
+    [at require (node:internal/modules/helpers:135:16)]
+    [at <anonymous> (turbopack:///[turbopack-node]/transforms/postcss.ts:49:25)]
+    [at <anonymous>]
+
+Import trace:
+  Client Component Browser:
+    ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css [Client Component Browser]
+    ./Desktop/Osde/Liquidaciones/Guardias/app/layout.tsx [Server Component]
+[00:09:08.640] Browser ERROR   ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css
+Error evaluating Node.js code
+Error: Cannot find module '@tailwindcss/postcss'
+Require stack:
+- C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\.next\dev\build\chunks\[root-of-the-server]__a863fc26._.js
+- C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\.next\dev\build\chunks\[turbopack]_runtime.js
+- C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\.next\dev\build\postcss.js
+    [at Function._resolveFilename (node:internal/modules/cjs/loader:1401:15)]
+    [at defaultResolveImpl (node:internal/modules/cjs/loader:1057:19)]
+    [at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1062:22)]
+    [at Function._load (node:internal/modules/cjs/loader:1211:37)]
+    [at TracingChannel.traceSync (node:diagnostics_channel:322:14)]
+    [at wrapModuleLoad (node:internal/modules/cjs/loader:235:24)]
+    [at Module.require (node:internal/modules/cjs/loader:1487:12)]
+    [at require (node:internal/modules/helpers:135:16)]
+    [at <anonymous> (turbopack:///[turbopack-node]/transforms/postcss.ts:49:25)]
+    [at <anonymous>]
+
+Import trace:
+  Client Component Browser:
+    ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css [Client Component Browser]
+    ./Desktop/Osde/Liquidaciones/Guardias/app/layout.tsx [Server Component]
+[00:09:10.229] Server  ERROR    ⨯ ./Desktop/Osde/Liquidaciones/Guardias/node_modules/tailwindcss-animate/index.js:1:16
+Module not found: Can't resolve 'tailwindcss/plugin'
+> 1 | const plugin = require("tailwindcss/plugin")
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  2 |
+  3 | function filterDefault(values) {
+  4 | 	return Object.fromEntries(
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[00:09:10.232] Server  ERROR    ⨯ ./Desktop/Osde/Liquidaciones/Guardias/node_modules/tailwindcss-animate/index.js:1:16
+Module not found: Can't resolve 'tailwindcss/plugin'
+> 1 | const plugin = require("tailwindcss/plugin")
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  2 |
+  3 | function filterDefault(values) {
+  4 | 	return Object.fromEntries(
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[00:09:10.237] Server  ERROR    ⨯ ./Desktop/Osde/Liquidaciones/Guardias/node_modules/tailwindcss-animate/index.js:1:16
+Module not found: Can't resolve 'tailwindcss/plugin'
+> 1 | const plugin = require("tailwindcss/plugin")
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  2 |
+  3 | function filterDefault(values) {
+  4 | 	return Object.fromEntries(
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[00:09:10.241] Server  ERROR    ⨯ ./Desktop/Osde/Liquidaciones/Guardias/node_modules/tailwindcss-animate/index.js:1:16
+Module not found: Can't resolve 'tailwindcss/plugin'
+> 1 | const plugin = require("tailwindcss/plugin")
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  2 |
+  3 | function filterDefault(values) {
+  4 | 	return Object.fromEntries(
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[00:09:10.245] Server  ERROR    ⨯ ./Desktop/Osde/Liquidaciones/Guardias/node_modules/tailwindcss-animate/index.js:1:16
+Module not found: Can't resolve 'tailwindcss/plugin'
+> 1 | const plugin = require("tailwindcss/plugin")
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  2 |
+  3 | function filterDefault(values) {
+  4 | 	return Object.fromEntries(
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[00:09:10.249] Server  ERROR    ⨯ ./Desktop/Osde/Liquidaciones/Guardias/node_modules/tailwindcss-animate/index.js:1:16
+Module not found: Can't resolve 'tailwindcss/plugin'
+> 1 | const plugin = require("tailwindcss/plugin")
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  2 |
+  3 | function filterDefault(values) {
+  4 | 	return Object.fromEntries(
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[00:09:10.252] Server  ERROR    ⨯ ./Desktop/Osde/Liquidaciones/Guardias/node_modules/tailwindcss-animate/index.js:1:16
+Module not found: Can't resolve 'tailwindcss/plugin'
+> 1 | const plugin = require("tailwindcss/plugin")
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  2 |
+  3 | function filterDefault(values) {
+  4 | 	return Object.fromEntries(
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[00:09:10.368] Browser ERROR   ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css
+Error evaluating Node.js code
+Error: Cannot find module '@tailwindcss/postcss'
+Require stack:
+- C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\.next\dev\build\chunks\[root-of-the-server]__a863fc26._.js
+- C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\.next\dev\build\chunks\[turbopack]_runtime.js
+- C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\.next\dev\build\postcss.js
+    [at Function._resolveFilename (node:internal/modules/cjs/loader:1401:15)]
+    [at defaultResolveImpl (node:internal/modules/cjs/loader:1057:19)]
+    [at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1062:22)]
+    [at Function._load (node:internal/modules/cjs/loader:1211:37)]
+    [at TracingChannel.traceSync (node:diagnostics_channel:322:14)]
+    [at wrapModuleLoad (node:internal/modules/cjs/loader:235:24)]
+    [at Module.require (node:internal/modules/cjs/loader:1487:12)]
+    [at require (node:internal/modules/helpers:135:16)]
+    [at <anonymous> (turbopack:///[turbopack-node]/transforms/postcss.ts:49:25)]
+    [at <anonymous>]
+
+Import trace:
+  Client Component Browser:
+    ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css [Client Component Browser]
+    ./Desktop/Osde/Liquidaciones/Guardias/app/layout.tsx [Server Component]
+[00:09:10.368] Browser ERROR   ./Desktop/Osde/Liquidaciones/Guardias/node_modules/tailwindcss-animate/index.js:1:16
+Module not found: Can't resolve 'tailwindcss/plugin'
+> 1 | const plugin = require("tailwindcss/plugin")
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  2 |
+  3 | function filterDefault(values) {
+  4 | 	return Object.fromEntries(
+
+https://nextjs.org/docs/messages/module-not-found
+[00:09:11.222] Browser ERROR   ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css
+Error evaluating Node.js code
+Error: Cannot find module '@tailwindcss/postcss'
+Require stack:
+- C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\.next\dev\build\chunks\[root-of-the-server]__a863fc26._.js
+- C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\.next\dev\build\chunks\[turbopack]_runtime.js
+- C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\.next\dev\build\postcss.js
+    [at Function._resolveFilename (node:internal/modules/cjs/loader:1401:15)]
+    [at defaultResolveImpl (node:internal/modules/cjs/loader:1057:19)]
+    [at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1062:22)]
+    [at Function._load (node:internal/modules/cjs/loader:1211:37)]
+    [at TracingChannel.traceSync (node:diagnostics_channel:322:14)]
+    [at wrapModuleLoad (node:internal/modules/cjs/loader:235:24)]
+    [at Module.require (node:internal/modules/cjs/loader:1487:12)]
+    [at require (node:internal/modules/helpers:135:16)]
+    [at <anonymous> (turbopack:///[turbopack-node]/transforms/postcss.ts:49:25)]
+    [at <anonymous>]
+
+Import trace:
+  Client Component Browser:
+    ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css [Client Component Browser]
+    ./Desktop/Osde/Liquidaciones/Guardias/app/layout.tsx [Server Component]
+[00:09:11.222] Browser ERROR   ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css
+Error evaluating Node.js code
+Error: Cannot find module '@tailwindcss/postcss'
+Require stack:
+- C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\.next\dev\build\chunks\[root-of-the-server]__a863fc26._.js
+- C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\.next\dev\build\chunks\[turbopack]_runtime.js
+- C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\.next\dev\build\postcss.js
+    [at Function._resolveFilename (node:internal/modules/cjs/loader:1401:15)]
+    [at defaultResolveImpl (node:internal/modules/cjs/loader:1057:19)]
+    [at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1062:22)]
+    [at Function._load (node:internal/modules/cjs/loader:1211:37)]
+    [at TracingChannel.traceSync (node:diagnostics_channel:322:14)]
+    [at wrapModuleLoad (node:internal/modules/cjs/loader:235:24)]
+    [at Module.require (node:internal/modules/cjs/loader:1487:12)]
+    [at require (node:internal/modules/helpers:135:16)]
+    [at <anonymous> (turbopack:///[turbopack-node]/transforms/postcss.ts:49:25)]
+    [at <anonymous>]
+
+Import trace:
+  Client Component Browser:
+    ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css [Client Component Browser]
+    ./Desktop/Osde/Liquidaciones/Guardias/app/layout.tsx [Server Component]
+[00:09:11.570] Browser ERROR   ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css
+Error evaluating Node.js code
+Error: Cannot find module '@tailwindcss/postcss'
+Require stack:
+- C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\.next\dev\build\chunks\[root-of-the-server]__a863fc26._.js
+- C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\.next\dev\build\chunks\[turbopack]_runtime.js
+- C:\Users\lucas\Desktop\Osde\Liquidaciones\Guardias\.next\dev\build\postcss.js
+    [at Function._resolveFilename (node:internal/modules/cjs/loader:1401:15)]
+    [at defaultResolveImpl (node:internal/modules/cjs/loader:1057:19)]
+    [at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1062:22)]
+    [at Function._load (node:internal/modules/cjs/loader:1211:37)]
+    [at TracingChannel.traceSync (node:diagnostics_channel:322:14)]
+    [at wrapModuleLoad (node:internal/modules/cjs/loader:235:24)]
+    [at Module.require (node:internal/modules/cjs/loader:1487:12)]
+    [at require (node:internal/modules/helpers:135:16)]
+    [at <anonymous> (turbopack:///[turbopack-node]/transforms/postcss.ts:49:25)]
+    [at <anonymous>]
+
+Import trace:
+  Client Component Browser:
+    ./Desktop/Osde/Liquidaciones/Guardias/app/globals.css [Client Component Browser]
+    ./Desktop/Osde/Liquidaciones/Guardias/app/layout.tsx [Server Component]
+[00:09:38.669] Server  LOG      ✓ Compiled in 180ms
