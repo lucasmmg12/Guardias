@@ -279,21 +279,6 @@ export default function PediatriaPage() {
                     </div>
                 </div>
             </div>
-
-            <style jsx>{`
-                @keyframes borderGlow {
-                    0%, 100% {
-                        opacity: 0.3;
-                    }
-                    50% {
-                        opacity: 0.8;
-                    }
-                }
-                
-                .delay-1000 {
-                    animation-delay: 1000ms;
-                }
-            `}</style>
         </div>
     )
 }

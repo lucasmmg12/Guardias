@@ -188,46 +188,6 @@ export default function HomePage() {
                     <div className="w-2 h-2 rounded-full bg-green-300 animate-pulse delay-300"></div>
                 </div>
             </div>
-
-            <style jsx>{`
-                @keyframes borderGlow {
-                    0%, 100% {
-                        opacity: 0.3;
-                    }
-                    50% {
-                        opacity: 0.8;
-                    }
-                }
-                
-                @keyframes float {
-                    0%, 100% {
-                        transform: translateY(0px);
-                    }
-                    50% {
-                        transform: translateY(-10px);
-                    }
-                }
-                
-                .animate-float {
-                    animation: float 3s ease-in-out infinite;
-                }
-                
-                .delay-150 {
-                    animation-delay: 150ms;
-                }
-                
-                .delay-300 {
-                    animation-delay: 300ms;
-                }
-                
-                .delay-500 {
-                    animation-delay: 500ms;
-                }
-                
-                .delay-1000 {
-                    animation-delay: 1000ms;
-                }
-            `}</style>
         </div>
     )
 }
