@@ -30,6 +30,7 @@ export function EstadisticasObraSocial({ mes, anio, especialidad }: Estadisticas
       setLoading(true)
       
       // Llamar a la función de sincronización primero
+      // @ts-ignore - La función RPC no está en los tipos generados de Supabase aún
       const { error: syncError } = await supabase.rpc('sincronizar_estadisticas_obra_social', {
         p_mes: mes,
         p_anio: anio,
@@ -42,6 +43,7 @@ export function EstadisticasObraSocial({ mes, anio, especialidad }: Estadisticas
       }
 
       // Obtener estadísticas desde la vista consolidada
+      // @ts-ignore - La vista no está en los tipos generados de Supabase aún
       const { data, error } = await supabase
         .from('v_estadisticas_obra_social_consolidado')
         .select('obra_social, cantidad_consultas, porcentaje_del_total, total_consultas_mes')
@@ -53,8 +55,9 @@ export function EstadisticasObraSocial({ mes, anio, especialidad }: Estadisticas
       if (error) throw error
 
       if (data && data.length > 0) {
-        setEstadisticas(data as EstadisticaObraSocial[])
-        setTotalConsultas(data[0].total_consultas_mes || 0)
+        const estadisticasData = data as any[]
+        setEstadisticas(estadisticasData as EstadisticaObraSocial[])
+        setTotalConsultas(estadisticasData[0]?.total_consultas_mes || 0)
       } else {
         setEstadisticas([])
         setTotalConsultas(0)
