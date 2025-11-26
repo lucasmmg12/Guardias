@@ -129,22 +129,41 @@ export async function readExcelFile(file: File): Promise<ExcelData> {
         if (cell && cell.v !== null && cell.v !== undefined) {
           let value: any = cell.v
           
-          // Si es una fecha, convertirla a string formateado
-          if (cell.t === 'd' && value instanceof Date) {
-            const day = value.getDate()
-            const month = value.getMonth() + 1
-            const year = value.getFullYear()
-            value = `${day}/${month}/${year}`
-          } else if (cell.t === 'n' && typeof value === 'number') {
-            // Si es un número que parece una fecha serial de Excel
-            if (value > 1 && value < 100000) {
-              try {
-                const excelDate = XLSX.SSF.parse_date_code(value)
-                if (excelDate) {
-                  value = `${excelDate.d}/${excelDate.m}/${excelDate.y}`
+          // Detectar si es la columna "Duración"
+          const isDuracion = headerInfo.name.toLowerCase().includes('duración') || 
+                            headerInfo.name.toLowerCase().includes('duracion')
+          
+          if (isDuracion) {
+            // Para la columna Duración, mantener como número (minutos)
+            if (typeof value === 'number') {
+              // Ya es un número, mantenerlo tal cual
+              value = Math.round(value) // Redondear a entero si es necesario
+            } else if (typeof value === 'string') {
+              // Si viene como string, intentar convertir a número
+              const numValue = parseFloat(value.replace(',', '.'))
+              value = isNaN(numValue) ? value : Math.round(numValue)
+            }
+            // No aplicar conversión de fecha para Duración
+          } else {
+            // Para otras columnas, aplicar la lógica de conversión de fechas
+            // Si es una fecha, convertirla a string formateado
+            if (cell.t === 'd' && value instanceof Date) {
+              const day = value.getDate()
+              const month = value.getMonth() + 1
+              const year = value.getFullYear()
+              value = `${day}/${month}/${year}`
+            } else if (cell.t === 'n' && typeof value === 'number') {
+              // Si es un número que parece una fecha serial de Excel
+              // Solo convertir si NO es la columna Duración
+              if (value > 1 && value < 100000) {
+                try {
+                  const excelDate = XLSX.SSF.parse_date_code(value)
+                  if (excelDate) {
+                    value = `${excelDate.d}/${excelDate.m}/${excelDate.y}`
+                  }
+                } catch {
+                  // Si no se puede parsear como fecha, mantener el número
                 }
-              } catch {
-                // Si no se puede parsear como fecha, mantener el número
               }
             }
           }

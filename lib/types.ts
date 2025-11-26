@@ -66,6 +66,10 @@ export interface Medico {
   id: string
   nombre: string
   matricula: string
+  matricula_provincial: string | null
+  cuit: string | null
+  grupo_persona: string | null
+  perfil: string | null
   es_residente: boolean
   especialidad: string
   activo: boolean
@@ -77,6 +81,10 @@ export interface MedicoInsert {
   id?: string
   nombre: string
   matricula: string
+  matricula_provincial?: string | null
+  cuit?: string | null
+  grupo_persona?: string | null
+  perfil?: string | null
   es_residente?: boolean
   especialidad: string
   activo?: boolean
@@ -88,6 +96,10 @@ export interface MedicoUpdate {
   id?: string
   nombre?: string
   matricula?: string
+  matricula_provincial?: string | null
+  cuit?: string | null
+  grupo_persona?: string | null
+  perfil?: string | null
   es_residente?: boolean
   especialidad?: string
   activo?: boolean
