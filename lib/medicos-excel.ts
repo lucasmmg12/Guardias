@@ -34,6 +34,25 @@ function esResidente(perfil: string | null | undefined): boolean {
 }
 
 /**
+ * Busca un valor en un objeto row por diferentes variaciones del nombre de columna
+ */
+function getValueByVariations(row: any, variations: string[]): any {
+  for (const variation of variations) {
+    // Buscar coincidencia exacta
+    if (row[variation] !== undefined && row[variation] !== null) {
+      return row[variation]
+    }
+    // Buscar coincidencia case-insensitive
+    const keys = Object.keys(row)
+    const foundKey = keys.find(key => key.toLowerCase().trim() === variation.toLowerCase().trim())
+    if (foundKey && row[foundKey] !== undefined && row[foundKey] !== null) {
+      return row[foundKey]
+    }
+  }
+  return null
+}
+
+/**
  * Lee un archivo Excel de médicos y retorna un array de objetos MedicoInsert
  */
 export async function importMedicosFromExcel(file: File): Promise<{
@@ -63,7 +82,7 @@ export async function importMedicosFromExcel(file: File): Promise<{
     const jsonData = XLSX.utils.sheet_to_json(worksheet, {
       defval: null,
       raw: false
-    }) as MedicoExcelRow[]
+    }) as any[]
 
     if (jsonData.length === 0) {
       throw new Error('El archivo Excel no contiene datos')
@@ -75,43 +94,75 @@ export async function importMedicosFromExcel(file: File): Promise<{
       const filaNum = i + 2 // +2 porque empieza en 0 y la fila 1 es el header
 
       try {
+        // Obtener valores con mapeo flexible de columnas
+        const nombre = getValueByVariations(row, ['Nombre', 'nombre', 'NOMBRE'])
+        const matriculaProvincialRaw = getValueByVariations(row, [
+          'Mat. provinc', 
+          'Mat provinc', 
+          'Mat. Provincial',
+          'Matricula Provincial',
+          'Matrícula Provincial',
+          'Matricula',
+          'Matrícula',
+          'Mat. Provinc'
+        ])
+        const cuitRaw = getValueByVariations(row, ['CUIT', 'cuit', 'Cuit'])
+        const especialidadRaw = getValueByVariations(row, ['Especialidad', 'especialidad', 'ESPECIALIDAD'])
+        const grupoPersonaRaw = getValueByVariations(row, [
+          'Grupo persona',
+          'Grupo Persona',
+          'Grupo de Persona',
+          'Grupo',
+          'grupo persona'
+        ])
+        const perfilRaw = getValueByVariations(row, ['Perfil', 'perfil', 'PERFIL'])
+        const activoRaw = getValueByVariations(row, ['Activo', 'activo', 'ACTIVO', 'Estado', 'estado'])
+
         // Validar campos requeridos
-        if (!row.Nombre || String(row.Nombre).trim() === '') {
+        if (!nombre || String(nombre).trim() === '') {
           resultado.errores.push(`Fila ${filaNum}: El campo "Nombre" es requerido`)
           continue
         }
 
-        if (!row['Mat. provinc'] && !row.CUIT) {
+        if (!matriculaProvincialRaw && !cuitRaw) {
           resultado.errores.push(`Fila ${filaNum}: Debe tener al menos "Mat. provinc" o "CUIT"`)
           continue
         }
 
-        if (!row.Especialidad || String(row.Especialidad).trim() === '') {
+        if (!especialidadRaw || String(especialidadRaw).trim() === '') {
           resultado.errores.push(`Fila ${filaNum}: El campo "Especialidad" es requerido`)
           continue
         }
 
-        // Crear objeto médico con validación de longitud
-        const matriculaProvincial = row['Mat. provinc'] ? String(row['Mat. provinc']).trim().substring(0, 50) : null
-        const cuit = row.CUIT ? String(row.CUIT).trim().substring(0, 20) : null
+        // Procesar y validar valores
+        const matriculaProvincial = matriculaProvincialRaw 
+          ? String(matriculaProvincialRaw).trim().substring(0, 50) 
+          : null
+        const cuit = cuitRaw 
+          ? String(cuitRaw).trim().replace(/[^0-9]/g, '').substring(0, 20) 
+          : null
         const matricula = (matriculaProvincial || cuit || `TEMP-${Date.now()}-${i}`).substring(0, 50)
         
         // Truncar campos según límites de la BD
-        const nombre = String(row.Nombre).trim().substring(0, 255)
-        const especialidad = String(row.Especialidad).trim().substring(0, 200)
-        const grupoPersona = row['Grupo persona'] ? String(row['Grupo persona']).trim().substring(0, 100) : null
-        const perfil = row.Perfil ? String(row.Perfil).trim().substring(0, 100) : null
+        const nombreFinal = String(nombre).trim().substring(0, 255)
+        const especialidad = String(especialidadRaw).trim().substring(0, 200)
+        const grupoPersona = grupoPersonaRaw 
+          ? String(grupoPersonaRaw).trim().substring(0, 100) 
+          : null
+        const perfil = perfilRaw 
+          ? String(perfilRaw).trim().substring(0, 100) 
+          : null
 
         const medico: MedicoInsert = {
-          nombre: nombre,
+          nombre: nombreFinal,
           matricula: matricula,
           matricula_provincial: matriculaProvincial,
           cuit: cuit,
           grupo_persona: grupoPersona,
           perfil: perfil,
-          es_residente: esResidente(row.Perfil),
+          es_residente: esResidente(perfil),
           especialidad: especialidad,
-          activo: parseActivo(row.Activo)
+          activo: parseActivo(activoRaw)
         }
 
         resultado.medicos.push(medico)

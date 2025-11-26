@@ -315,7 +315,18 @@ export default function MedicosPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-sm">
+              <table className="w-full border-collapse text-sm table-fixed">
+                <colgroup>
+                  <col className="w-[20%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[20%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[6%]" />
+                  <col className="w-[7%]" />
+                  <col className="w-[7%]" />
+                </colgroup>
                 <thead>
                   <tr className="border-b border-white/10 bg-white/5">
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300">Nombre</th>
@@ -335,23 +346,25 @@ export default function MedicosPage() {
                       key={medico.id}
                       className="border-b border-white/5 hover:bg-white/5 transition-colors"
                     >
-                      <td className="px-4 py-3 text-gray-300">{medico.nombre}</td>
-                      <td className="px-4 py-3 text-gray-400 font-mono text-xs">
+                      <td className="px-4 py-3 text-gray-300 break-words">{medico.nombre}</td>
+                      <td className="px-4 py-3 text-gray-400 font-mono text-xs break-words">
                         {medico.matricula_provincial || '-'}
                       </td>
-                      <td className="px-4 py-3 text-gray-400 font-mono text-xs">
+                      <td className="px-4 py-3 text-gray-400 font-mono text-xs break-words">
                         {medico.cuit || '-'}
                       </td>
-                      <td className="px-4 py-3 text-gray-300">{medico.especialidad}</td>
-                      <td className="px-4 py-3 text-gray-400">{medico.grupo_persona || '-'}</td>
-                      <td className="px-4 py-3 text-gray-400">{medico.perfil || '-'}</td>
+                      <td className="px-4 py-3 text-gray-300 break-words" style={{ wordBreak: 'break-word', maxWidth: '200px' }}>
+                        {medico.especialidad}
+                      </td>
+                      <td className="px-4 py-3 text-gray-400 break-words">{medico.grupo_persona || '-'}</td>
+                      <td className="px-4 py-3 text-gray-400 break-words">{medico.perfil || '-'}</td>
                       <td className="px-4 py-3">
                         {medico.es_residente ? (
-                          <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded">
+                          <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded whitespace-nowrap">
                             Sí
                           </span>
                         ) : (
-                          <span className="px-2 py-1 bg-gray-500/20 text-gray-400 text-xs rounded">
+                          <span className="px-2 py-1 bg-gray-500/20 text-gray-400 text-xs rounded whitespace-nowrap">
                             No
                           </span>
                         )}
@@ -359,7 +372,7 @@ export default function MedicosPage() {
                       <td className="px-4 py-3">
                         <button
                           onClick={() => handleToggleActivo(medico)}
-                          className={`px-2 py-1 text-xs rounded transition-colors ${
+                          className={`px-2 py-1 text-xs rounded transition-colors whitespace-nowrap ${
                             medico.activo
                               ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
                               : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
