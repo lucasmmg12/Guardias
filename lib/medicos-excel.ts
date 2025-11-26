@@ -34,9 +34,24 @@ function esResidente(perfil: string | null | undefined): boolean {
 }
 
 /**
+ * Normaliza un nombre de columna para comparación (elimina espacios extra, puntos, etc.)
+ */
+function normalizeColumnName(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/\./g, ' ') // Reemplazar puntos con espacios
+    .replace(/\s+/g, ' ') // Normalizar espacios múltiples
+    .replace(/[^\w\s]/g, '') // Eliminar caracteres especiales excepto letras, números y espacios
+    .trim()
+}
+
+/**
  * Busca un valor en un objeto row por diferentes variaciones del nombre de columna
  */
 function getValueByVariations(row: any, variations: string[], debugHeaders?: string[]): any {
+  const keys = Object.keys(row)
+  
   // Primero intentar coincidencia exacta
   for (const variation of variations) {
     if (row[variation] !== undefined && row[variation] !== null && String(row[variation]).trim() !== '') {
@@ -44,12 +59,11 @@ function getValueByVariations(row: any, variations: string[], debugHeaders?: str
     }
   }
   
-  // Buscar coincidencia case-insensitive y con normalización de espacios
-  const keys = Object.keys(row)
+  // Buscar coincidencia normalizada (sin puntos, espacios normalizados, case-insensitive)
   for (const variation of variations) {
-    const normalizedVariation = variation.toLowerCase().trim().replace(/\s+/g, ' ')
+    const normalizedVariation = normalizeColumnName(variation)
     const foundKey = keys.find(key => {
-      const normalizedKey = key.toLowerCase().trim().replace(/\s+/g, ' ')
+      const normalizedKey = normalizeColumnName(key)
       return normalizedKey === normalizedVariation
     })
     if (foundKey && row[foundKey] !== undefined && row[foundKey] !== null && String(row[foundKey]).trim() !== '') {
@@ -57,17 +71,36 @@ function getValueByVariations(row: any, variations: string[], debugHeaders?: str
     }
   }
   
-  // Buscar coincidencia parcial (contiene la palabra clave)
+  // Buscar coincidencia parcial (contiene las palabras clave importantes)
   for (const variation of variations) {
-    const keywords = variation.toLowerCase().split(/[\s.]+/).filter(k => k.length > 2)
-    for (const keyword of keywords) {
-      const foundKey = keys.find(key => {
-        const normalizedKey = key.toLowerCase().trim()
-        return normalizedKey.includes(keyword) || keyword.includes(normalizedKey)
-      })
-      if (foundKey && row[foundKey] !== undefined && row[foundKey] !== null && String(row[foundKey]).trim() !== '') {
-        return row[foundKey]
-      }
+    const keywords = normalizeColumnName(variation)
+      .split(/\s+/)
+      .filter(k => k.length > 2 && k !== 'mat' && k !== 'prov') // Filtrar palabras muy cortas o comunes
+    
+    // Buscar una clave que contenga todas las palabras importantes
+    const foundKey = keys.find(key => {
+      const normalizedKey = normalizeColumnName(key)
+      // Verificar que contenga todas las palabras clave importantes
+      const hasAllKeywords = keywords.length === 0 || keywords.every(kw => normalizedKey.includes(kw))
+      return hasAllKeywords
+    })
+    
+    if (foundKey && row[foundKey] !== undefined && row[foundKey] !== null && String(row[foundKey]).trim() !== '') {
+      return row[foundKey]
+    }
+  }
+  
+  // Último intento: buscar cualquier clave que contenga "mat" y "prov" o "provincial"
+  const matProvKeys = keys.filter(key => {
+    const normalizedKey = normalizeColumnName(key)
+    return (normalizedKey.includes('mat') || normalizedKey.includes('matricula')) && 
+           (normalizedKey.includes('prov') || normalizedKey.includes('provincial'))
+  })
+  
+  if (matProvKeys.length > 0) {
+    const foundKey = matProvKeys[0]
+    if (row[foundKey] !== undefined && row[foundKey] !== null && String(row[foundKey]).trim() !== '') {
+      return row[foundKey]
     }
   }
   
@@ -139,21 +172,23 @@ export async function importMedicosFromExcel(file: File): Promise<{
         // Obtener valores con mapeo flexible de columnas
         const nombre = getValueByVariations(row, ['Nombre', 'nombre', 'NOMBRE'], realHeaders)
         const matriculaProvincialRaw = getValueByVariations(row, [
-          'Mat. provinc', 
-          'Mat provinc', 
-          'Mat. Provincial',
-          'Matricula Provincial',
-          'Matrícula Provincial',
-          'Matricula',
-          'Matrícula',
+          'Mat. Provincial',  // Prioridad: formato exacto del Excel
+          'Mat Provincial',
+          'Mat.Provincial',
+          'MatProvincial',
+          'Mat. provinc',
+          'Mat provinc',
           'Mat. Provinc',
           'Mat Provinc',
-          'Matrícula Prov',
+          'Matricula Provincial',
+          'Matrícula Provincial',
           'Matricula Prov',
+          'Matrícula Prov',
           'Mat Prov',
           'Mat. Prov',
-          'Provincial',
-          'Prov'
+          'Matricula',
+          'Matrícula',
+          'Provincial'
         ], realHeaders)
         const cuitRaw = getValueByVariations(row, ['CUIT', 'cuit', 'Cuit'], realHeaders)
         const especialidadRaw = getValueByVariations(row, ['Especialidad', 'especialidad', 'ESPECIALIDAD'], realHeaders)
@@ -168,22 +203,21 @@ export async function importMedicosFromExcel(file: File): Promise<{
         const perfilRaw = getValueByVariations(row, ['Perfil', 'perfil', 'PERFIL'], realHeaders)
         const activoRaw = getValueByVariations(row, ['Activo', 'activo', 'ACTIVO', 'Estado', 'estado'], realHeaders)
 
-        // Debug: Si no encontramos matrícula provincial en la primera fila, log detallado
-        if (!matriculaProvincialRaw && filaNum === 2) {
-          const possibleMatHeaders = realHeaders.filter(h => {
-            const hLower = h.toLowerCase()
-            return hLower.includes('mat') || 
-                   hLower.includes('prov') ||
-                   hLower.includes('matricula') ||
-                   hLower.includes('matrícula')
-          })
+        // Debug: Log detallado para la primera fila
+        if (filaNum === 2) {
           if (typeof console !== 'undefined' && console.log) {
+            console.log('=== DEBUG IMPORTACIÓN MÉDICOS ===')
             console.log('Headers encontrados en Excel:', realHeaders)
-            console.log('Headers que podrían ser matrícula:', possibleMatHeaders)
-            console.log('Valores en la primera fila:', Object.entries(row).filter(([k, v]) => 
-              k.toLowerCase().includes('mat') || 
-              k.toLowerCase().includes('prov')
-            ))
+            console.log('Valor encontrado para matrícula provincial:', matriculaProvincialRaw)
+            const possibleMatHeaders = realHeaders.filter(h => {
+              const hNormalized = normalizeColumnName(h)
+              return hNormalized.includes('mat') || hNormalized.includes('prov')
+            })
+            console.log('Headers normalizados que podrían ser matrícula:', possibleMatHeaders)
+            if (possibleMatHeaders.length > 0) {
+              console.log('Valores de esas columnas:', possibleMatHeaders.map(h => ({ header: h, value: row[h] })))
+            }
+            console.log('===================================')
           }
         }
 

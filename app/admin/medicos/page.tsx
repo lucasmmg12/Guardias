@@ -224,7 +224,7 @@ export default function MedicosPage() {
 
         {/* Barra de acciones */}
         <div 
-          className="p-6 rounded-xl"
+          className="p-4 sm:p-6 rounded-xl overflow-hidden"
           style={{
             background: 'rgba(255, 255, 255, 0.1)',
             backdropFilter: 'blur(20px)',
@@ -232,11 +232,11 @@ export default function MedicosPage() {
             boxShadow: '0 8px 32px 0 rgba(34, 197, 94, 0.2)',
           }}
         >
-          <div className="flex flex-col lg:flex-row gap-4 items-stretch lg:items-center justify-between">
+          <div className="flex flex-col xl:flex-row gap-4 items-stretch xl:items-center justify-between w-full">
             {/* Búsqueda y filtros */}
-            <div className="flex flex-col sm:flex-row flex-1 gap-3 items-stretch sm:items-center">
-              <div className="relative flex-1">
-                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 flex items-center">
+            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center flex-1 min-w-0">
+              <div className="relative flex-1 sm:max-w-md">
+                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 flex items-center pointer-events-none z-10">
                   <Search className="h-4 w-4 text-gray-400" />
                 </div>
                 <Input
@@ -250,7 +250,7 @@ export default function MedicosPage() {
               <select
                 value={filterEspecialidad}
                 onChange={(e) => setFilterEspecialidad(e.target.value)}
-                className="px-4 py-2 rounded-lg bg-black/30 border border-gray-600 text-white text-sm h-10 min-w-[180px]"
+                className="px-4 py-2 rounded-lg bg-black/30 border border-gray-600 text-white text-sm h-10 sm:min-w-[180px] w-full sm:w-auto"
               >
                 <option value="all">Todas las especialidades</option>
                 {especialidades.map(esp => (
@@ -260,7 +260,7 @@ export default function MedicosPage() {
               <select
                 value={filterActivo}
                 onChange={(e) => setFilterActivo(e.target.value)}
-                className="px-4 py-2 rounded-lg bg-black/30 border border-gray-600 text-white text-sm h-10 min-w-[120px]"
+                className="px-4 py-2 rounded-lg bg-black/30 border border-gray-600 text-white text-sm h-10 sm:min-w-[120px] w-full sm:w-auto"
               >
                 <option value="all">Todos</option>
                 <option value="activo">Activos</option>
@@ -269,10 +269,10 @@ export default function MedicosPage() {
             </div>
 
             {/* Botones de acción */}
-            <div className="flex flex-col sm:flex-row gap-3 shrink-0">
+            <div className="flex flex-col sm:flex-row gap-3 shrink-0 w-full sm:w-auto">
               <Button
                 onClick={() => setShowFormModal(true)}
-                className="bg-green-600 hover:bg-green-500 text-white h-10 whitespace-nowrap"
+                className="bg-green-600 hover:bg-green-500 text-white h-10 whitespace-nowrap w-full sm:w-auto"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Agregar Médico
@@ -280,7 +280,7 @@ export default function MedicosPage() {
               <Button
                 onClick={() => setShowImportModal(true)}
                 variant="outline"
-                className="border-green-500 text-green-400 hover:bg-green-500/20 h-10 whitespace-nowrap"
+                className="border-green-500 text-green-400 hover:bg-green-500/20 h-10 whitespace-nowrap w-full sm:w-auto"
               >
                 <Upload className="h-4 w-4 mr-2" />
                 Importar Excel
@@ -288,7 +288,7 @@ export default function MedicosPage() {
               <Button
                 onClick={handleExport}
                 variant="outline"
-                className="border-green-500 text-green-400 hover:bg-green-500/20 h-10 whitespace-nowrap"
+                className="border-green-500 text-green-400 hover:bg-green-500/20 h-10 whitespace-nowrap w-full sm:w-auto"
                 disabled={medicos.length === 0}
               >
                 <Download className="h-4 w-4 mr-2" />
