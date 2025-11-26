@@ -106,3 +106,94 @@ export function obtenerSugerenciasObraSocial(valor: string | null | undefined): 
     
     return sugerencias
 }
+
+/**
+ * Detecta si una fila tiene horario de inicio
+ * Busca columnas que contengan "hora", "horario", "inicio" en su nombre
+ */
+export function tieneHorario(row: any, headers: string[]): boolean {
+    // Buscar columna de horario
+    const columnaHorario = headers.find(h => {
+        const hLower = h.toLowerCase().trim()
+        return hLower.includes('hora') || 
+               hLower.includes('horario') || 
+               hLower.includes('inicio') ||
+               hLower === 'hora' ||
+               hLower === 'horario'
+    })
+    
+    if (!columnaHorario) {
+        // Si no hay columna de horario, asumir que tiene horario (no es problema)
+        return true
+    }
+    
+    const valor = row[columnaHorario]
+    
+    // Si está vacío, null, undefined o string vacío, no tiene horario
+    if (valor === null || valor === undefined || valor === '') {
+        return false
+    }
+    
+    // Si es string, verificar que no esté vacío después de trim
+    if (typeof valor === 'string' && valor.trim() === '') {
+        return false
+    }
+    
+    return true
+}
+
+/**
+ * Crea una firma única para una fila basada en todos sus valores
+ */
+function crearFirmaFila(row: any, headers: string[]): string {
+    const valores = headers.map(header => {
+        const valor = row[header]
+        // Normalizar valores: convertir null/undefined a string vacío, y normalizar strings
+        if (valor === null || valor === undefined) {
+            return ''
+        }
+        return String(valor).trim().toLowerCase()
+    })
+    return valores.join('|')
+}
+
+/**
+ * Detecta filas duplicadas en un array de filas
+ * Retorna un Map donde la clave es la firma de la fila y el valor es un array de índices de filas duplicadas
+ */
+export function detectarDuplicados(rows: any[], headers: string[]): Map<string, number[]> {
+    const duplicados = new Map<string, number[]>()
+    const firmas = new Map<string, number[]>()
+    
+    // Crear mapa de firmas a índices
+    rows.forEach((row, index) => {
+        const firma = crearFirmaFila(row, headers)
+        if (!firmas.has(firma)) {
+            firmas.set(firma, [])
+        }
+        firmas.get(firma)!.push(index)
+    })
+    
+    // Encontrar firmas que aparecen más de una vez
+    firmas.forEach((indices, firma) => {
+        if (indices.length > 1) {
+            duplicados.set(firma, indices)
+        }
+    })
+    
+    return duplicados
+}
+
+/**
+ * Obtiene todos los índices de filas que son duplicadas
+ */
+export function obtenerIndicesDuplicados(rows: any[], headers: string[]): Set<number> {
+    const indices = new Set<number>()
+    const duplicados = detectarDuplicados(rows, headers)
+    
+    duplicados.forEach((indicesFila) => {
+        indicesFila.forEach(index => indices.add(index))
+    })
+    
+    return indices
+}

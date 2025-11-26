@@ -2,6 +2,6 @@
 2:I[81625,["/_next/static/chunks/92639014c83c983f.js","/_next/static/chunks/786c4b10f926bb8a.js"],"ViewportBoundary"]
 4:I[81625,["/_next/static/chunks/92639014c83c983f.js","/_next/static/chunks/786c4b10f926bb8a.js"],"MetadataBoundary"]
 5:"$Sreact.suspense"
-0:{"buildId":"e74NvM94y828Vyq0HF8Op","rsc":["$","$1","h",{"children":[null,["$","$L2",null,{"children":"$@3"}],["$","div",null,{"hidden":true,"children":["$","$L4",null,{"children":["$","$5",null,{"name":"Next.Metadata","children":"$@6"}]}]}],["$","meta",null,{"name":"next-size-adjust","content":""}]]}],"loading":null,"isPartial":false}
+0:{"buildId":"Q0AyagBSgiNdlyMOTRqK2","rsc":["$","$1","h",{"children":[null,["$","$L2",null,{"children":"$@3"}],["$","div",null,{"hidden":true,"children":["$","$L4",null,{"children":["$","$5",null,{"name":"Next.Metadata","children":"$@6"}]}]}],["$","meta",null,{"name":"next-size-adjust","content":""}]]}],"loading":null,"isPartial":false}
 3:[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}]]
 6:[["$","title","0",{"children":"Sistema de Liquidaciones de Guardias - Grow Labs"}],["$","meta","1",{"name":"description","content":"Sistema de procesamiento y gestión de liquidaciones de guardias médicas"}]]

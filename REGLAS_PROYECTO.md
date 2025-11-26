@@ -3,8 +3,10 @@
 ## 📋 Índice
 1. [Reglas de Obra Social](#reglas-de-obra-social)
 2. [Procesamiento de PARTICULARES](#procesamiento-de-particulares)
-3. [Conteo Mensual por Obra Social](#conteo-mensual-por-obra-social)
-4. [Flujos de Trabajo](#flujos-de-trabajo)
+3. [Regla de Sin Horario de Inicio](#regla-de-sin-horario-de-inicio)
+4. [Regla de Duplicados](#regla-de-duplicados)
+5. [Conteo Mensual por Obra Social](#conteo-mensual-por-obra-social)
+6. [Flujos de Trabajo](#flujos-de-trabajo)
 
 ---
 
@@ -46,6 +48,65 @@ Un registro se considera **PARTICULAR** cuando:
 - La columna "Cliente" es **editable** en la tabla
 - Sugerencia rápida: botón o autocompletado para "042 - PARTICULARES"
 - Validación: asegurar que el valor ingresado sea válido
+
+---
+
+## ⏰ Regla de Sin Horario de Inicio
+
+### Detección de Pacientes No Atendidos
+Un registro se considera **"Sin horario de inicio"** cuando:
+- La columna de **hora/horario/inicio** está **vacía** (null o string vacío)
+- Esto significa que el **paciente no se atendió**
+
+### Señalización Visual
+- El sistema debe **señalar de forma muy visible** cuando un registro no tiene horario
+- Indicadores visuales:
+  - Fondo rojo/naranja en la fila
+  - Ícono de alerta (⚠️)
+  - Mensaje: **"⚠️ Sin horario - Paciente no atendido"**
+  - Borde destacado en rojo
+
+### Eliminación Rápida
+- **Melisa** debe poder **eliminar estas filas de forma rápida**
+- Cada fila sin horario debe tener un **botón de eliminar visible**
+- El botón debe estar fácilmente accesible
+- Confirmación antes de eliminar (opcional, según preferencia)
+
+### Proceso de Eliminación
+1. Melisa identifica filas sin horario (señaladas visualmente)
+2. Hace clic en el botón de eliminar de la fila
+3. El sistema elimina la fila inmediatamente
+4. La tabla se actualiza automáticamente
+
+---
+
+## 🔄 Regla de Duplicados
+
+### Detección de Duplicados
+Dos o más filas se consideran **duplicadas** cuando:
+- **TODOS** los valores de **TODAS** las columnas son **exactamente iguales**
+- Misma fecha, misma hora, mismo paciente, mismo todo
+- La comparación es **case-sensitive** y **exacta**
+
+### Señalización Visual
+- El sistema debe **señalar de forma muy visible** cuando hay duplicados
+- Indicadores visuales:
+  - Fondo púrpura/naranja en las filas duplicadas
+  - Ícono de alerta (⚠️)
+  - Mensaje: **"⚠️ Duplicado detectado"**
+  - Borde destacado
+  - Todas las filas del grupo duplicado deben estar señaladas
+
+### Identificación de Grupos
+- Si hay 3 filas idénticas, las 3 deben estar señaladas
+- El sistema debe mostrar cuántos duplicados hay en total
+- Cada grupo de duplicados debe ser identificable visualmente
+
+### Proceso de Revisión
+1. Melisa identifica filas duplicadas (señaladas visualmente)
+2. Revisa si realmente son duplicados o son registros legítimos
+3. Si son duplicados, puede eliminarlos usando el botón de eliminar
+4. Si no son duplicados, puede editar las filas para diferenciarlas
 
 ---
 
@@ -115,6 +176,8 @@ Mes | Año | Especialidad | Obra Social | Cantidad de Consultas
 ### Funciones Clave
 - `detectarParticular(cliente: string | null): boolean` - Detecta si es particular
 - `esNombrePersona(valor: string): boolean` - Determina si un valor es nombre de persona
+- `tieneHorario(row: ExcelRow, headers: string[]): boolean` - Detecta si una fila tiene horario
+- `detectarDuplicados(rows: ExcelRow[], headers: string[]): Map<string, number[]>` - Detecta filas duplicadas
 - `contarPorObraSocial(mes: number, anio: number, especialidad: string)` - Cuenta consultas
 
 ### Componentes

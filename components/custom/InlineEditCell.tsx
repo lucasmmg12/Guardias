@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Check, X, Edit2 } from 'lucide-react'
@@ -28,9 +28,15 @@ export function InlineEditCell({
     const [isLoading, setIsLoading] = useState(false)
     const inputRef = useRef<HTMLInputElement>(null)
     
-    // Obtener sugerencias si es la columna "Cliente"
-    const esColumnaCliente = columnName?.toLowerCase().trim() === 'cliente'
-    const sugerencias = esColumnaCliente ? obtenerSugerenciasObraSocial(String(value)) : []
+    // Memoizar si es columna Cliente
+    const esColumnaCliente = useMemo(() => {
+      return columnName?.toLowerCase().trim() === 'cliente'
+    }, [columnName])
+    
+    // Memoizar sugerencias
+    const sugerencias = useMemo(() => {
+      return esColumnaCliente ? obtenerSugerenciasObraSocial(String(value)) : []
+    }, [esColumnaCliente, value])
 
     useEffect(() => {
         setCurrentValue(value ?? '')
@@ -42,7 +48,7 @@ export function InlineEditCell({
         }
     }, [isEditing])
 
-    const handleSave = async () => {
+    const handleSave = useCallback(async () => {
         if (currentValue === value) {
             setIsEditing(false)
             return
@@ -58,20 +64,20 @@ export function InlineEditCell({
         } finally {
             setIsLoading(false)
         }
-    }
+    }, [currentValue, value, onSave])
 
-    const handleCancel = () => {
+    const handleCancel = useCallback(() => {
         setCurrentValue(value ?? '')
         setIsEditing(false)
-    }
+    }, [value])
 
-    const handleKeyDown = (e: React.KeyboardEvent) => {
+    const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
         if (e.key === 'Enter') {
             handleSave()
         } else if (e.key === 'Escape') {
             handleCancel()
         }
-    }
+    }, [handleSave, handleCancel])
 
     if (!isEditable) {
         return <div className={cn("px-2 py-1", className)}>{value}</div>
@@ -111,26 +117,44 @@ export function InlineEditCell({
                     </Button>
                 </div>
                 {/* Mostrar sugerencias para columna Cliente */}
-                {esColumnaCliente && sugerencias.length > 0 && (
+                        {esColumnaCliente && sugerencias.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1">
-                        {sugerencias.map((sugerencia, idx) => (
-                            <button
-                                key={idx}
-                                type="button"
-                                onClick={() => {
-                                    setCurrentValue(sugerencia)
-                                    inputRef.current?.focus()
-                                }}
-                                className="text-[10px] px-2 py-0.5 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded hover:bg-blue-500/30 transition-colors"
-                            >
-                                {sugerencia}
-                            </button>
-                        ))}
+                        {sugerencias.map((sugerencia, idx) => {
+                            const handleSugerenciaClick = () => {
+                                setCurrentValue(sugerencia)
+                                inputRef.current?.focus()
+                            }
+                            return (
+                                <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={handleSugerenciaClick}
+                                    className="text-[10px] px-2 py-0.5 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded hover:bg-blue-500/30 transition-colors"
+                                >
+                                    {sugerencia}
+                                </button>
+                            )
+                        })}
                     </div>
                 )}
             </div>
         )
     }
+
+    const handleEditClick = useCallback(() => {
+        setIsEditing(true)
+    }, [])
+
+    // Memoizar el valor formateado
+    const displayValue = useMemo(() => {
+        if (value === null || value === '') {
+            return <span className="text-gray-500 italic text-xs">Vacío</span>
+        }
+        if (type === 'number' && typeof value === 'number') {
+            return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(value)
+        }
+        return value
+    }, [value, type])
 
     return (
         <div
@@ -138,16 +162,10 @@ export function InlineEditCell({
                 "group flex items-center justify-between px-2 py-1 rounded hover:bg-white/5 cursor-pointer transition-colors min-h-[32px]",
                 className
             )}
-            onClick={() => setIsEditing(true)}
+            onClick={handleEditClick}
         >
             <span className="truncate">
-                {value === null || value === '' ? (
-                    <span className="text-gray-500 italic text-xs">Vacío</span>
-                ) : (
-                    type === 'number' && typeof value === 'number'
-                        ? new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(value)
-                        : value
-                )}
+                {displayValue}
             </span>
             <Edit2 className="h-3 w-3 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity" />
         </div>

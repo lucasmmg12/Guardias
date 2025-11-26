@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { Medico } from '@/lib/types'
 import { importMedicosFromExcel, exportMedicosToExcel } from '@/lib/medicos-excel'
@@ -8,6 +8,7 @@ import { UploadExcel } from '@/components/custom/UploadExcel'
 import { MedicoFormModal } from '@/components/custom/MedicoFormModal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
 import { 
   Plus, 
   Download, 
@@ -178,29 +179,40 @@ export default function MedicosPage() {
     window.URL.revokeObjectURL(url)
   }
 
-  const filteredMedicos = medicos.filter(medico => {
-    // Filtro de residentes (aplicado primero para mejor rendimiento)
-    if (filterResidente && !medico.es_residente) {
-      return false
-    }
-    
-    // Filtro de búsqueda
-    if (searchTerm) {
-      const search = searchTerm.toLowerCase()
-      const matchesSearch = (
-        medico.nombre.toLowerCase().includes(search) ||
-        medico.matricula?.toLowerCase().includes(search) ||
-        medico.matricula_provincial?.toLowerCase().includes(search) ||
-        medico.cuit?.toLowerCase().includes(search) ||
-        medico.especialidad.toLowerCase().includes(search)
-      )
-      if (!matchesSearch) return false
-    }
-    
-    return true
-  })
+  // Memoizar el filtrado de médicos para evitar recálculos innecesarios
+  const filteredMedicos = useMemo(() => {
+    return medicos.filter(medico => {
+      // Filtro de residentes (aplicado primero para mejor rendimiento)
+      if (filterResidente && !medico.es_residente) {
+        return false
+      }
+      
+      // Filtro de búsqueda
+      if (searchTerm) {
+        const search = searchTerm.toLowerCase()
+        const matchesSearch = (
+          medico.nombre.toLowerCase().includes(search) ||
+          medico.matricula?.toLowerCase().includes(search) ||
+          medico.matricula_provincial?.toLowerCase().includes(search) ||
+          medico.cuit?.toLowerCase().includes(search) ||
+          medico.especialidad.toLowerCase().includes(search)
+        )
+        if (!matchesSearch) return false
+      }
+      
+      return true
+    })
+  }, [medicos, filterResidente, searchTerm])
 
-  const especialidades = Array.from(new Set(medicos.map(m => m.especialidad))).sort()
+  // Memoizar especialidades para evitar recálculos
+  const especialidades = useMemo(() => {
+    return Array.from(new Set(medicos.map(m => m.especialidad))).sort()
+  }, [medicos])
+
+  // Memoizar el handler del toggle de residentes
+  const handleToggleResidente = useCallback(() => {
+    setFilterResidente(prev => !prev)
+  }, [])
 
   return (
     <div className="min-h-screen relative p-8 pb-20 overflow-hidden">
@@ -285,12 +297,13 @@ export default function MedicosPage() {
               
               {/* Botón toggle para filtrar residentes */}
               <button
-                onClick={() => setFilterResidente(!filterResidente)}
-                className={`px-4 py-2 rounded-lg border text-sm h-10 whitespace-nowrap transition-all duration-200 flex items-center gap-2 ${
+                onClick={handleToggleResidente}
+                className={cn(
+                  "px-4 py-2 rounded-lg border text-sm h-10 whitespace-nowrap transition-all duration-200 flex items-center gap-2",
                   filterResidente
-                    ? 'bg-blue-600/30 border-blue-500 text-blue-400 hover:bg-blue-600/40'
-                    : 'bg-black/30 border-gray-600 text-gray-300 hover:bg-black/40 hover:border-gray-500'
-                }`}
+                    ? "bg-blue-600/30 border-blue-500 text-blue-400 hover:bg-blue-600/40"
+                    : "bg-black/30 border-gray-600 text-gray-300 hover:bg-black/40 hover:border-gray-500"
+                )}
                 title={filterResidente ? 'Mostrar todos los médicos' : 'Mostrar solo residentes'}
               >
                 <Users className="h-4 w-4" />
