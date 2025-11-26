@@ -12,9 +12,13 @@ BEGIN;
 -- Agregar nuevos campos a la tabla medicos
 ALTER TABLE medicos
   ADD COLUMN IF NOT EXISTS cuit VARCHAR(20),
-  ADD COLUMN IF NOT EXISTS grupo_persona VARCHAR(50),
-  ADD COLUMN IF NOT EXISTS perfil VARCHAR(50),
+  ADD COLUMN IF NOT EXISTS grupo_persona VARCHAR(100),
+  ADD COLUMN IF NOT EXISTS perfil VARCHAR(100),
   ADD COLUMN IF NOT EXISTS matricula_provincial VARCHAR(50);
+
+-- Aumentar límites de campos existentes si es necesario
+ALTER TABLE medicos
+  ALTER COLUMN especialidad TYPE VARCHAR(200);
 
 -- Crear índices para los nuevos campos
 CREATE INDEX IF NOT EXISTS idx_medicos_cuit ON medicos(cuit);

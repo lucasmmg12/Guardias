@@ -91,20 +91,26 @@ export async function importMedicosFromExcel(file: File): Promise<{
           continue
         }
 
-        // Crear objeto médico
-        const matriculaProvincial = row['Mat. provinc'] ? String(row['Mat. provinc']).trim() : null
-        const cuit = row.CUIT ? String(row.CUIT).trim() : null
-        const matricula = matriculaProvincial || cuit || `TEMP-${Date.now()}-${i}`
+        // Crear objeto médico con validación de longitud
+        const matriculaProvincial = row['Mat. provinc'] ? String(row['Mat. provinc']).trim().substring(0, 50) : null
+        const cuit = row.CUIT ? String(row.CUIT).trim().substring(0, 20) : null
+        const matricula = (matriculaProvincial || cuit || `TEMP-${Date.now()}-${i}`).substring(0, 50)
+        
+        // Truncar campos según límites de la BD
+        const nombre = String(row.Nombre).trim().substring(0, 255)
+        const especialidad = String(row.Especialidad).trim().substring(0, 200)
+        const grupoPersona = row['Grupo persona'] ? String(row['Grupo persona']).trim().substring(0, 100) : null
+        const perfil = row.Perfil ? String(row.Perfil).trim().substring(0, 100) : null
 
         const medico: MedicoInsert = {
-          nombre: String(row.Nombre).trim(),
+          nombre: nombre,
           matricula: matricula,
           matricula_provincial: matriculaProvincial,
           cuit: cuit,
-          grupo_persona: row['Grupo persona'] ? String(row['Grupo persona']).trim() : null,
-          perfil: row.Perfil ? String(row.Perfil).trim() : null,
+          grupo_persona: grupoPersona,
+          perfil: perfil,
           es_residente: esResidente(row.Perfil),
-          especialidad: String(row.Especialidad).trim(),
+          especialidad: especialidad,
           activo: parseActivo(row.Activo)
         }
 
