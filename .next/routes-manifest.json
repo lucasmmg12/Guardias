@@ -40,6 +40,12 @@
       "namedRegex": "^/_not\\-found(?:/)?$"
     },
     {
+      "page": "/admin/medicos",
+      "regex": "^/admin/medicos(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/medicos(?:/)?$"
+    },
+    {
       "page": "/ginecologia",
       "regex": "^/ginecologia(?:/)?$",
       "routeKeys": {},

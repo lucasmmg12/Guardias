@@ -90,6 +90,7 @@ export default function MedicosPage() {
     try {
       const { error } = await supabase
         .from('medicos')
+        // @ts-ignore - Los tipos de Supabase no reconocen los nuevos campos aún
         .update({ activo: !medico.activo })
         .eq('id', medico.id)
 
@@ -111,10 +112,10 @@ export default function MedicosPage() {
       // Verificar duplicados por matrícula o CUIT
       const { data: existingMedicos } = await supabase
         .from('medicos')
-        .select('matricula, cuit')
+        .select('matricula, cuit') as any
 
-      const existingMatriculas = new Set(existingMedicos?.map(m => m.matricula) || [])
-      const existingCuits = new Set(existingMedicos?.map(m => m.cuit).filter(Boolean) || [])
+      const existingMatriculas = new Set((existingMedicos as any)?.map((m: any) => m.matricula) || [])
+      const existingCuits = new Set((existingMedicos as any)?.map((m: any) => m.cuit).filter(Boolean) || [])
 
       const medicosToInsert: Medico[] = []
       let duplicados = 0
@@ -137,7 +138,7 @@ export default function MedicosPage() {
       if (medicosToInsert.length > 0) {
         const { error } = await supabase
           .from('medicos')
-          .insert(medicosToInsert)
+          .insert(medicosToInsert as any)
 
         if (error) throw error
       }

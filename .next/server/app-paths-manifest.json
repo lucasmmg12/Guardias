@@ -1,6 +1,7 @@
 {
   "/_global-error/page": "app/_global-error/page.js",
   "/_not-found/page": "app/_not-found/page.js",
+  "/admin/medicos/page": "app/admin/medicos/page.js",
   "/ginecologia/page": "app/ginecologia/page.js",
   "/page": "app/page.js",
   "/pediatria/page": "app/pediatria/page.js"
