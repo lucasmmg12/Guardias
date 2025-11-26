@@ -197,3 +197,104 @@ export function obtenerIndicesDuplicados(rows: any[], headers: string[]): Set<nu
     
     return indices
 }
+
+/**
+ * Convierte una hora en formato string (HH:MM, HH:MM:SS, etc.) a minutos desde medianoche
+ * También maneja formatos como "07:30", "7:30", "07:30:00", etc.
+ */
+export function horaAMinutos(hora: string | null | undefined): number | null {
+    if (!hora || typeof hora !== 'string') return null
+    
+    const trimmed = hora.trim()
+    if (trimmed === '') return null
+    
+    // Extraer horas y minutos usando regex
+    const match = trimmed.match(/^(\d{1,2}):(\d{2})(?::\d{2})?/)
+    if (!match) return null
+    
+    const horas = parseInt(match[1], 10)
+    const minutos = parseInt(match[2], 10)
+    
+    if (isNaN(horas) || isNaN(minutos) || horas < 0 || horas > 23 || minutos < 0 || minutos > 59) {
+        return null
+    }
+    
+    return horas * 60 + minutos
+}
+
+/**
+ * Obtiene el día de la semana de una fecha (0 = Domingo, 1 = Lunes, ..., 6 = Sábado)
+ * Acepta formatos: "DD/MM/YYYY", "YYYY-MM-DD", Date object
+ */
+export function obtenerDiaSemana(fecha: string | Date | null | undefined): number | null {
+    if (!fecha) return null
+    
+    let date: Date
+    
+    if (fecha instanceof Date) {
+        date = fecha
+    } else if (typeof fecha === 'string') {
+        // Intentar parsear formato DD/MM/YYYY
+        const matchDDMMYYYY = fecha.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+        if (matchDDMMYYYY) {
+            const dia = parseInt(matchDDMMYYYY[1], 10)
+            const mes = parseInt(matchDDMMYYYY[2], 10) - 1 // Mes en JS es 0-indexed
+            const anio = parseInt(matchDDMMYYYY[3], 10)
+            date = new Date(anio, mes, dia)
+        } else {
+            // Intentar parsear como ISO o formato estándar
+            date = new Date(fecha)
+        }
+        
+        if (isNaN(date.getTime())) {
+            return null
+        }
+    } else {
+        return null
+    }
+    
+    return date.getDay() // 0 = Domingo, 1 = Lunes, ..., 6 = Sábado
+}
+
+/**
+ * Detecta si una fecha es de lunes a sábado (no domingo)
+ */
+export function esDiaLaboral(fecha: string | Date | null | undefined): boolean {
+    const diaSemana = obtenerDiaSemana(fecha)
+    if (diaSemana === null) return false
+    // 0 = Domingo, 1-6 = Lunes a Sábado
+    return diaSemana >= 1 && diaSemana <= 6
+}
+
+/**
+ * Detecta si una hora está dentro del horario formativo (07:00 a 15:00)
+ */
+export function esHorarioFormativo(hora: string | null | undefined): boolean {
+    const minutos = horaAMinutos(hora)
+    if (minutos === null) return false
+    
+    // 07:00 = 420 minutos, 15:00 = 900 minutos
+    // El horario formativo es de 07:00 a 15:00 (inclusive)
+    return minutos >= 420 && minutos < 900 // 15:00 no se incluye (es < 900, no <=)
+}
+
+/**
+ * Detecta si una consulta es de un residente en horario formativo
+ * Requiere: fecha, hora, y que el médico sea residente
+ */
+export function esResidenteHorarioFormativo(
+    fecha: string | Date | null | undefined,
+    hora: string | null | undefined,
+    esResidente: boolean
+): boolean {
+    // Solo aplica si es residente
+    if (!esResidente) return false
+    
+    // Debe ser día laboral (lunes a sábado)
+    if (!esDiaLaboral(fecha)) return false
+    
+    // Debe estar en horario formativo (07:00 a 15:00)
+    if (!esHorarioFormativo(hora)) return false
+    
+    return true
+}

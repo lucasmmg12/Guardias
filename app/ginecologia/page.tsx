@@ -1,7 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase/client'
+import { useState } from 'react'
 import { UploadExcel } from '@/components/custom/UploadExcel'
 import { ExcelDataTable } from '@/components/custom/ExcelDataTable'
 import { EstadisticasObraSocial } from '@/components/custom/EstadisticasObraSocial'
@@ -10,32 +9,9 @@ import { AlertCircle, CheckCircle2, Sparkles } from 'lucide-react'
 import Link from 'next/link'
 
 export default function GinecologiaPage() {
-    const [medicos, setMedicos] = useState<any[]>([])
-    const [loading, setLoading] = useState(true)
     const [isProcessing, setIsProcessing] = useState(false)
     const [excelData, setExcelData] = useState<ExcelData | null>(null)
     const [error, setError] = useState<string | null>(null)
-
-    useEffect(() => {
-        loadMedicos()
-    }, [])
-
-    async function loadMedicos() {
-        try {
-            const { data, error } = await supabase
-                .from('medicos')
-                .select('*')
-                .eq('especialidad', 'Ginecología')
-                .eq('activo', true)
-
-            if (error) throw error
-            setMedicos(data || [])
-        } catch (error) {
-            console.error('Error loading médicos:', error)
-        } finally {
-            setLoading(false)
-        }
-    }
 
     const handleUpload = async (file: File) => {
         setIsProcessing(true)
@@ -165,8 +141,9 @@ export default function GinecologiaPage() {
                             <h2 className="text-2xl font-bold text-blue-400 mb-6">
                                 📊 Datos del Excel
                             </h2>
-                            <ExcelDataTable 
-                                data={excelData} 
+                            <ExcelDataTable
+                                data={excelData}
+                                especialidad="Ginecología"
                                 onCellUpdate={handleCellUpdate}
                             />
                         </div>
@@ -195,74 +172,16 @@ export default function GinecologiaPage() {
                     )
                 })()}
 
-                <div className="grid md:grid-cols-3 gap-8">
-                    {/* Médicos Activos */}
-                    <div 
-                        className="md:col-span-2 p-6 rounded-xl"
-                        style={{
-                            background: 'rgba(255, 255, 255, 0.1)',
-                            backdropFilter: 'blur(20px)',
-                            border: '1px solid rgba(255, 255, 255, 0.2)',
-                            boxShadow: '0 8px 32px 0 rgba(59, 130, 246, 0.2)',
-                        }}
-                    >
-                        <h3 className="text-xl font-semibold text-gray-200 mb-4 flex items-center gap-2">
-                            👨‍⚕️ Médicos Activos
-                            <span className="text-sm font-normal text-gray-500 bg-gray-800 px-2 py-0.5 rounded-full">
-                                {medicos.length}
-                            </span>
-                        </h3>
-
-                        {loading ? (
-                            <div className="text-center py-8 text-gray-400">
-                                Cargando médicos...
-                            </div>
-                        ) : medicos.length === 0 ? (
-                            <div className="text-center py-8 text-gray-400">
-                                No hay médicos registrados en Ginecología
-                            </div>
-                        ) : (
-                            <div className="grid sm:grid-cols-2 gap-3">
-                                {medicos.map((medico) => (
-                                    <div
-                                        key={medico.id}
-                                        className="bg-white/5 p-3 rounded-lg hover:bg-white/10 transition-colors border border-white/5"
-                                    >
-                                        <div className="flex items-start justify-between">
-                                            <div>
-                                                <div className="font-medium text-gray-200 text-sm">
-                                                    {medico.nombre}
-                                                </div>
-                                                <div className="text-xs text-gray-500 font-mono mt-1">
-                                                    MN: {medico.matricula}
-                                                </div>
-                                            </div>
-                                            {medico.es_residente ? (
-                                                <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-[10px] uppercase tracking-wider font-semibold rounded">
-                                                    Residente
-                                                </span>
-                                            ) : (
-                                                <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-[10px] uppercase tracking-wider font-semibold rounded">
-                                                    Planta
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Reglas de Negocio */}
-                    <div 
-                        className="p-6 rounded-xl h-fit"
-                        style={{
-                            background: 'rgba(255, 255, 255, 0.1)',
-                            backdropFilter: 'blur(20px)',
-                            border: '1px solid rgba(255, 255, 255, 0.2)',
-                            boxShadow: '0 8px 32px 0 rgba(59, 130, 246, 0.2)',
-                        }}
-                    >
+                {/* Reglas de Negocio */}
+                <div 
+                    className="p-6 rounded-xl"
+                    style={{
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        backdropFilter: 'blur(20px)',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        boxShadow: '0 8px 32px 0 rgba(59, 130, 246, 0.2)',
+                    }}
+                >
                         <h3 className="text-xl font-semibold text-gray-200 mb-4">
                             📋 Reglas Vigentes
                         </h3>
@@ -288,7 +207,6 @@ export default function GinecologiaPage() {
                             </div>
                         </div>
                     </div>
-                </div>
             </div>
         </div>
     )

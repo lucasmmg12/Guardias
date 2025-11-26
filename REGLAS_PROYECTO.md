@@ -110,6 +110,41 @@ Dos o más filas se consideran **duplicadas** cuando:
 
 ---
 
+## 👨‍⚕️ Regla de Residentes en Horario Formativo
+
+### Detección de Consultas No Pagables
+Una consulta se considera **"Residente en Horario Formativo"** cuando:
+- El médico es **RESIDENTE** (verificado en la base de datos)
+- La consulta es de **lunes a sábado** (no domingo)
+- El horario de la consulta está entre **07:00 y 15:00** (inclusive 07:00, excluyendo 15:00)
+- **NO se debe pagar** esta consulta según las reglas del sistema
+
+### Identificación del Médico
+- El sistema busca al médico en la columna **"Responsable"** del Excel
+- Compara el nombre con la base de datos de médicos activos de la especialidad correspondiente
+- Verifica si el médico tiene `es_residente = true` en la base de datos
+
+### Señalización Visual
+- El sistema debe **señalar de forma muy visible** cuando una consulta es de residente en horario formativo
+- Indicadores visuales:
+  - Fondo azul en la fila
+  - Ícono de usuario con X (UserX)
+  - Mensaje: **"ℹ️ Consulta de residente en horario formativo - NO se debe pagar"**
+  - Borde destacado en azul
+
+### Información Mostrada
+- Alerta superior con contador de consultas detectadas
+- Mensaje explicativo: "Estas consultas son de **residentes** realizadas entre **lunes a sábado de 07:00 a 15:00**. **NO se deben pagar** según las reglas del sistema."
+- Resumen en el pie de la tabla con el contador
+
+### Optimización
+- Los médicos se cargan **una sola vez** al montar el componente
+- Se crea un **mapa optimizado** para búsqueda rápida por nombre
+- Las detecciones se realizan con `useMemo` para evitar recálculos innecesarios
+- La búsqueda de médicos es **case-insensitive** y maneja variaciones de nombres
+
+---
+
 ## 📊 Conteo Mensual por Obra Social
 
 ### Requisitos
@@ -178,6 +213,11 @@ Mes | Año | Especialidad | Obra Social | Cantidad de Consultas
 - `esNombrePersona(valor: string): boolean` - Determina si un valor es nombre de persona
 - `tieneHorario(row: ExcelRow, headers: string[]): boolean` - Detecta si una fila tiene horario
 - `detectarDuplicados(rows: ExcelRow[], headers: string[]): Map<string, number[]>` - Detecta filas duplicadas
+- `esResidenteHorarioFormativo(fecha, hora, esResidente): boolean` - Detecta si es residente en horario formativo
+- `esDiaLaboral(fecha): boolean` - Detecta si es día laboral (lunes a sábado)
+- `esHorarioFormativo(hora): boolean` - Detecta si está en horario formativo (07:00-15:00)
+- `horaAMinutos(hora): number | null` - Convierte hora a minutos desde medianoche
+- `obtenerDiaSemana(fecha): number | null` - Obtiene el día de la semana (0=Domingo, 1=Lunes, etc.)
 - `contarPorObraSocial(mes: number, anio: number, especialidad: string)` - Cuenta consultas
 
 ### Componentes
