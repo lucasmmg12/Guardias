@@ -36,19 +36,41 @@ function esResidente(perfil: string | null | undefined): boolean {
 /**
  * Busca un valor en un objeto row por diferentes variaciones del nombre de columna
  */
-function getValueByVariations(row: any, variations: string[]): any {
+function getValueByVariations(row: any, variations: string[], debugHeaders?: string[]): any {
+  // Primero intentar coincidencia exacta
   for (const variation of variations) {
-    // Buscar coincidencia exacta
-    if (row[variation] !== undefined && row[variation] !== null) {
+    if (row[variation] !== undefined && row[variation] !== null && String(row[variation]).trim() !== '') {
       return row[variation]
     }
-    // Buscar coincidencia case-insensitive
-    const keys = Object.keys(row)
-    const foundKey = keys.find(key => key.toLowerCase().trim() === variation.toLowerCase().trim())
-    if (foundKey && row[foundKey] !== undefined && row[foundKey] !== null) {
+  }
+  
+  // Buscar coincidencia case-insensitive y con normalización de espacios
+  const keys = Object.keys(row)
+  for (const variation of variations) {
+    const normalizedVariation = variation.toLowerCase().trim().replace(/\s+/g, ' ')
+    const foundKey = keys.find(key => {
+      const normalizedKey = key.toLowerCase().trim().replace(/\s+/g, ' ')
+      return normalizedKey === normalizedVariation
+    })
+    if (foundKey && row[foundKey] !== undefined && row[foundKey] !== null && String(row[foundKey]).trim() !== '') {
       return row[foundKey]
     }
   }
+  
+  // Buscar coincidencia parcial (contiene la palabra clave)
+  for (const variation of variations) {
+    const keywords = variation.toLowerCase().split(/[\s.]+/).filter(k => k.length > 2)
+    for (const keyword of keywords) {
+      const foundKey = keys.find(key => {
+        const normalizedKey = key.toLowerCase().trim()
+        return normalizedKey.includes(keyword) || keyword.includes(normalizedKey)
+      })
+      if (foundKey && row[foundKey] !== undefined && row[foundKey] !== null && String(row[foundKey]).trim() !== '') {
+        return row[foundKey]
+      }
+    }
+  }
+  
   return null
 }
 
@@ -88,6 +110,26 @@ export async function importMedicosFromExcel(file: File): Promise<{
       throw new Error('El archivo Excel no contiene datos')
     }
 
+    // Obtener los headers reales del Excel para debugging
+    const realHeaders = jsonData.length > 0 ? Object.keys(jsonData[0]) : []
+    
+    // Si no hay datos pero hay headers, intentar leer la primera fila manualmente
+    if (realHeaders.length === 0) {
+      const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1')
+      for (let col = 0; col <= Math.min(range.e.c, 20); col++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col })
+        const cell = worksheet[cellAddress]
+        if (cell && cell.v) {
+          realHeaders.push(String(cell.v))
+        }
+      }
+    }
+
+    // Log de headers encontrados para debugging (solo en desarrollo)
+    if (typeof console !== 'undefined' && console.log) {
+      console.log('Headers detectados en Excel:', realHeaders)
+    }
+
     // Procesar cada fila
     for (let i = 0; i < jsonData.length; i++) {
       const row = jsonData[i]
@@ -95,7 +137,7 @@ export async function importMedicosFromExcel(file: File): Promise<{
 
       try {
         // Obtener valores con mapeo flexible de columnas
-        const nombre = getValueByVariations(row, ['Nombre', 'nombre', 'NOMBRE'])
+        const nombre = getValueByVariations(row, ['Nombre', 'nombre', 'NOMBRE'], realHeaders)
         const matriculaProvincialRaw = getValueByVariations(row, [
           'Mat. provinc', 
           'Mat provinc', 
@@ -104,19 +146,46 @@ export async function importMedicosFromExcel(file: File): Promise<{
           'Matrícula Provincial',
           'Matricula',
           'Matrícula',
-          'Mat. Provinc'
-        ])
-        const cuitRaw = getValueByVariations(row, ['CUIT', 'cuit', 'Cuit'])
-        const especialidadRaw = getValueByVariations(row, ['Especialidad', 'especialidad', 'ESPECIALIDAD'])
+          'Mat. Provinc',
+          'Mat Provinc',
+          'Matrícula Prov',
+          'Matricula Prov',
+          'Mat Prov',
+          'Mat. Prov',
+          'Provincial',
+          'Prov'
+        ], realHeaders)
+        const cuitRaw = getValueByVariations(row, ['CUIT', 'cuit', 'Cuit'], realHeaders)
+        const especialidadRaw = getValueByVariations(row, ['Especialidad', 'especialidad', 'ESPECIALIDAD'], realHeaders)
         const grupoPersonaRaw = getValueByVariations(row, [
           'Grupo persona',
           'Grupo Persona',
           'Grupo de Persona',
           'Grupo',
-          'grupo persona'
-        ])
-        const perfilRaw = getValueByVariations(row, ['Perfil', 'perfil', 'PERFIL'])
-        const activoRaw = getValueByVariations(row, ['Activo', 'activo', 'ACTIVO', 'Estado', 'estado'])
+          'grupo persona',
+          'GrupoPersona'
+        ], realHeaders)
+        const perfilRaw = getValueByVariations(row, ['Perfil', 'perfil', 'PERFIL'], realHeaders)
+        const activoRaw = getValueByVariations(row, ['Activo', 'activo', 'ACTIVO', 'Estado', 'estado'], realHeaders)
+
+        // Debug: Si no encontramos matrícula provincial en la primera fila, log detallado
+        if (!matriculaProvincialRaw && filaNum === 2) {
+          const possibleMatHeaders = realHeaders.filter(h => {
+            const hLower = h.toLowerCase()
+            return hLower.includes('mat') || 
+                   hLower.includes('prov') ||
+                   hLower.includes('matricula') ||
+                   hLower.includes('matrícula')
+          })
+          if (typeof console !== 'undefined' && console.log) {
+            console.log('Headers encontrados en Excel:', realHeaders)
+            console.log('Headers que podrían ser matrícula:', possibleMatHeaders)
+            console.log('Valores en la primera fila:', Object.entries(row).filter(([k, v]) => 
+              k.toLowerCase().includes('mat') || 
+              k.toLowerCase().includes('prov')
+            ))
+          }
+        }
 
         // Validar campos requeridos
         if (!nombre || String(nombre).trim() === '') {
@@ -125,8 +194,17 @@ export async function importMedicosFromExcel(file: File): Promise<{
         }
 
         if (!matriculaProvincialRaw && !cuitRaw) {
-          resultado.errores.push(`Fila ${filaNum}: Debe tener al menos "Mat. provinc" o "CUIT"`)
+          // Si es la primera fila con error, incluir información de headers disponibles
+          const headerInfo = filaNum === 2 
+            ? ` (Headers encontrados: ${realHeaders.join(', ')})`
+            : ''
+          resultado.errores.push(`Fila ${filaNum}: Debe tener al menos "Mat. provinc" o "CUIT"${headerInfo}`)
           continue
+        }
+        
+        // Si no encontramos matrícula provincial pero sí CUIT, usar CUIT como matrícula
+        if (!matriculaProvincialRaw && cuitRaw) {
+          // Esto está bien, usaremos el CUIT como matrícula
         }
 
         if (!especialidadRaw || String(especialidadRaw).trim() === '') {

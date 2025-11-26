@@ -232,23 +232,25 @@ export default function MedicosPage() {
             boxShadow: '0 8px 32px 0 rgba(34, 197, 94, 0.2)',
           }}
         >
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+          <div className="flex flex-col lg:flex-row gap-4 items-stretch lg:items-center justify-between">
             {/* Búsqueda y filtros */}
-            <div className="flex flex-1 gap-4 items-center w-full md:w-auto">
-              <div className="relative flex-1 md:flex-initial">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <div className="flex flex-col sm:flex-row flex-1 gap-3 items-stretch sm:items-center">
+              <div className="relative flex-1">
+                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 flex items-center">
+                  <Search className="h-4 w-4 text-gray-400" />
+                </div>
                 <Input
                   type="text"
-                  placeholder="Buscar por nombre, matrícula, CUIT..."
+                  placeholder="Todas las especialidades"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-black/30 border-gray-600 text-white placeholder-gray-400"
+                  className="pl-10 w-full bg-black/30 border-gray-600 text-white placeholder-gray-400 h-10"
                 />
               </div>
               <select
                 value={filterEspecialidad}
                 onChange={(e) => setFilterEspecialidad(e.target.value)}
-                className="px-4 py-2 rounded-lg bg-black/30 border border-gray-600 text-white text-sm"
+                className="px-4 py-2 rounded-lg bg-black/30 border border-gray-600 text-white text-sm h-10 min-w-[180px]"
               >
                 <option value="all">Todas las especialidades</option>
                 {especialidades.map(esp => (
@@ -258,7 +260,7 @@ export default function MedicosPage() {
               <select
                 value={filterActivo}
                 onChange={(e) => setFilterActivo(e.target.value)}
-                className="px-4 py-2 rounded-lg bg-black/30 border border-gray-600 text-white text-sm"
+                className="px-4 py-2 rounded-lg bg-black/30 border border-gray-600 text-white text-sm h-10 min-w-[120px]"
               >
                 <option value="all">Todos</option>
                 <option value="activo">Activos</option>
@@ -267,10 +269,10 @@ export default function MedicosPage() {
             </div>
 
             {/* Botones de acción */}
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3 shrink-0">
               <Button
                 onClick={() => setShowFormModal(true)}
-                className="bg-green-600 hover:bg-green-500 text-white"
+                className="bg-green-600 hover:bg-green-500 text-white h-10 whitespace-nowrap"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Agregar Médico
@@ -278,7 +280,7 @@ export default function MedicosPage() {
               <Button
                 onClick={() => setShowImportModal(true)}
                 variant="outline"
-                className="border-green-500 text-green-400 hover:bg-green-500/20"
+                className="border-green-500 text-green-400 hover:bg-green-500/20 h-10 whitespace-nowrap"
               >
                 <Upload className="h-4 w-4 mr-2" />
                 Importar Excel
@@ -286,7 +288,7 @@ export default function MedicosPage() {
               <Button
                 onClick={handleExport}
                 variant="outline"
-                className="border-green-500 text-green-400 hover:bg-green-500/20"
+                className="border-green-500 text-green-400 hover:bg-green-500/20 h-10 whitespace-nowrap"
                 disabled={medicos.length === 0}
               >
                 <Download className="h-4 w-4 mr-2" />
