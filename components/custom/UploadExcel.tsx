@@ -63,12 +63,20 @@ export function UploadExcel({ onUpload, isProcessing = false }: UploadExcelProps
 
     const handleProcess = async () => {
         if (!file) return
-        try {
-            await onUpload(file)
-            // No limpiamos el archivo aquí, dejamos que el padre decida qué hacer
-        } catch (err) {
-            setError('Error al procesar el archivo')
-        }
+        
+        // Limpiar errores previos
+        setError(null)
+        
+        // Diferir el procesamiento pesado para no bloquear la UI
+        // Esto permite que React actualice el estado "procesando" primero
+        setTimeout(async () => {
+            try {
+                await onUpload(file)
+                // No limpiamos el archivo aquí, dejamos que el padre decida qué hacer
+            } catch (err) {
+                setError('Error al procesar el archivo')
+            }
+        }, 0)
     }
 
     const clearFile = () => {

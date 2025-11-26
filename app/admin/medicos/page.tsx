@@ -103,10 +103,12 @@ export default function MedicosPage() {
   }
 
   const handleImport = async (file: File) => {
+    // Actualizar estado inmediatamente para feedback visual
     setIsImporting(true)
     setImportResult(null)
 
     try {
+      // Procesar Excel (esta es la operación más pesada)
       const resultado = await importMedicosFromExcel(file)
       
       // Verificar duplicados por matrícula o CUIT
@@ -120,6 +122,7 @@ export default function MedicosPage() {
       const medicosToInsert: Medico[] = []
       let duplicados = 0
 
+      // Procesar duplicados de forma eficiente
       for (const medico of resultado.medicos) {
         const isDuplicate = 
           existingMatriculas.has(medico.matricula) ||
@@ -134,7 +137,7 @@ export default function MedicosPage() {
         }
       }
 
-      // Insertar médicos nuevos
+      // Insertar médicos nuevos en batch
       if (medicosToInsert.length > 0) {
         const { error } = await supabase
           .from('medicos')
@@ -150,6 +153,7 @@ export default function MedicosPage() {
         errores: resultado.errores
       })
 
+      // Recargar médicos después de la inserción
       loadMedicos()
     } catch (error: any) {
       setImportResult({

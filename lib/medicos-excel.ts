@@ -159,9 +159,10 @@ export async function importMedicosFromExcel(file: File): Promise<{
     }
 
     // Log de headers encontrados para debugging (solo en desarrollo)
-    if (typeof console !== 'undefined' && console.log) {
-      console.log('Headers detectados en Excel:', realHeaders)
-    }
+    // Comentado en producción para mejorar rendimiento
+    // if (process.env.NODE_ENV === 'development' && typeof console !== 'undefined' && console.log) {
+    //   console.log('Headers detectados en Excel:', realHeaders)
+    // }
 
     // Procesar cada fila
     for (let i = 0; i < jsonData.length; i++) {
@@ -203,23 +204,24 @@ export async function importMedicosFromExcel(file: File): Promise<{
         const perfilRaw = getValueByVariations(row, ['Perfil', 'perfil', 'PERFIL'], realHeaders)
         const activoRaw = getValueByVariations(row, ['Activo', 'activo', 'ACTIVO', 'Estado', 'estado'], realHeaders)
 
-        // Debug: Log detallado para la primera fila
-        if (filaNum === 2) {
-          if (typeof console !== 'undefined' && console.log) {
-            console.log('=== DEBUG IMPORTACIÓN MÉDICOS ===')
-            console.log('Headers encontrados en Excel:', realHeaders)
-            console.log('Valor encontrado para matrícula provincial:', matriculaProvincialRaw)
-            const possibleMatHeaders = realHeaders.filter(h => {
-              const hNormalized = normalizeColumnName(h)
-              return hNormalized.includes('mat') || hNormalized.includes('prov')
-            })
-            console.log('Headers normalizados que podrían ser matrícula:', possibleMatHeaders)
-            if (possibleMatHeaders.length > 0) {
-              console.log('Valores de esas columnas:', possibleMatHeaders.map(h => ({ header: h, value: row[h] })))
-            }
-            console.log('===================================')
-          }
-        }
+        // Debug: Log detallado para la primera fila (solo en desarrollo)
+        // Comentado en producción para mejorar rendimiento
+        // if (process.env.NODE_ENV === 'development' && filaNum === 2) {
+        //   if (typeof console !== 'undefined' && console.log) {
+        //     console.log('=== DEBUG IMPORTACIÓN MÉDICOS ===')
+        //     console.log('Headers encontrados en Excel:', realHeaders)
+        //     console.log('Valor encontrado para matrícula provincial:', matriculaProvincialRaw)
+        //     const possibleMatHeaders = realHeaders.filter(h => {
+        //       const hNormalized = normalizeColumnName(h)
+        //       return hNormalized.includes('mat') || hNormalized.includes('prov')
+        //     })
+        //     console.log('Headers normalizados que podrían ser matrícula:', possibleMatHeaders)
+        //     if (possibleMatHeaders.length > 0) {
+        //       console.log('Valores de esas columnas:', possibleMatHeaders.map(h => ({ header: h, value: row[h] })))
+        //     }
+        //     console.log('===================================')
+        //   }
+        // }
 
         // Validar campos requeridos
         if (!nombre || String(nombre).trim() === '') {
