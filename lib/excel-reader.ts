@@ -67,64 +67,52 @@ export async function readExcelFile(file: File): Promise<ExcelData> {
 
     const periodo = extractPeriodo(row2)
 
-    // Leer la fila 10 (índice 9) para los headers manualmente
-    const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1')
-    const headers: string[] = []
+    // Leer la fila 10 (índice 9) para los headers
+    // IMPORTANTE: Leer TODAS las columnas, incluso las vacías, para mantener la correspondencia exacta
+    const headers: Array<{ name: string; colIndex: number }> = []
+    const maxCols = Math.min(range.e.c + 1, 50) // Limitar a 50 columnas máximo para evitar problemas
     
-    // Leer headers de la fila 10 (índice 9)
-    for (let col = 0; col <= range.e.c; col++) {
+    // Primero, encontrar la última columna con un header válido
+    let lastHeaderCol = -1
+    for (let col = 0; col < maxCols; col++) {
       const cellAddress = XLSX.utils.encode_cell({ r: 9, c: col })
       const cell = worksheet[cellAddress]
       if (cell && cell.v !== null && cell.v !== undefined) {
         const headerValue = String(cell.v).trim()
         if (headerValue !== '') {
-          headers.push(headerValue)
-        } else {
-          // Si encontramos un header vacío, seguimos leyendo hasta encontrar el siguiente no vacío
-          // o hasta el final del rango
-          let foundNext = false
-          for (let nextCol = col + 1; nextCol <= range.e.c; nextCol++) {
-            const nextCellAddress = XLSX.utils.encode_cell({ r: 9, c: nextCol })
-            const nextCell = worksheet[nextCellAddress]
-            if (nextCell && nextCell.v !== null && nextCell.v !== undefined) {
-              const nextHeaderValue = String(nextCell.v).trim()
-              if (nextHeaderValue !== '') {
-                foundNext = true
-                break
-              }
-            }
-          }
-          if (!foundNext) {
-            break // No hay más headers
-          }
-        }
-      } else {
-        // Si encontramos una celda vacía, seguimos hasta encontrar el siguiente header
-        // pero solo si ya tenemos headers anteriores
-        if (headers.length > 0) {
-          // Verificar si hay más headers después
-          let hasMoreHeaders = false
-          for (let nextCol = col + 1; nextCol <= Math.min(range.e.c, col + 5); nextCol++) {
-            const nextCellAddress = XLSX.utils.encode_cell({ r: 9, c: nextCol })
-            const nextCell = worksheet[nextCellAddress]
-            if (nextCell && nextCell.v !== null && nextCell.v !== undefined) {
-              const nextHeaderValue = String(nextCell.v).trim()
-              if (nextHeaderValue !== '') {
-                hasMoreHeaders = true
-                break
-              }
-            }
-          }
-          if (!hasMoreHeaders) {
-            break // No hay más headers
-          }
+          lastHeaderCol = col
         }
       }
     }
-
-    if (headers.length === 0) {
+    
+    // Si no encontramos headers, lanzar error
+    if (lastHeaderCol === -1) {
       throw new Error('No se encontraron headers en la fila 10')
     }
+    
+    // Leer todos los headers desde la columna 0 hasta la última con header válido
+    for (let col = 0; col <= lastHeaderCol; col++) {
+      const cellAddress = XLSX.utils.encode_cell({ r: 9, c: col })
+      const cell = worksheet[cellAddress]
+      
+      if (cell && cell.v !== null && cell.v !== undefined) {
+        const headerValue = String(cell.v).trim()
+        headers.push({
+          name: headerValue || `Columna ${col + 1}`, // Si está vacío, usar nombre genérico
+          colIndex: col
+        })
+      } else {
+        // Si la celda está vacía pero estamos antes de la última columna con header,
+        // agregar un header vacío para mantener la correspondencia
+        headers.push({
+          name: `Columna ${col + 1}`,
+          colIndex: col
+        })
+      }
+    }
+
+    // Filtrar headers vacíos solo para la visualización, pero mantener la estructura
+    const headerNames = headers.map(h => h.name).filter(name => !name.startsWith('Columna'))
 
     // Leer datos manualmente desde la fila 11 (índice 10) en adelante
     const rows: ExcelRow[] = []
@@ -133,11 +121,12 @@ export async function readExcelFile(file: File): Promise<ExcelData> {
       const row: ExcelRow = {}
       let hasData = false
       
-      headers.forEach((header, colIndex) => {
-        const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: colIndex })
+      // Leer usando el índice de columna real del Excel
+      headers.forEach((headerInfo) => {
+        const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: headerInfo.colIndex })
         const cell = worksheet[cellAddress]
+        
         if (cell && cell.v !== null && cell.v !== undefined) {
-          // Preservar el tipo de dato original
           let value: any = cell.v
           
           // Si es una fecha, convertirla a string formateado
@@ -160,10 +149,16 @@ export async function readExcelFile(file: File): Promise<ExcelData> {
             }
           }
           
-          row[header] = value
-          hasData = true
+          // Solo agregar al row si el header tiene un nombre válido (no es "Columna X")
+          if (!headerInfo.name.startsWith('Columna')) {
+            row[headerInfo.name] = value
+            hasData = true
+          }
         } else {
-          row[header] = null
+          // Solo agregar null si el header tiene un nombre válido
+          if (!headerInfo.name.startsWith('Columna')) {
+            row[headerInfo.name] = null
+          }
         }
       })
       
@@ -175,7 +170,7 @@ export async function readExcelFile(file: File): Promise<ExcelData> {
 
     return {
       periodo,
-      headers,
+      headers: headerNames, // Usar solo los headers con nombre válido para la visualización
       rows
     }
   } catch (error) {
