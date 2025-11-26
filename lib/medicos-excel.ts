@@ -247,13 +247,25 @@ export async function importMedicosFromExcel(file: File): Promise<{
         }
 
         // Procesar y validar valores
-        const matriculaProvincial = matriculaProvincialRaw 
-          ? String(matriculaProvincialRaw).trim().substring(0, 50) 
+        // La matrícula principal recibe directamente el valor de "Mat. Provincial" del Excel
+        const matriculaProvincialRawValue = matriculaProvincialRaw 
+          ? String(matriculaProvincialRaw).trim() 
           : null
+        
         const cuit = cuitRaw 
           ? String(cuitRaw).trim().replace(/[^0-9]/g, '').substring(0, 20) 
           : null
-        const matricula = (matriculaProvincial || cuit || `TEMP-${Date.now()}-${i}`).substring(0, 50)
+        
+        // La columna "matricula" recibe el valor de "Mat. Provincial" del Excel
+        // Si no hay "Mat. Provincial", usar CUIT como fallback
+        const matricula = matriculaProvincialRawValue 
+          ? matriculaProvincialRawValue.substring(0, 50)
+          : (cuit || `TEMP-${Date.now()}-${i}`).substring(0, 50)
+        
+        // matricula_provincial también recibe el mismo valor de "Mat. Provincial"
+        const matriculaProvincial = matriculaProvincialRawValue 
+          ? matriculaProvincialRawValue.substring(0, 50) 
+          : null
         
         // Truncar campos según límites de la BD
         const nombreFinal = String(nombre).trim().substring(0, 255)
@@ -267,8 +279,8 @@ export async function importMedicosFromExcel(file: File): Promise<{
 
         const medico: MedicoInsert = {
           nombre: nombreFinal,
-          matricula: matricula,
-          matricula_provincial: matriculaProvincial,
+          matricula: matricula, // Recibe directamente "Mat. Provincial" del Excel
+          matricula_provincial: matriculaProvincial, // También recibe "Mat. Provincial"
           cuit: cuit,
           grupo_persona: grupoPersona,
           perfil: perfil,
