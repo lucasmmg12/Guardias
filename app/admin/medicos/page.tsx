@@ -18,7 +18,8 @@ import {
   CheckCircle2, 
   XCircle,
   AlertCircle,
-  Sparkles
+  Sparkles,
+  Users
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -28,6 +29,7 @@ export default function MedicosPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterEspecialidad, setFilterEspecialidad] = useState<string>('all')
   const [filterActivo, setFilterActivo] = useState<string>('all')
+  const [filterResidente, setFilterResidente] = useState<boolean>(false)
   const [showFormModal, setShowFormModal] = useState(false)
   const [editingMedico, setEditingMedico] = useState<Medico | null>(null)
   const [showImportModal, setShowImportModal] = useState(false)
@@ -177,15 +179,25 @@ export default function MedicosPage() {
   }
 
   const filteredMedicos = medicos.filter(medico => {
-    if (!searchTerm) return true
-    const search = searchTerm.toLowerCase()
-    return (
-      medico.nombre.toLowerCase().includes(search) ||
-      medico.matricula?.toLowerCase().includes(search) ||
-      medico.matricula_provincial?.toLowerCase().includes(search) ||
-      medico.cuit?.toLowerCase().includes(search) ||
-      medico.especialidad.toLowerCase().includes(search)
-    )
+    // Filtro de residentes (aplicado primero para mejor rendimiento)
+    if (filterResidente && !medico.es_residente) {
+      return false
+    }
+    
+    // Filtro de búsqueda
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase()
+      const matchesSearch = (
+        medico.nombre.toLowerCase().includes(search) ||
+        medico.matricula?.toLowerCase().includes(search) ||
+        medico.matricula_provincial?.toLowerCase().includes(search) ||
+        medico.cuit?.toLowerCase().includes(search) ||
+        medico.especialidad.toLowerCase().includes(search)
+      )
+      if (!matchesSearch) return false
+    }
+    
+    return true
   })
 
   const especialidades = Array.from(new Set(medicos.map(m => m.especialidad))).sort()
@@ -270,6 +282,25 @@ export default function MedicosPage() {
                 <option value="activo">Activos</option>
                 <option value="inactivo">Inactivos</option>
               </select>
+              
+              {/* Botón toggle para filtrar residentes */}
+              <button
+                onClick={() => setFilterResidente(!filterResidente)}
+                className={`px-4 py-2 rounded-lg border text-sm h-10 whitespace-nowrap transition-all duration-200 flex items-center gap-2 ${
+                  filterResidente
+                    ? 'bg-blue-600/30 border-blue-500 text-blue-400 hover:bg-blue-600/40'
+                    : 'bg-black/30 border-gray-600 text-gray-300 hover:bg-black/40 hover:border-gray-500'
+                }`}
+                title={filterResidente ? 'Mostrar todos los médicos' : 'Mostrar solo residentes'}
+              >
+                <Users className="h-4 w-4" />
+                <span className="hidden sm:inline">
+                  {filterResidente ? 'Solo Residentes' : 'Todos'}
+                </span>
+                <span className="sm:hidden">
+                  {filterResidente ? 'Residentes' : 'Todos'}
+                </span>
+              </button>
             </div>
 
             {/* Botones de acción */}
@@ -423,6 +454,14 @@ export default function MedicosPage() {
           Activos: <span className="text-green-400 font-semibold">
             {filteredMedicos.filter(m => m.activo).length}
           </span>
+          {filterResidente && (
+            <>
+              {' • '}
+              Residentes: <span className="text-blue-400 font-semibold">
+                {filteredMedicos.filter(m => m.es_residente).length}
+              </span>
+            </>
+          )}
         </div>
       </div>
 

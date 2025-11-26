@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { UploadExcel } from '@/components/custom/UploadExcel'
 import { ExcelDataTable } from '@/components/custom/ExcelDataTable'
+import { EstadisticasObraSocial } from '@/components/custom/EstadisticasObraSocial'
 import { readExcelFile, ExcelData } from '@/lib/excel-reader'
 import { AlertCircle, CheckCircle2, Sparkles } from 'lucide-react'
 import Link from 'next/link'
@@ -50,6 +51,23 @@ export default function GinecologiaPage() {
         } finally {
             setIsProcessing(false)
         }
+    }
+
+    // Extraer mes y año del período del Excel
+    const obtenerMesAnio = () => {
+        if (!excelData?.periodo) return { mes: new Date().getMonth() + 1, anio: new Date().getFullYear() }
+        
+        // Parsear fecha desde formato "DD/MM/YYYY"
+        const fechaDesde = excelData.periodo.desde
+        const partes = fechaDesde.split('/')
+        if (partes.length === 3) {
+            return {
+                mes: parseInt(partes[1], 10),
+                anio: parseInt(partes[2], 10)
+            }
+        }
+        
+        return { mes: new Date().getMonth() + 1, anio: new Date().getFullYear() }
     }
 
     const handleCellUpdate = async (rowIndex: number, column: string, newValue: any) => {
@@ -154,6 +172,28 @@ export default function GinecologiaPage() {
                         </div>
                     </div>
                 )}
+
+                {/* Estadísticas por Obra Social */}
+                {excelData && excelData.periodo && (() => {
+                    const { mes, anio } = obtenerMesAnio()
+                    return (
+                        <div 
+                            className="relative rounded-2xl shadow-2xl overflow-hidden p-8"
+                            style={{
+                                background: 'rgba(255, 255, 255, 0.1)',
+                                backdropFilter: 'blur(20px)',
+                                border: '1px solid rgba(59, 130, 246, 0.3)',
+                                boxShadow: '0 8px 32px 0 rgba(59, 130, 246, 0.3)',
+                            }}
+                        >
+                            <EstadisticasObraSocial
+                                mes={mes}
+                                anio={anio}
+                                especialidad="Ginecología"
+                            />
+                        </div>
+                    )
+                })()}
 
                 <div className="grid md:grid-cols-3 gap-8">
                     {/* Médicos Activos */}

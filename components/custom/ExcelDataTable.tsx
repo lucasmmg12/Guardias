@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { ExcelRow, ExcelData } from '@/lib/excel-reader'
 import { InlineEditCell } from './InlineEditCell'
 import { CheckCircle2, AlertCircle } from 'lucide-react'
+import { esParticular } from '@/lib/utils'
 
 interface ExcelDataTableProps {
   data: ExcelData
@@ -46,6 +47,26 @@ export function ExcelDataTable({ data, onCellUpdate }: ExcelDataTableProps) {
     return columnLower === 'cliente' || columnLower === 'responsable'
   }
 
+  // Detectar filas con PARTICULARES (sin obra social)
+  const filasParticulares = useMemo(() => {
+    const indices: Set<number> = new Set()
+    const clienteIndex = data.headers.findIndex(h => h.toLowerCase().trim() === 'cliente')
+    
+    if (clienteIndex === -1) return indices
+    
+    rows.forEach((row, index) => {
+      const cliente = row[data.headers[clienteIndex]]
+      if (esParticular(cliente)) {
+        indices.add(index)
+      }
+    })
+    
+    return indices
+  }, [rows, data.headers])
+
+  // Contar PARTICULARES
+  const cantidadParticulares = filasParticulares.size
+
   return (
     <div className="w-full space-y-4">
       {/* Información del período */}
@@ -64,6 +85,30 @@ export function ExcelDataTable({ data, onCellUpdate }: ExcelDataTableProps) {
             <span className="text-white">
               {data.periodo.desde} - {data.periodo.hasta}
             </span>
+          </div>
+        </div>
+      )}
+
+      {/* Alerta de PARTICULARES */}
+      {cantidadParticulares > 0 && (
+        <div 
+          className="p-4 rounded-xl border-2 animate-pulse"
+          style={{
+            background: 'rgba(251, 191, 36, 0.15)',
+            backdropFilter: 'blur(20px)',
+            borderColor: 'rgba(251, 191, 36, 0.5)',
+          }}
+        >
+          <div className="flex items-center gap-3 text-yellow-400">
+            <AlertCircle className="h-6 w-6 flex-shrink-0" />
+            <div className="flex-1">
+              <div className="font-bold text-lg mb-1">
+                ⚠️ {cantidadParticulares} registro{cantidadParticulares > 1 ? 's' : ''} sin obra social detectado{cantidadParticulares > 1 ? 's' : ''}
+              </div>
+              <div className="text-sm text-yellow-300">
+                Estos registros deben ser revisados. Si son pacientes particulares, edite la columna "Cliente" y agregue: <strong>"042 - PARTICULARES"</strong>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -109,10 +154,16 @@ export function ExcelDataTable({ data, onCellUpdate }: ExcelDataTableProps) {
                 </td>
               </tr>
             ) : (
-              rows.map((row, rowIndex) => (
+              rows.map((row, rowIndex) => {
+                const esParticularRow = filasParticulares.has(rowIndex)
+                return (
                 <tr
                   key={rowIndex}
-                  className="border-b border-white/5 hover:bg-white/5 transition-colors"
+                  className={`border-b transition-colors ${
+                    esParticularRow
+                      ? 'bg-yellow-500/20 border-yellow-500/30 hover:bg-yellow-500/30'
+                      : 'border-white/5 hover:bg-white/5'
+                  }`}
                 >
                   {data.headers.map((header, colIndex) => {
                     const value = row[header] ?? null
@@ -130,15 +181,23 @@ export function ExcelDataTable({ data, onCellUpdate }: ExcelDataTableProps) {
                         }}
                       >
                         {editable ? (
-                          <InlineEditCell
-                            value={value}
-                            type="text"
-                            onSave={async (newValue) => {
-                              await handleCellSave(rowIndex, header, newValue)
-                            }}
-                            isEditable={true}
-                            className={isSaving ? 'opacity-50' : ''}
-                          />
+                          <div className="relative">
+                            <InlineEditCell
+                              value={value}
+                              type="text"
+                              onSave={async (newValue) => {
+                                await handleCellSave(rowIndex, header, newValue)
+                              }}
+                              isEditable={true}
+                              className={isSaving ? 'opacity-50' : ''}
+                              columnName={header}
+                            />
+                            {esParticularRow && header.toLowerCase().trim() === 'cliente' && (
+                              <div className="absolute -top-1 -right-1">
+                                <AlertCircle className="h-3 w-3 text-yellow-400" />
+                              </div>
+                            )}
+                          </div>
                         ) : (
                           <div className="px-1 py-0.5 truncate" title={value ? String(value) : ''}>
                             {value === null || value === '' ? (
@@ -152,7 +211,7 @@ export function ExcelDataTable({ data, onCellUpdate }: ExcelDataTableProps) {
                     )
                   })}
                 </tr>
-              ))
+              )})
             )}
           </tbody>
         </table>
@@ -163,6 +222,12 @@ export function ExcelDataTable({ data, onCellUpdate }: ExcelDataTableProps) {
         Total de filas: <span className="text-green-400 font-semibold">{rows.length}</span>
         {' • '}
         Columnas: <span className="text-green-400 font-semibold">{data.headers.length}</span>
+        {cantidadParticulares > 0 && (
+          <>
+            {' • '}
+            Sin obra social: <span className="text-yellow-400 font-semibold">{cantidadParticulares}</span>
+          </>
+        )}
       </div>
     </div>
   )
