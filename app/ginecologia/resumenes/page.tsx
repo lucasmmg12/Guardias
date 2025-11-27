@@ -176,6 +176,34 @@ export default function ResumenesGinecologiaPage() {
         {/* Contenido de Tabs */}
         {loading ? (
           <div className="text-center py-12 text-gray-400">Cargando resúmenes...</div>
+        ) : resumenesPorMedico.size === 0 && resumenesPorPrestador.length === 0 ? (
+          <div 
+            className="rounded-xl p-8 text-center"
+            style={{
+              background: 'rgba(255, 255, 255, 0.05)',
+              backdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255, 193, 7, 0.3)',
+            }}
+          >
+            <div className="text-yellow-400 text-xl font-bold mb-4">
+              No hay datos para el período seleccionado
+            </div>
+            <div className="text-gray-400 mb-6">
+              Para generar resúmenes, primero debes:
+            </div>
+            <ol className="text-left text-gray-300 space-y-2 max-w-md mx-auto mb-6">
+              <li>1. Ir a la página de <strong className="text-green-400">Ginecología</strong></li>
+              <li>2. Subir un archivo Excel con las consultas</li>
+              <li>3. Confirmar el mes y año del período</li>
+              <li>4. El sistema guardará automáticamente los datos</li>
+            </ol>
+            <Button
+              onClick={() => router.push('/ginecologia')}
+              className="bg-green-600 hover:bg-green-500 text-white"
+            >
+              Ir a Ginecología
+            </Button>
+          </div>
         ) : tabActiva === 'medicos' ? (
           /* Tab: Resumen por Médico */
           <div className="space-y-6">

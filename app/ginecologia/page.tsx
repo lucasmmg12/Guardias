@@ -6,7 +6,9 @@ import { UploadExcel } from '@/components/custom/UploadExcel'
 import { ExcelDataTable } from '@/components/custom/ExcelDataTable'
 import { EstadisticasObraSocial } from '@/components/custom/EstadisticasObraSocial'
 import { MesSelectorModal } from '@/components/custom/MesSelectorModal'
+import { NotificationModal, NotificationType } from '@/components/custom/NotificationModal'
 import { readExcelFile, ExcelData } from '@/lib/excel-reader'
+import { procesarExcelGinecologia } from '@/lib/ginecologia-processor'
 import { AlertCircle, CheckCircle2, Sparkles, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -21,6 +23,30 @@ export default function GinecologiaPage() {
     const [anioDetectado, setAnioDetectado] = useState<number | null>(null)
     const [mesSeleccionado, setMesSeleccionado] = useState(new Date().getMonth() + 1)
     const [anioSeleccionado, setAnioSeleccionado] = useState(new Date().getFullYear())
+    const [archivoActual, setArchivoActual] = useState<File | null>(null)
+    const [isGuardando, setIsGuardando] = useState(false)
+    const [notification, setNotification] = useState<{
+        isOpen: boolean
+        type: NotificationType
+        title?: string
+        message: string
+    }>({
+        isOpen: false,
+        type: 'info',
+        message: ''
+    })
+
+    function showNotification(type: NotificationType, message: string, title?: string) {
+        setNotification({
+            isOpen: true,
+            type,
+            message,
+            title
+        })
+        setTimeout(() => {
+            setNotification(prev => ({ ...prev, isOpen: false }))
+        }, 5000)
+    }
 
     // Función para detectar mes y año desde las fechas del Excel
     const detectarMesAnio = (data: ExcelData): { mes: number | null; anio: number | null } => {
@@ -87,6 +113,7 @@ export default function GinecologiaPage() {
         setError(null)
         setMesDetectado(null)
         setAnioDetectado(null)
+        setArchivoActual(file)
 
         try {
             const data = await readExcelFile(file)
@@ -113,10 +140,52 @@ export default function GinecologiaPage() {
         }
     }
 
-    const handleMesConfirmado = (mes: number, anio: number) => {
+    const handleMesConfirmado = async (mes: number, anio: number) => {
         setMesSeleccionado(mes)
         setAnioSeleccionado(anio)
         setShowMesSelector(false)
+
+        // Si hay datos del Excel, procesar y guardar
+        if (excelData && archivoActual) {
+            setIsGuardando(true)
+            try {
+                const resultado = await procesarExcelGinecologia(
+                    excelData,
+                    mes,
+                    anio,
+                    archivoActual.name
+                )
+
+                if (resultado.errores.length > 0) {
+                    showNotification(
+                        'error',
+                        `Se procesaron ${resultado.procesadas} filas. Errores: ${resultado.errores.length}`,
+                        'Procesamiento con errores'
+                    )
+                } else if (resultado.advertencias.length > 0) {
+                    showNotification(
+                        'warning',
+                        `Se procesaron ${resultado.procesadas} de ${resultado.totalFilas} filas. ${resultado.advertencias.length} advertencias.`,
+                        'Procesamiento completado'
+                    )
+                } else {
+                    showNotification(
+                        'success',
+                        `Se procesaron y guardaron ${resultado.procesadas} consultas correctamente.`,
+                        'Guardado exitoso'
+                    )
+                }
+            } catch (err: any) {
+                console.error('Error guardando datos:', err)
+                showNotification(
+                    'error',
+                    `Error al guardar: ${err.message || 'Error desconocido'}`,
+                    'Error'
+                )
+            } finally {
+                setIsGuardando(false)
+            }
+        }
     }
 
     // Extraer mes y año del período del Excel (usar el seleccionado)
@@ -316,6 +385,22 @@ export default function GinecologiaPage() {
                 mesActual={new Date().getMonth() + 1}
                 anioActual={new Date().getFullYear()}
             />
+
+            {/* Notificación */}
+            <NotificationModal
+                isOpen={notification.isOpen}
+                onClose={() => setNotification(prev => ({ ...prev, isOpen: false }))}
+                type={notification.type}
+                title={notification.title}
+                message={notification.message}
+            />
+
+            {/* Indicador de guardado */}
+            {isGuardando && (
+                <div className="fixed bottom-4 right-4 p-4 rounded-lg bg-blue-500/20 border border-blue-500/50 text-blue-400">
+                    Guardando datos en la base de datos...
+                </div>
+            )}
         </div>
     )
 }
