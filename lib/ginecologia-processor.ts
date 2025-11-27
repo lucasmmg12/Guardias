@@ -29,16 +29,23 @@ function normalizarColumna(nombre: string): string {
 function buscarValor(row: ExcelRow, variaciones: string[]): any {
   const keys = Object.keys(row)
   
-  // Buscar coincidencia exacta
+  // Si no hay keys, retornar null
+  if (keys.length === 0) return null
+  
+  // Buscar coincidencia exacta (case-insensitive)
   for (const variacion of variaciones) {
-    if (row[variacion] !== undefined && row[variacion] !== null) {
-      const valor = row[variacion]
-      if (typeof valor === 'string' && valor.trim() !== '') return valor.trim()
-      if (typeof valor !== 'string') return valor
+    for (const key of keys) {
+      if (key.toLowerCase().trim() === variacion.toLowerCase().trim()) {
+        const valor = row[key]
+        if (valor !== undefined && valor !== null) {
+          if (typeof valor === 'string' && valor.trim() !== '') return valor.trim()
+          if (typeof valor !== 'string') return valor
+        }
+      }
     }
   }
   
-  // Buscar coincidencia normalizada
+  // Buscar coincidencia normalizada (sin acentos, espacios)
   const normalizadas = variaciones.map(normalizarColumna)
   for (const key of keys) {
     const keyNormalizada = normalizarColumna(key)
@@ -51,12 +58,16 @@ function buscarValor(row: ExcelRow, variaciones: string[]): any {
     }
   }
   
-  // Buscar coincidencia parcial
+  // Buscar coincidencia parcial (contiene palabras clave)
   for (const variacion of variaciones) {
     const palabras = normalizarColumna(variacion).split(/\s+/).filter(p => p.length > 2)
+    if (palabras.length === 0) continue
+    
     for (const key of keys) {
       const keyNormalizada = normalizarColumna(key)
-      if (palabras.every(p => keyNormalizada.includes(p))) {
+      // Verificar que todas las palabras importantes estén presentes
+      const todasPalabrasPresentes = palabras.every(p => keyNormalizada.includes(p))
+      if (todasPalabrasPresentes) {
         const valor = row[key]
         if (valor !== undefined && valor !== null) {
           if (typeof valor === 'string' && valor.trim() !== '') return valor.trim()
@@ -72,6 +83,10 @@ function buscarValor(row: ExcelRow, variaciones: string[]): any {
 /**
  * Busca un médico por nombre en la lista de médicos
  */
+/**
+ * Busca un médico por nombre en la lista de médicos
+ * Mejora: búsqueda más flexible con múltiples estrategias
+ */
 function buscarMedico(nombre: string | null, medicos: Medico[]): Medico | null {
   if (!nombre || typeof nombre !== 'string') return null
   
@@ -81,7 +96,9 @@ function buscarMedico(nombre: string | null, medicos: Medico[]): Medico | null {
     .replace(/[\u0300-\u036f]/g, '')
     .trim()
   
-  // Buscar coincidencia exacta
+  if (nombreNormalizado === '') return null
+  
+  // Estrategia 1: Buscar coincidencia exacta
   for (const medico of medicos) {
     const medicoNombreNormalizado = medico.nombre
       .toLowerCase()
@@ -92,8 +109,19 @@ function buscarMedico(nombre: string | null, medicos: Medico[]): Medico | null {
     if (medicoNombreNormalizado === nombreNormalizado) {
       return medico
     }
-    
-    // Buscar por apellido (primera parte antes de la coma)
+  }
+  
+  // Estrategia 2: Buscar por apellido (primera parte antes de la coma)
+  const partesNombre = nombre.split(',').map(p => p.trim())
+  const apellidoNombre = partesNombre.length > 0 
+    ? partesNombre[0]
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+    : nombreNormalizado
+  
+  for (const medico of medicos) {
     const partesMedico = medico.nombre.split(',').map(p => p.trim())
     if (partesMedico.length > 0) {
       const apellidoMedico = partesMedico[0]
@@ -102,7 +130,31 @@ function buscarMedico(nombre: string | null, medicos: Medico[]): Medico | null {
         .replace(/[\u0300-\u036f]/g, '')
         .trim()
       
-      if (nombreNormalizado.includes(apellidoMedico) || apellidoMedico.includes(nombreNormalizado)) {
+      // Coincidencia exacta de apellido
+      if (apellidoMedico === apellidoNombre) {
+        return medico
+      }
+      
+      // Coincidencia parcial (uno contiene al otro)
+      if (apellidoNombre.includes(apellidoMedico) || apellidoMedico.includes(apellidoNombre)) {
+        return medico
+      }
+    }
+  }
+  
+  // Estrategia 3: Buscar por palabras clave (apellido y nombre)
+  const palabrasNombre = nombreNormalizado.split(/\s+/).filter(p => p.length > 2)
+  
+  if (palabrasNombre.length > 0) {
+    for (const medico of medicos) {
+      const medicoNombreNormalizado = medico.nombre
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+      
+      // Si todas las palabras importantes están presentes
+      if (palabrasNombre.every(p => medicoNombreNormalizado.includes(p))) {
         return medico
       }
     }
@@ -112,19 +164,74 @@ function buscarMedico(nombre: string | null, medicos: Medico[]): Medico | null {
 }
 
 /**
- * Convierte una fecha en formato DD/MM/YYYY a ISO (YYYY-MM-DD)
+ * Busca un médico por matrícula provincial
+ * Si matriculaExcel es "RESIDENTE" o NULL, busca médicos donde matricula_provincial IS NULL
+ * Si tiene un valor, busca por matricula_provincial exacta
+ */
+function buscarMedicoPorMatricula(
+  matriculaExcel: string | null,
+  medicos: Medico[]
+): Medico | null {
+  if (!matriculaExcel) {
+    // Si no hay matrícula en Excel, buscar médicos donde matricula_provincial IS NULL (residentes)
+    return medicos.find(m => m.matricula_provincial === null) || null
+  }
+  
+  const matriculaNormalizada = String(matriculaExcel).trim().toUpperCase()
+  
+  // Si es "RESIDENTE", buscar donde matricula_provincial IS NULL
+  if (matriculaNormalizada === 'RESIDENTE' || matriculaNormalizada === 'NULL') {
+    return medicos.find(m => m.matricula_provincial === null) || null
+  }
+  
+  // Buscar por matrícula provincial exacta
+  return medicos.find(m => 
+    m.matricula_provincial && 
+    String(m.matricula_provincial).trim().toUpperCase() === matriculaNormalizada
+  ) || null
+}
+
+/**
+ * Convierte una fecha en múltiples formatos a ISO (YYYY-MM-DD)
  */
 function convertirFechaISO(fecha: string | null | undefined): string | null {
-  if (!fecha || typeof fecha !== 'string') return null
+  if (!fecha) return null
   
-  const match = fecha.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/)
-  if (!match) return null
+  const fechaStr = String(fecha).trim()
+  if (fechaStr === '') return null
   
-  const dia = match[1].padStart(2, '0')
-  const mes = match[2].padStart(2, '0')
-  const anio = match[3]
+  // Intentar formato DD/MM/YYYY
+  const matchDDMMYYYY = fechaStr.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/)
+  if (matchDDMMYYYY) {
+    const dia = matchDDMMYYYY[1].padStart(2, '0')
+    const mes = matchDDMMYYYY[2].padStart(2, '0')
+    const anio = matchDDMMYYYY[3]
+    return `${anio}-${mes}-${dia}`
+  }
   
-  return `${anio}-${mes}-${dia}`
+  // Intentar formato YYYY-MM-DD (ya está en ISO)
+  const matchISO = fechaStr.match(/(\d{4})-(\d{1,2})-(\d{1,2})/)
+  if (matchISO) {
+    const anio = matchISO[1]
+    const mes = matchISO[2].padStart(2, '0')
+    const dia = matchISO[3].padStart(2, '0')
+    return `${anio}-${mes}-${dia}`
+  }
+  
+  // Intentar parsear como Date object
+  try {
+    const dateObj = new Date(fechaStr)
+    if (!isNaN(dateObj.getTime())) {
+      const year = dateObj.getFullYear()
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0')
+      const day = String(dateObj.getDate()).padStart(2, '0')
+      return `${year}-${month}-${day}`
+    }
+  } catch {
+    // Ignorar error
+  }
+  
+  return null
 }
 
 /**
@@ -275,36 +382,134 @@ export async function procesarExcelGinecologia(
     console.log(`Procesando ${excelData.rows.length} filas del Excel`)
     console.log('Headers disponibles:', excelData.headers)
 
+    // Contadores para debugging
+    let filasSinFecha = 0
+    let filasFechaInvalida = 0
+    let filasProcesadas = 0
+
     for (let i = 0; i < excelData.rows.length; i++) {
       const row = excelData.rows[i]
       
       try {
-        // Extraer datos de la fila
-        const fechaStr = buscarValor(row, ['Fecha', 'fecha', 'FECHA', 'Fecha visita', 'Fecha Visita', 'Fecha de visita'])
-        const hora = buscarValor(row, ['Hora', 'hora', 'HORA', 'Horario', 'horario', 'Hora inicio'])
-        const paciente = buscarValor(row, ['Paciente', 'paciente', 'PACIENTE', 'Nombre paciente', 'Nombre Paciente'])
-        const obraSocial = buscarValor(row, ['Obra Social', 'obra social', 'Obra social', 'ObraSocial', 'Cliente', 'Obra'])
-        const medicoNombre = buscarValor(row, ['Responsable', 'responsable', 'Médico', 'medico', 'MEDICO', 'Medico', 'Profesional', 'Médico responsable'])
+        // Extraer datos de la fila - AUMENTAR VARIACIONES DE BÚSQUEDA
+        const fechaStr = buscarValor(row, [
+          'Fecha', 'fecha', 'FECHA', 
+          'Fecha visita', 'Fecha Visita', 'Fecha de visita',
+          'Fecha de Visita', 'Fecha De Visita',
+          'Fecha de atención', 'Fecha Atención', 'Fecha de Atención',
+          'Fecha de la consulta', 'Fecha Consulta', 'Fecha de Consulta',
+          'FECHA VISITA', 'FECHA DE VISITA',
+          'Fecha Visita', 'Fecha visita'
+        ])
+        const hora = buscarValor(row, [
+          'Hora', 'hora', 'HORA', 
+          'Horario', 'horario', 'HORARIO',
+          'Hora inicio', 'Hora Inicio', 'Hora de inicio',
+          'Hora de Inicio', 'HORA INICIO'
+        ])
+        const paciente = buscarValor(row, [
+          'Paciente', 'paciente', 'PACIENTE', 
+          'Nombre paciente', 'Nombre Paciente', 'Nombre del paciente',
+          'NOMBRE PACIENTE'
+        ])
+        const obraSocial = buscarValor(row, [
+          'Obra Social', 'obra social', 'Obra social', 
+          'ObraSocial', 'Cliente', 'Obra', 
+          'Obra Social / Cliente', 'Obra Social/Cliente',
+          'OBRA SOCIAL', 'CLIENTE'
+        ])
+        const medicoNombre = buscarValor(row, [
+          'Responsable', 'responsable', 'RESPONSABLE',
+          'Médico', 'medico', 'MEDICO', 'Medico',
+          'Profesional', 'profesional', 'PROFESIONAL',
+          'Médico responsable', 'Médico Responsable', 'Medico Responsable',
+          'MÉDICO RESPONSABLE'
+        ])
         
-        // Validar datos mínimos
-        if (!fechaStr) {
-          resultado.advertencias.push(`Fila ${i + 1}: Sin fecha, se omite`)
-          continue
+        // Extraer matrícula del Excel
+        const matriculaExcel = buscarValor(row, [
+          'Mat. Provincial', 'Mat Provincial', 'Mat.Provincial', 'MatProvincial',
+          'Matricula Provincial', 'Matrícula Provincial',
+          'Matricula', 'Matrícula', 'Mat', 'MAT',
+          'Medico Matricula', 'Médico Matrícula',
+          'Matricula Medico', 'Matrícula Médico',
+          'Matricula Provincial', 'Matrícula Provincial'
+        ])
+        
+        // MEJORAR: Intentar múltiples formatos de fecha
+        let fecha: string | null = null
+        
+        if (fechaStr) {
+          // Intentar formato DD/MM/YYYY
+          fecha = convertirFechaISO(fechaStr)
+          
+          // Si falla, intentar otros formatos
+          if (!fecha) {
+            // Intentar formato YYYY-MM-DD
+            const matchISO = String(fechaStr).match(/(\d{4})-(\d{1,2})-(\d{1,2})/)
+            if (matchISO) {
+              fecha = fechaStr // Ya está en formato ISO
+            } else {
+              // Intentar parsear como Date object
+              try {
+                const dateObj = new Date(fechaStr)
+                if (!isNaN(dateObj.getTime())) {
+                  const year = dateObj.getFullYear()
+                  const month = String(dateObj.getMonth() + 1).padStart(2, '0')
+                  const day = String(dateObj.getDate()).padStart(2, '0')
+                  fecha = `${year}-${month}-${day}`
+                }
+              } catch {
+                // Ignorar error
+              }
+            }
+          }
         }
-
-        const fecha = convertirFechaISO(fechaStr)
+        
+        // Validar datos mínimos - PERMITIR FILAS SIN FECHA PERO REGISTRAR ADVERTENCIA
         if (!fecha) {
-          resultado.advertencias.push(`Fila ${i + 1}: Fecha inválida (${fechaStr}), se omite`)
+          filasSinFecha++
+          resultado.advertencias.push(`Fila ${i + 1}: Sin fecha válida (${fechaStr || 'vacía'}), se omite`)
           continue
         }
 
-        // Buscar médico
-        const medico = buscarMedico(medicoNombre, medicos)
-        const esResidente = medico?.es_residente || false
+        // Validar que la fecha sea razonable (entre 2020 y 2100)
+        const fechaAnio = parseInt(fecha.split('-')[0])
+        if (fechaAnio < 2020 || fechaAnio > 2100) {
+          filasFechaInvalida++
+          resultado.advertencias.push(`Fila ${i + 1}: Fecha fuera de rango (${fecha}), se omite`)
+          continue
+        }
+
+        // Buscar médico - Primero por nombre, luego por matrícula
+        let medico = buscarMedico(medicoNombre, medicos)
+        
+        // Si no se encontró por nombre, intentar por matrícula
+        if (!medico && matriculaExcel) {
+          medico = buscarMedicoPorMatricula(matriculaExcel, medicos)
+        }
+        
+        // Si aún no se encontró y la matrícula es "RESIDENTE" o NULL, buscar residentes
+        if (!medico && (!matriculaExcel || String(matriculaExcel).trim().toUpperCase() === 'RESIDENTE')) {
+          medico = medicos.find(m => m.matricula_provincial === null) || null
+        }
+        
+        // Determinar si es residente: matricula_provincial IS NULL = residente
+        const esResidente = medico ? (medico.matricula_provincial === null) : false
+
+        // Si no se encuentra el médico, registrar advertencia pero continuar
+        if (!medico && medicoNombre) {
+          resultado.advertencias.push(`Fila ${i + 1}: Médico no encontrado en BD: ${medicoNombre}${matriculaExcel ? ` (Matrícula: ${matriculaExcel})` : ''}`)
+        }
 
         // Obtener valor de consulta
         const obraSocialFinal = obraSocial || 'PARTICULARES'
         const valorUnitario = valoresPorObraSocial.get(obraSocialFinal) || 0
+
+        // Si no hay valor para la obra social, registrar advertencia
+        if (valorUnitario === 0 && obraSocialFinal !== 'PARTICULARES') {
+          resultado.advertencias.push(`Fila ${i + 1}: No hay valor configurado para obra social: ${obraSocialFinal}`)
+        }
 
         // Aplicar regla de residentes
         const horaFormato = convertirHora(hora)
@@ -328,7 +533,7 @@ export async function procesarExcelGinecologia(
           paciente: paciente || null,
           obra_social: obraSocialFinal,
           medico_nombre: medicoNombre || medico?.nombre || 'Desconocido',
-          medico_matricula: medico?.matricula || null,
+          medico_matricula: medico?.matricula_provincial || null,
           medico_es_residente: esResidente,
           monto_facturado: montoFacturado,
           porcentaje_retencion: null, // Ginecología no tiene retención del 30%
@@ -342,6 +547,7 @@ export async function procesarExcelGinecologia(
         }
 
         detalles.push(detalle)
+        filasProcesadas++
         resultado.procesadas++
 
       } catch (error: any) {
@@ -350,6 +556,12 @@ export async function procesarExcelGinecologia(
         console.error(`Error procesando fila ${i + 1}:`, error)
         console.error('Datos de la fila:', row)
       }
+    }
+
+    // Agregar resumen de advertencias al final
+    console.log(`Resumen: ${filasProcesadas} procesadas, ${filasSinFecha} sin fecha, ${filasFechaInvalida} fecha inválida`)
+    if (filasSinFecha > 0 || filasFechaInvalida > 0) {
+      resultado.advertencias.push(`Total omitidas: ${filasSinFecha + filasFechaInvalida} (${filasSinFecha} sin fecha, ${filasFechaInvalida} fecha inválida)`)
     }
 
     // 5. Guardar detalles en la base de datos
