@@ -246,8 +246,15 @@ export async function procesarExcelGinecologia(
         .select('id')
         .single()
 
-      if (errorLiquidacion || !liquidacionCreada) {
-        resultado.errores.push(`Error creando liquidación: ${errorLiquidacion?.message || 'Error desconocido'}`)
+      if (errorLiquidacion) {
+        resultado.errores.push(`Error creando liquidación: ${errorLiquidacion.message || 'Error desconocido'}. Detalles: ${JSON.stringify(errorLiquidacion)}`)
+        console.error('Error creando liquidación:', errorLiquidacion)
+        return resultado
+      }
+
+      if (!liquidacionCreada || !(liquidacionCreada as any).id) {
+        resultado.errores.push(`Error: No se pudo crear la liquidación. Respuesta: ${JSON.stringify(liquidacionCreada)}`)
+        console.error('Liquidación no creada:', liquidacionCreada)
         return resultado
       }
 
@@ -260,16 +267,24 @@ export async function procesarExcelGinecologia(
     const detalles: DetalleGuardiaInsert[] = []
     resultado.totalFilas = excelData.rows.length
 
+    if (excelData.rows.length === 0) {
+      resultado.errores.push('El Excel no contiene filas de datos')
+      return resultado
+    }
+
+    console.log(`Procesando ${excelData.rows.length} filas del Excel`)
+    console.log('Headers disponibles:', excelData.headers)
+
     for (let i = 0; i < excelData.rows.length; i++) {
       const row = excelData.rows[i]
       
       try {
         // Extraer datos de la fila
-        const fechaStr = buscarValor(row, ['Fecha', 'fecha', 'FECHA', 'Fecha visita', 'Fecha Visita'])
-        const hora = buscarValor(row, ['Hora', 'hora', 'HORA', 'Horario', 'horario'])
+        const fechaStr = buscarValor(row, ['Fecha', 'fecha', 'FECHA', 'Fecha visita', 'Fecha Visita', 'Fecha de visita'])
+        const hora = buscarValor(row, ['Hora', 'hora', 'HORA', 'Horario', 'horario', 'Hora inicio'])
         const paciente = buscarValor(row, ['Paciente', 'paciente', 'PACIENTE', 'Nombre paciente', 'Nombre Paciente'])
-        const obraSocial = buscarValor(row, ['Obra Social', 'obra social', 'Obra social', 'ObraSocial', 'Cliente'])
-        const medicoNombre = buscarValor(row, ['Responsable', 'responsable', 'Médico', 'medico', 'MEDICO', 'Medico', 'Profesional'])
+        const obraSocial = buscarValor(row, ['Obra Social', 'obra social', 'Obra social', 'ObraSocial', 'Cliente', 'Obra'])
+        const medicoNombre = buscarValor(row, ['Responsable', 'responsable', 'Médico', 'medico', 'MEDICO', 'Medico', 'Profesional', 'Médico responsable'])
         
         // Validar datos mínimos
         if (!fechaStr) {
@@ -330,19 +345,34 @@ export async function procesarExcelGinecologia(
         resultado.procesadas++
 
       } catch (error: any) {
-        resultado.errores.push(`Fila ${i + 1}: ${error.message || 'Error desconocido'}`)
+        const errorMsg = error.message || 'Error desconocido'
+        resultado.errores.push(`Fila ${i + 1}: ${errorMsg}`)
+        console.error(`Error procesando fila ${i + 1}:`, error)
+        console.error('Datos de la fila:', row)
       }
     }
 
     // 5. Guardar detalles en la base de datos
-    if (detalles.length > 0) {
+    if (detalles.length === 0) {
+      resultado.errores.push('No se procesó ninguna fila válida. Verifique que el Excel tenga fechas válidas.')
+      return resultado
+    }
+
+    console.log(`Guardando ${detalles.length} detalles en la base de datos`)
+    
+    // Insertar en lotes de 100 para evitar problemas de tamaño
+    const batchSize = 100
+    for (let i = 0; i < detalles.length; i += batchSize) {
+      const batch = detalles.slice(i, i + batchSize)
       const { error: errorDetalles } = await supabase
         .from('detalle_guardia')
         // @ts-ignore - La tabla no está en los tipos generados de Supabase aún
-        .insert(detalles)
+        .insert(batch)
 
       if (errorDetalles) {
-        resultado.errores.push(`Error guardando detalles: ${errorDetalles.message}`)
+        resultado.errores.push(`Error guardando detalles (lote ${Math.floor(i / batchSize) + 1}): ${errorDetalles.message}. Detalles: ${JSON.stringify(errorDetalles)}`)
+        console.error('Error guardando detalles:', errorDetalles)
+        console.error('Primer detalle del lote:', batch[0])
         return resultado
       }
     }

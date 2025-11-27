@@ -157,11 +157,15 @@ export default function GinecologiaPage() {
                 )
 
                 if (resultado.errores.length > 0) {
+                    const mensajeError = resultado.errores.length > 0 
+                        ? `Se procesaron ${resultado.procesadas} filas. Errores: ${resultado.errores.slice(0, 3).join('; ')}${resultado.errores.length > 3 ? '...' : ''}`
+                        : `Se procesaron ${resultado.procesadas} filas. Errores: ${resultado.errores.length}`
                     showNotification(
                         'error',
-                        `Se procesaron ${resultado.procesadas} filas. Errores: ${resultado.errores.length}`,
+                        mensajeError,
                         'Procesamiento con errores'
                     )
+                    console.error('Errores completos:', resultado.errores)
                 } else if (resultado.advertencias.length > 0) {
                     showNotification(
                         'warning',
