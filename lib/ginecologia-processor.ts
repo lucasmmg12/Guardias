@@ -140,6 +140,10 @@ function buscarMedico(nombre: string | null, medicos: Medico[]): Medico | null {
     ? partesNombre[0].trim()
     : (palabrasNombre.length > 0 ? palabrasNombre[0] : nombreNormalizado)
   
+  // Primero buscar coincidencia exacta de apellido
+  let mejorCoincidenciaApellido: Medico | null = null
+  let mejorPuntuacionApellido = 0
+  
   for (const medico of medicos) {
     const medicoNombreNormalizado = normalizarNombre(medico.nombre)
     const partesMedico = medicoNombreNormalizado.split(',').map(p => p.trim())
@@ -149,17 +153,53 @@ function buscarMedico(nombre: string | null, medicos: Medico[]): Medico | null {
       ? partesMedico[0].trim()
       : (palabrasMedico.length > 0 ? palabrasMedico[0] : medicoNombreNormalizado)
     
-    // Coincidencia exacta de apellido
+    // Coincidencia exacta de apellido (prioridad máxima)
     if (apellidoNombre === apellidoMedico && apellidoNombre.length > 2) {
-      return medico
+      // Si hay coincidencia exacta, verificar si también coinciden más palabras
+      const palabrasCoincidentes = palabrasNombre.filter(p => 
+        palabrasMedico.some(m => m === p || m.includes(p) || p.includes(m))
+      ).length
+      
+      if (palabrasCoincidentes > mejorPuntuacionApellido) {
+        mejorPuntuacionApellido = palabrasCoincidentes
+        mejorCoincidenciaApellido = medico
+      }
     }
+  }
+  
+  // Si encontramos coincidencia exacta de apellido con buena puntuación, retornarla
+  if (mejorCoincidenciaApellido && mejorPuntuacionApellido > 0) {
+    return mejorCoincidenciaApellido
+  }
+  
+  // Si no, buscar coincidencia parcial de apellido
+  for (const medico of medicos) {
+    const medicoNombreNormalizado = normalizarNombre(medico.nombre)
+    const partesMedico = medicoNombreNormalizado.split(',').map(p => p.trim())
+    const palabrasMedico = medicoNombreNormalizado.split(/\s+/).filter(p => p.length > 2)
+    
+    const apellidoMedico = partesMedico.length > 1
+      ? partesMedico[0].trim()
+      : (palabrasMedico.length > 0 ? palabrasMedico[0] : medicoNombreNormalizado)
     
     // Coincidencia parcial de apellido (uno contiene al otro)
     if (apellidoNombre.length > 2 && apellidoMedico.length > 2) {
       if (apellidoNombre.includes(apellidoMedico) || apellidoMedico.includes(apellidoNombre)) {
-        return medico
+        // Verificar también cuántas palabras coinciden
+        const palabrasCoincidentes = palabrasNombre.filter(p => 
+          palabrasMedico.some(m => m === p || m.includes(p) || p.includes(m))
+        ).length
+        
+        if (palabrasCoincidentes >= mejorPuntuacionApellido) {
+          mejorPuntuacionApellido = palabrasCoincidentes
+          mejorCoincidenciaApellido = medico
+        }
       }
     }
+  }
+  
+  if (mejorCoincidenciaApellido) {
+    return mejorCoincidenciaApellido
   }
   
   // Estrategia 4: Buscar por todas las palabras importantes (todas deben estar presentes)
@@ -309,6 +349,12 @@ export async function procesarExcelGinecologia(
     }
 
     const medicos = medicosData || []
+    
+    // Log para debugging: mostrar cantidad de médicos cargados
+    console.log(`[Ginecología] Médicos cargados: ${medicos.length}`)
+    console.log(`[Ginecología] Residentes: ${medicos.filter(m => m.matricula_provincial === null).length}`)
+    console.log(`[Ginecología] No residentes: ${medicos.filter(m => m.matricula_provincial !== null).length}`)
+    console.log(`[Ginecología] Nombres de médicos:`, medicos.map(m => `${m.nombre} (${m.matricula_provincial === null ? 'RESIDENTE' : 'NO RESIDENTE'})`).slice(0, 10))
 
     // 2. Cargar valores de consultas ginecológicas
     const { data: valoresData } = await supabase
@@ -490,6 +536,15 @@ export async function procesarExcelGinecologia(
 
         // Buscar médico SOLO por nombre (es el único dato que trae el Excel)
         const medico = buscarMedico(medicoNombre, medicos)
+        
+        // Log para debugging: mostrar qué médico se encontró
+        if (medicoNombre) {
+          if (medico) {
+            console.log(`[Fila ${i + 1}] Médico encontrado: "${medicoNombre}" -> "${medico.nombre}" (${medico.matricula_provincial === null ? 'RESIDENTE' : 'NO RESIDENTE - Mat: ' + medico.matricula_provincial})`)
+          } else {
+            console.log(`[Fila ${i + 1}] Médico NO encontrado: "${medicoNombre}"`)
+          }
+        }
         
         // Determinar si es residente: matricula_provincial IS NULL = residente
         const esResidente = medico ? (medico.matricula_provincial === null) : false
