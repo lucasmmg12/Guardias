@@ -630,8 +630,12 @@ export default function ValoresConsultasPage() {
               <thead>
                 <tr>
                   <th 
-                    className="px-4 py-3 text-left text-sm font-semibold text-green-400 bg-green-500/20 border-b border-green-500/30 sticky left-0 z-10"
-                    style={{ minWidth: '200px' }}
+                    className="px-4 py-3 text-left text-sm font-semibold text-green-400 border-b border-green-500/30 sticky left-0 z-20"
+                    style={{ 
+                      minWidth: '200px',
+                      background: 'rgba(34, 197, 94, 0.2)',
+                      backdropFilter: 'blur(10px)'
+                    }}
                   >
                     Obra Social
                   </th>
@@ -666,14 +670,22 @@ export default function ValoresConsultasPage() {
                     </td>
                   </tr>
                 ) : (
-                  tablaData.map((fila, index) => (
+                  tablaData.map((fila, index) => {
+                    const esPar = index % 2 === 0
+                    return (
                     <tr
                       key={fila.obra_social}
                       className="border-b border-white/5 hover:bg-white/5"
                     >
                       <td 
-                        className="px-4 py-3 text-sm text-gray-300 font-medium sticky left-0 bg-gray-900/95"
-                        style={{ minWidth: '200px' }}
+                        className="px-4 py-3 text-sm text-gray-300 font-medium sticky left-0 z-10"
+                        style={{ 
+                          minWidth: '200px',
+                          background: esPar 
+                            ? 'rgba(17, 24, 39, 0.95)' 
+                            : 'rgba(17, 24, 39, 0.98)',
+                          backdropFilter: 'blur(10px)'
+                        }}
                       >
                         {fila.obra_social}
                       </td>
@@ -694,7 +706,7 @@ export default function ValoresConsultasPage() {
                         </td>
                       ))}
                     </tr>
-                  ))
+                  )})
                 )}
               </tbody>
             </table>
