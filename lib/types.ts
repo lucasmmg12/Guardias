@@ -202,6 +202,7 @@ export interface LiquidacionGuardia {
   archivo_url: string | null
   procesado_por: string | null
   procesado_at: string | null
+  numero_liquidacion: number | null
   created_at: string
   updated_at: string
 }
@@ -221,6 +222,7 @@ export interface LiquidacionGuardiaInsert {
   archivo_url?: string | null
   procesado_por?: string | null
   procesado_at?: string | null
+  numero_liquidacion?: number | null
   created_at?: string
   updated_at?: string
 }
@@ -240,6 +242,7 @@ export interface LiquidacionGuardiaUpdate {
   archivo_url?: string | null
   procesado_por?: string | null
   procesado_at?: string | null
+  numero_liquidacion?: number | null
   created_at?: string
   updated_at?: string
 }

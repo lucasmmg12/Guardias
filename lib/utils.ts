@@ -298,3 +298,19 @@ export function esResidenteHorarioFormativo(
     
     return true
 }
+
+/**
+ * Calcula el número de liquidación basado en mes y año
+ * Agosto 2025 = 401, Septiembre 2025 = 402, etc.
+ */
+export function calcularNumeroLiquidacion(mes: number, anio: number): number {
+    // Mes base: Agosto 2025 = 401
+    const mesBase = 8 // Agosto
+    const anioBase = 2025
+    const numeroBase = 401
+    
+    // Calcular diferencia de meses desde la base
+    const mesesDiferencia = (anio - anioBase) * 12 + (mes - mesBase)
+    
+    return numeroBase + mesesDiferencia
+}

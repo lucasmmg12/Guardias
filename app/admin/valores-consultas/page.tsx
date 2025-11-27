@@ -8,8 +8,9 @@ import { InlineEditCell } from '@/components/custom/InlineEditCell'
 import { NotificationModal, NotificationType } from '@/components/custom/NotificationModal'
 import { ObraSocialFormModal } from '@/components/custom/ObraSocialFormModal'
 import { Button } from '@/components/ui/button'
-import { Lightbulb, Star, Plus, Copy, CopyCheck, Upload, Trash2 } from 'lucide-react'
+import { Lightbulb, Star, Plus, Copy, CopyCheck, Upload, Trash2, FileDown } from 'lucide-react'
 import * as XLSX from 'xlsx'
+import { exportPDFValoresConsultas } from '@/lib/pdf-exporter-valores-consultas'
 
 const MESES = [
   { value: 1, label: 'Enero' },
@@ -468,6 +469,28 @@ export default function ValoresConsultasPage() {
     return fila
   })
 
+  async function handleExportarPDF() {
+    try {
+      if (valores.length === 0) {
+        showNotification('warning', 'No hay datos para exportar', 'Sin datos')
+        return
+      }
+
+      exportPDFValoresConsultas({
+        valores,
+        mes,
+        anio,
+        obrasSociales,
+        tiposConsulta: TIPOS_CONSULTA
+      })
+
+      showNotification('success', 'PDF generado correctamente', 'Exportación exitosa')
+    } catch (error) {
+      console.error('Error exportando PDF:', error)
+      showNotification('error', 'Error al generar el PDF: ' + (error instanceof Error ? error.message : 'Error desconocido'), 'Error')
+    }
+  }
+
   return (
     <div className="min-h-screen p-8">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -618,6 +641,15 @@ export default function ValoresConsultasPage() {
               />
             )}
           </div>
+          <Button
+            onClick={handleExportarPDF}
+            variant="outline"
+            className="border-green-500/50 text-green-400 hover:bg-green-500/20"
+            disabled={loading || valores.length === 0}
+          >
+            <FileDown className="h-4 w-4 mr-2" />
+            Exportar PDF
+          </Button>
         </div>
 
         {/* Upload Excel */}
