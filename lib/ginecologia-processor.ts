@@ -336,12 +336,11 @@ export async function procesarExcelGinecologia(
   }
 
   try {
-    // 1. Cargar médicos de ginecología
+    // 1. Cargar TODOS los médicos de ginecología (activos e inactivos)
     const { data: medicosData, error: errorMedicos } = await supabase
       .from('medicos')
       .select('*')
-      .eq('especialidad', 'Ginecología')
-      .eq('activo', true) as { data: Medico[] | null; error: any }
+      .eq('especialidad', 'Ginecología') as { data: Medico[] | null; error: any }
 
     if (errorMedicos) {
       resultado.errores.push(`Error cargando médicos: ${errorMedicos.message}`)
