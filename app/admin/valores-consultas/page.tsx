@@ -8,7 +8,7 @@ import { InlineEditCell } from '@/components/custom/InlineEditCell'
 import { NotificationModal, NotificationType } from '@/components/custom/NotificationModal'
 import { ObraSocialFormModal } from '@/components/custom/ObraSocialFormModal'
 import { Button } from '@/components/ui/button'
-import { Lightbulb, Star, Plus, Copy, CopyCheck, Upload } from 'lucide-react'
+import { Lightbulb, Star, Plus, Copy, CopyCheck, Upload, Trash2 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 
 const MESES = [
@@ -430,6 +430,32 @@ export default function ValoresConsultasPage() {
     }
   }
 
+  async function handleEliminarObraSocial(obraSocial: string) {
+    if (!confirm(`¿Está seguro de que desea eliminar la obra social "${obraSocial}" y todos sus valores para ${MESES[mes - 1]} ${anio}?`)) {
+      return
+    }
+
+    try {
+      setLoading(true)
+      const { error } = await supabase
+        .from('valores_consultas_obra_social')
+        .delete()
+        .eq('obra_social', obraSocial)
+        .eq('mes', mes)
+        .eq('anio', anio)
+
+      if (error) throw error
+
+      await cargarValores()
+      showNotification('success', `Obra social "${obraSocial}" eliminada correctamente`, 'Eliminación exitosa')
+    } catch (error) {
+      console.error('Error eliminando obra social:', error)
+      showNotification('error', 'Error al eliminar la obra social: ' + (error instanceof Error ? error.message : 'Error desconocido'), 'Error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   // Crear matriz de datos para la tabla
   const tablaData = obrasSociales.map(obraSocial => {
     const fila: { obra_social: string; [key: string]: any } = { obra_social: obraSocial }
@@ -648,13 +674,23 @@ export default function ValoresConsultasPage() {
                       {tipo}
                     </th>
                   ))}
+                  <th 
+                    className="px-4 py-3 text-center text-sm font-semibold text-green-400 border-b border-green-500/30 sticky right-0 z-20"
+                    style={{ 
+                      minWidth: '80px',
+                      background: 'rgba(34, 197, 94, 0.2)',
+                      backdropFilter: 'blur(10px)'
+                    }}
+                  >
+                    Acciones
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
                     <td 
-                      colSpan={TIPOS_CONSULTA.length + 1}
+                      colSpan={TIPOS_CONSULTA.length + 2}
                       className="px-4 py-8 text-center text-gray-400"
                     >
                       Cargando...
@@ -663,7 +699,7 @@ export default function ValoresConsultasPage() {
                 ) : tablaData.length === 0 ? (
                   <tr>
                     <td 
-                      colSpan={TIPOS_CONSULTA.length + 1}
+                      colSpan={TIPOS_CONSULTA.length + 2}
                       className="px-4 py-8 text-center text-gray-400"
                     >
                       No hay datos para el mes seleccionado. Use "Importar Excel" o "Copiar desde mes anterior" para comenzar.
@@ -705,6 +741,25 @@ export default function ValoresConsultasPage() {
                           />
                         </td>
                       ))}
+                      <td 
+                        className="px-4 py-3 text-center sticky right-0 z-10"
+                        style={{ 
+                          minWidth: '80px',
+                          background: esPar 
+                            ? 'rgba(17, 24, 39, 0.95)' 
+                            : 'rgba(17, 24, 39, 0.98)',
+                          backdropFilter: 'blur(10px)'
+                        }}
+                      >
+                        <button
+                          onClick={() => handleEliminarObraSocial(fila.obra_social)}
+                          className="p-2 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors"
+                          title="Eliminar obra social"
+                          disabled={loading}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </td>
                     </tr>
                   )})
                 )}
