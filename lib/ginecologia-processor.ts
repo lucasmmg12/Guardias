@@ -84,111 +84,128 @@ function buscarValor(row: ExcelRow, variaciones: string[]): any {
  * Busca un médico por nombre en la lista de médicos
  */
 /**
+ * Normaliza un nombre para búsqueda (sin acentos, minúsculas, sin espacios extra)
+ */
+function normalizarNombre(nombre: string): string {
+  return nombre
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/**
  * Busca un médico por nombre en la lista de médicos
- * Mejora: búsqueda más flexible con múltiples estrategias
+ * Búsqueda muy flexible con múltiples estrategias
  */
 function buscarMedico(nombre: string | null, medicos: Medico[]): Medico | null {
   if (!nombre || typeof nombre !== 'string') return null
   
-  const nombreNormalizado = nombre
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .trim()
-  
+  const nombreNormalizado = normalizarNombre(nombre)
   if (nombreNormalizado === '') return null
   
-  // Estrategia 1: Buscar coincidencia exacta
+  // Estrategia 1: Coincidencia exacta (después de normalizar)
   for (const medico of medicos) {
-    const medicoNombreNormalizado = medico.nombre
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .trim()
-    
+    const medicoNombreNormalizado = normalizarNombre(medico.nombre)
     if (medicoNombreNormalizado === nombreNormalizado) {
       return medico
     }
   }
   
-  // Estrategia 2: Buscar por apellido (primera parte antes de la coma)
-  const partesNombre = nombre.split(',').map(p => p.trim())
-  const apellidoNombre = partesNombre.length > 0 
-    ? partesNombre[0]
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .trim()
-    : nombreNormalizado
+  // Estrategia 2: Coincidencia exacta sin considerar orden (si uno tiene coma y otro no)
+  // Ejemplo: "García, Juan" vs "Juan García"
+  const partesNombre = nombreNormalizado.split(',').map(p => p.trim())
+  const palabrasNombre = nombreNormalizado.split(/\s+/).filter(p => p.length > 2)
   
   for (const medico of medicos) {
-    const partesMedico = medico.nombre.split(',').map(p => p.trim())
-    if (partesMedico.length > 0) {
-      const apellidoMedico = partesMedico[0]
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .trim()
+    const medicoNombreNormalizado = normalizarNombre(medico.nombre)
+    const partesMedico = medicoNombreNormalizado.split(',').map(p => p.trim())
+    const palabrasMedico = medicoNombreNormalizado.split(/\s+/).filter(p => p.length > 2)
+    
+    // Si ambos tienen las mismas palabras (sin importar orden)
+    if (palabrasNombre.length > 0 && palabrasMedico.length > 0) {
+      const palabrasNombreSet = new Set(palabrasNombre)
+      const palabrasMedicoSet = new Set(palabrasMedico)
       
-      // Coincidencia exacta de apellido
-      if (apellidoMedico === apellidoNombre) {
+      if (palabrasNombreSet.size === palabrasMedicoSet.size &&
+          Array.from(palabrasNombreSet).every(p => palabrasMedicoSet.has(p))) {
         return medico
       }
-      
-      // Coincidencia parcial (uno contiene al otro)
+    }
+  }
+  
+  // Estrategia 3: Buscar por apellido (primera parte antes de la coma o primera palabra)
+  const apellidoNombre = partesNombre.length > 1 
+    ? partesNombre[0].trim()
+    : (palabrasNombre.length > 0 ? palabrasNombre[0] : nombreNormalizado)
+  
+  for (const medico of medicos) {
+    const medicoNombreNormalizado = normalizarNombre(medico.nombre)
+    const partesMedico = medicoNombreNormalizado.split(',').map(p => p.trim())
+    const palabrasMedico = medicoNombreNormalizado.split(/\s+/).filter(p => p.length > 2)
+    
+    const apellidoMedico = partesMedico.length > 1
+      ? partesMedico[0].trim()
+      : (palabrasMedico.length > 0 ? palabrasMedico[0] : medicoNombreNormalizado)
+    
+    // Coincidencia exacta de apellido
+    if (apellidoNombre === apellidoMedico && apellidoNombre.length > 2) {
+      return medico
+    }
+    
+    // Coincidencia parcial de apellido (uno contiene al otro)
+    if (apellidoNombre.length > 2 && apellidoMedico.length > 2) {
       if (apellidoNombre.includes(apellidoMedico) || apellidoMedico.includes(apellidoNombre)) {
         return medico
       }
     }
   }
   
-  // Estrategia 3: Buscar por palabras clave (apellido y nombre)
-  const palabrasNombre = nombreNormalizado.split(/\s+/).filter(p => p.length > 2)
-  
+  // Estrategia 4: Buscar por todas las palabras importantes (todas deben estar presentes)
   if (palabrasNombre.length > 0) {
     for (const medico of medicos) {
-      const medicoNombreNormalizado = medico.nombre
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .trim()
+      const medicoNombreNormalizado = normalizarNombre(medico.nombre)
+      const palabrasMedico = medicoNombreNormalizado.split(/\s+/).filter(p => p.length > 2)
       
-      // Si todas las palabras importantes están presentes
+      // Si todas las palabras del nombre están en el nombre del médico
       if (palabrasNombre.every(p => medicoNombreNormalizado.includes(p))) {
+        return medico
+      }
+      
+      // Si todas las palabras del médico están en el nombre
+      if (palabrasMedico.length > 0 && palabrasMedico.every(p => nombreNormalizado.includes(p))) {
         return medico
       }
     }
   }
   
+  // Estrategia 5: Búsqueda por similitud (al menos 2 palabras coinciden)
+  if (palabrasNombre.length >= 2) {
+    let mejorCoincidencia: Medico | null = null
+    let mejorPuntuacion = 0
+    
+    for (const medico of medicos) {
+      const medicoNombreNormalizado = normalizarNombre(medico.nombre)
+      const palabrasMedico = medicoNombreNormalizado.split(/\s+/).filter(p => p.length > 2)
+      
+      // Contar cuántas palabras coinciden
+      const palabrasCoincidentes = palabrasNombre.filter(p => 
+        palabrasMedico.some(m => m.includes(p) || p.includes(m))
+      ).length
+      
+      if (palabrasCoincidentes >= 2 && palabrasCoincidentes > mejorPuntuacion) {
+        mejorPuntuacion = palabrasCoincidentes
+        mejorCoincidencia = medico
+      }
+    }
+    
+    if (mejorCoincidencia) {
+      return mejorCoincidencia
+    }
+  }
+  
   return null
-}
-
-/**
- * Busca un médico por matrícula provincial
- * Si matriculaExcel es "RESIDENTE" o NULL, busca médicos donde matricula_provincial IS NULL
- * Si tiene un valor, busca por matricula_provincial exacta
- */
-function buscarMedicoPorMatricula(
-  matriculaExcel: string | null,
-  medicos: Medico[]
-): Medico | null {
-  if (!matriculaExcel) {
-    // Si no hay matrícula en Excel, buscar médicos donde matricula_provincial IS NULL (residentes)
-    return medicos.find(m => m.matricula_provincial === null) || null
-  }
-  
-  const matriculaNormalizada = String(matriculaExcel).trim().toUpperCase()
-  
-  // Si es "RESIDENTE", buscar donde matricula_provincial IS NULL
-  if (matriculaNormalizada === 'RESIDENTE' || matriculaNormalizada === 'NULL') {
-    return medicos.find(m => m.matricula_provincial === null) || null
-  }
-  
-  // Buscar por matrícula provincial exacta
-  return medicos.find(m => 
-    m.matricula_provincial && 
-    String(m.matricula_provincial).trim().toUpperCase() === matriculaNormalizada
-  ) || null
 }
 
 /**
@@ -426,16 +443,6 @@ export async function procesarExcelGinecologia(
           'MÉDICO RESPONSABLE'
         ])
         
-        // Extraer matrícula del Excel
-        const matriculaExcel = buscarValor(row, [
-          'Mat. Provincial', 'Mat Provincial', 'Mat.Provincial', 'MatProvincial',
-          'Matricula Provincial', 'Matrícula Provincial',
-          'Matricula', 'Matrícula', 'Mat', 'MAT',
-          'Medico Matricula', 'Médico Matrícula',
-          'Matricula Medico', 'Matrícula Médico',
-          'Matricula Provincial', 'Matrícula Provincial'
-        ])
-        
         // MEJORAR: Intentar múltiples formatos de fecha
         let fecha: string | null = null
         
@@ -481,25 +488,15 @@ export async function procesarExcelGinecologia(
           continue
         }
 
-        // Buscar médico - Primero por nombre, luego por matrícula
-        let medico = buscarMedico(medicoNombre, medicos)
-        
-        // Si no se encontró por nombre, intentar por matrícula
-        if (!medico && matriculaExcel) {
-          medico = buscarMedicoPorMatricula(matriculaExcel, medicos)
-        }
-        
-        // Si aún no se encontró y la matrícula es "RESIDENTE" o NULL, buscar residentes
-        if (!medico && (!matriculaExcel || String(matriculaExcel).trim().toUpperCase() === 'RESIDENTE')) {
-          medico = medicos.find(m => m.matricula_provincial === null) || null
-        }
+        // Buscar médico SOLO por nombre (es el único dato que trae el Excel)
+        const medico = buscarMedico(medicoNombre, medicos)
         
         // Determinar si es residente: matricula_provincial IS NULL = residente
         const esResidente = medico ? (medico.matricula_provincial === null) : false
 
         // Si no se encuentra el médico, registrar advertencia pero continuar
         if (!medico && medicoNombre) {
-          resultado.advertencias.push(`Fila ${i + 1}: Médico no encontrado en BD: ${medicoNombre}${matriculaExcel ? ` (Matrícula: ${matriculaExcel})` : ''}`)
+          resultado.advertencias.push(`Fila ${i + 1}: Médico no encontrado en BD: "${medicoNombre}". Nombres disponibles: ${medicos.slice(0, 5).map(m => m.nombre).join(', ')}${medicos.length > 5 ? '...' : ''}`)
         }
 
         // Obtener valor de consulta
