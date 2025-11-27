@@ -4,6 +4,7 @@
   "/admin/medicos/page": "app/admin/medicos/page.js",
   "/admin/valores-consultas/page": "app/admin/valores-consultas/page.js",
   "/ginecologia/page": "app/ginecologia/page.js",
+  "/ginecologia/resumenes/page": "app/ginecologia/resumenes/page.js",
   "/page": "app/page.js",
   "/pediatria/page": "app/pediatria/page.js"
 }

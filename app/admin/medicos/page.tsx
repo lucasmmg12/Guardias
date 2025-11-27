@@ -20,11 +20,14 @@ import {
   XCircle,
   AlertCircle,
   Sparkles,
-  Users
+  Users,
+  ArrowLeft
 } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 export default function MedicosPage() {
+  const router = useRouter()
   const [medicos, setMedicos] = useState<Medico[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -223,29 +226,35 @@ export default function MedicosPage() {
       <div className="max-w-7xl mx-auto space-y-8 relative z-10">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <div>
-            <div className="flex items-center gap-4 mb-4">
-              <Link href="/" className="hover:opacity-80 transition-opacity">
-                <img 
-                  src="/logogrow.png" 
-                  alt="Grow Labs" 
-                  className="h-16 w-auto drop-shadow-2xl"
-                  style={{
-                    filter: 'drop-shadow(0 0 20px rgba(34, 197, 94, 0.5))'
-                  }}
-                />
-              </Link>
-              <div>
-                <h1 className="text-4xl font-bold mb-2 tracking-tight">
-                  <span className="bg-gradient-to-r from-green-400 to-emerald-300 bg-clip-text text-transparent">
-                    Administración de Médicos
-                  </span>
-                </h1>
-                <p className="text-gray-400 flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-green-400" />
-                  Gestión de prestadores para Pediatría y Ginecología
-                </p>
-              </div>
+          <div className="flex items-center gap-4">
+            <Button
+              onClick={() => router.push('/')}
+              variant="outline"
+              className="border-green-500/50 text-green-400 hover:bg-green-500/20"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Volver
+            </Button>
+            <Link href="/" className="hover:opacity-80 transition-opacity">
+              <img 
+                src="/logogrow.png" 
+                alt="Grow Labs" 
+                className="h-16 w-auto drop-shadow-2xl"
+                style={{
+                  filter: 'drop-shadow(0 0 20px rgba(34, 197, 94, 0.5))'
+                }}
+              />
+            </Link>
+            <div>
+              <h1 className="text-4xl font-bold mb-2 tracking-tight">
+                <span className="bg-gradient-to-r from-green-400 to-emerald-300 bg-clip-text text-transparent">
+                  Administración de Médicos
+                </span>
+              </h1>
+              <p className="text-gray-400 flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-green-400" />
+                Gestión de prestadores para Pediatría y Ginecología
+              </p>
             </div>
           </div>
         </div>

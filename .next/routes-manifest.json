@@ -58,6 +58,12 @@
       "namedRegex": "^/ginecologia(?:/)?$"
     },
     {
+      "page": "/ginecologia/resumenes",
+      "regex": "^/ginecologia/resumenes(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/ginecologia/resumenes(?:/)?$"
+    },
+    {
       "page": "/pediatria",
       "regex": "^/pediatria(?:/)?$",
       "routeKeys": {},

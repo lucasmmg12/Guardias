@@ -1,26 +1,110 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { UploadExcel } from '@/components/custom/UploadExcel'
 import { ExcelDataTable } from '@/components/custom/ExcelDataTable'
 import { EstadisticasObraSocial } from '@/components/custom/EstadisticasObraSocial'
+import { MesSelectorModal } from '@/components/custom/MesSelectorModal'
 import { readExcelFile, ExcelData } from '@/lib/excel-reader'
-import { AlertCircle, CheckCircle2, Sparkles } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Sparkles, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import { Button } from '@/components/ui/button'
 
 export default function GinecologiaPage() {
+    const router = useRouter()
     const [isProcessing, setIsProcessing] = useState(false)
     const [excelData, setExcelData] = useState<ExcelData | null>(null)
     const [error, setError] = useState<string | null>(null)
+    const [showMesSelector, setShowMesSelector] = useState(false)
+    const [mesDetectado, setMesDetectado] = useState<number | null>(null)
+    const [anioDetectado, setAnioDetectado] = useState<number | null>(null)
+    const [mesSeleccionado, setMesSeleccionado] = useState(new Date().getMonth() + 1)
+    const [anioSeleccionado, setAnioSeleccionado] = useState(new Date().getFullYear())
+
+    // Función para detectar mes y año desde las fechas del Excel
+    const detectarMesAnio = (data: ExcelData): { mes: number | null; anio: number | null } => {
+        // Primero intentar desde el período
+        if (data.periodo?.desde) {
+            const partes = data.periodo.desde.split('/')
+            if (partes.length === 3) {
+                const mes = parseInt(partes[1], 10)
+                const anio = parseInt(partes[2], 10)
+                if (mes >= 1 && mes <= 12 && anio >= 2020) {
+                    return { mes, anio }
+                }
+            }
+        }
+
+        // Si no hay período, buscar en las fechas de las filas
+        const fechaColumn = data.headers.find(h => 
+            h.toLowerCase().includes('fecha') || 
+            h.toLowerCase().includes('date')
+        )
+
+        if (fechaColumn && data.rows.length > 0) {
+            const fechas: number[] = []
+            data.rows.forEach(row => {
+                const fechaStr = row[fechaColumn]
+                if (fechaStr) {
+                    // Intentar parsear fecha en formato DD/MM/YYYY
+                    if (typeof fechaStr === 'string') {
+                        const match = fechaStr.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/)
+                        if (match) {
+                            const mes = parseInt(match[2], 10)
+                            const anio = parseInt(match[3], 10)
+                            if (mes >= 1 && mes <= 12 && anio >= 2020) {
+                                fechas.push(mes)
+                            }
+                        }
+                    }
+                }
+            })
+
+            // Si todas las fechas son del mismo mes, usar ese mes
+            if (fechas.length > 0) {
+                const mesComun = fechas[0]
+                const todasIguales = fechas.every(m => m === mesComun)
+                if (todasIguales) {
+                    // Obtener año de la primera fecha
+                    const primeraFecha = data.rows[0][fechaColumn]
+                    if (typeof primeraFecha === 'string') {
+                        const match = primeraFecha.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/)
+                        if (match) {
+                            return { mes: mesComun, anio: parseInt(match[3], 10) }
+                        }
+                    }
+                }
+            }
+        }
+
+        return { mes: null, anio: null }
+    }
 
     const handleUpload = async (file: File) => {
         setIsProcessing(true)
         setExcelData(null)
         setError(null)
+        setMesDetectado(null)
+        setAnioDetectado(null)
 
         try {
             const data = await readExcelFile(file)
             setExcelData(data)
+            
+            // Detectar mes y año automáticamente
+            const { mes, anio } = detectarMesAnio(data)
+            if (mes && anio) {
+                setMesDetectado(mes)
+                setAnioDetectado(anio)
+                setMesSeleccionado(mes)
+                setAnioSeleccionado(anio)
+                // Mostrar modal para confirmar
+                setShowMesSelector(true)
+            } else {
+                // Si no se detectó, mostrar modal para seleccionar manualmente
+                setShowMesSelector(true)
+            }
         } catch (err: any) {
             console.error('Error processing file:', err)
             setError(err.message || 'Ocurrió un error inesperado al procesar el archivo.')
@@ -29,21 +113,15 @@ export default function GinecologiaPage() {
         }
     }
 
-    // Extraer mes y año del período del Excel
+    const handleMesConfirmado = (mes: number, anio: number) => {
+        setMesSeleccionado(mes)
+        setAnioSeleccionado(anio)
+        setShowMesSelector(false)
+    }
+
+    // Extraer mes y año del período del Excel (usar el seleccionado)
     const obtenerMesAnio = () => {
-        if (!excelData?.periodo) return { mes: new Date().getMonth() + 1, anio: new Date().getFullYear() }
-        
-        // Parsear fecha desde formato "DD/MM/YYYY"
-        const fechaDesde = excelData.periodo.desde
-        const partes = fechaDesde.split('/')
-        if (partes.length === 3) {
-            return {
-                mes: parseInt(partes[1], 10),
-                anio: parseInt(partes[2], 10)
-            }
-        }
-        
-        return { mes: new Date().getMonth() + 1, anio: new Date().getFullYear() }
+        return { mes: mesSeleccionado, anio: anioSeleccionado }
     }
 
     const handleCellUpdate = async (rowIndex: number, column: string, newValue: any) => {
@@ -61,6 +139,16 @@ export default function GinecologiaPage() {
             <div className="max-w-6xl mx-auto space-y-8 relative z-10">
                 {/* Header con Logo */}
                 <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-4">
+                        <Button
+                            onClick={() => router.push('/')}
+                            variant="outline"
+                            className="border-green-500/50 text-green-400 hover:bg-green-500/20"
+                        >
+                            <ArrowLeft className="h-4 w-4 mr-2" />
+                            Volver
+                        </Button>
+                    </div>
                     <div>
                         <div className="flex items-center gap-4 mb-4">
                             <Link href="/" className="hover:opacity-80 transition-opacity">
@@ -107,9 +195,18 @@ export default function GinecologiaPage() {
                         }}
                     ></div>
                     <div className="relative">
-                        <h2 className="text-2xl font-bold text-blue-400 mb-6">
-                            📤 Cargar Liquidación
-                        </h2>
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-2xl font-bold text-blue-400">
+                                📤 Cargar Liquidación
+                            </h2>
+                            <Button
+                                onClick={() => router.push('/ginecologia/resumenes')}
+                                variant="outline"
+                                className="border-blue-500/50 text-blue-400 hover:bg-blue-500/20"
+                            >
+                                Ver Resúmenes
+                            </Button>
+                        </div>
 
                     <UploadExcel onUpload={handleUpload} isProcessing={isProcessing} />
 
@@ -208,6 +305,17 @@ export default function GinecologiaPage() {
                         </div>
                     </div>
             </div>
+
+            {/* Modal de selección de mes */}
+            <MesSelectorModal
+                isOpen={showMesSelector}
+                onClose={() => setShowMesSelector(false)}
+                onConfirm={handleMesConfirmado}
+                mesDetectado={mesDetectado}
+                anioDetectado={anioDetectado}
+                mesActual={new Date().getMonth() + 1}
+                anioActual={new Date().getFullYear()}
+            />
         </div>
     )
 }

@@ -1,0 +1,172 @@
+import { supabase } from './supabase/client'
+import { DetalleGuardia, ValorConsultaObraSocial, Medico } from './types'
+import { esResidenteHorarioFormativo } from './utils'
+
+export interface ResumenPorMedico {
+  medico_id: string | null
+  medico_nombre: string
+  obra_social: string
+  cantidad: number
+  valor_unitario: number
+  total: number
+}
+
+export interface ResumenPorPrestador {
+  medico_id: string | null
+  medico_nombre: string
+  cantidad: number
+  total_bruto: number
+  retencion_20: number
+  total_neto: number
+}
+
+/**
+ * Calcula el resumen por médico y obra social (PRE-RETENCIÓN)
+ * Aplica la regla de residentes: si es residente en horario formativo (lunes-sábado 07:00-15:00), no se cuenta
+ */
+export async function calcularResumenPorMedico(
+  mes: number,
+  anio: number
+): Promise<ResumenPorMedico[]> {
+  // Obtener liquidación de ginecología para el mes/año
+  const { data: liquidacion } = await supabase
+    .from('liquidaciones_guardia')
+    .select('id')
+    .eq('especialidad', 'Ginecología')
+    .eq('mes', mes)
+    .eq('anio', anio)
+    .single()
+
+  if (!liquidacion || !(liquidacion as any).id) {
+    return []
+  }
+
+  const liquidacionId = (liquidacion as any).id
+
+  // Obtener todos los detalles de guardia de esta liquidación
+  const { data: detalles } = await supabase
+    .from('detalle_guardia')
+    .select('*')
+    .eq('liquidacion_id', liquidacionId) as { data: DetalleGuardia[] | null }
+
+  if (!detalles || detalles.length === 0) {
+    return []
+  }
+
+  // Obtener valores de consultas ginecológicas
+  const { data: valoresConsultas } = await supabase
+    .from('valores_consultas_obra_social')
+    .select('*')
+    .eq('tipo_consulta', 'CONSULTA GINECOLOGICA')
+    .eq('mes', mes)
+    .eq('anio', anio) as { data: ValorConsultaObraSocial[] | null }
+
+  if (!valoresConsultas || valoresConsultas.length === 0) {
+    return []
+  }
+
+  // Crear mapa de valores por obra social
+  const valoresPorObraSocial = new Map<string, number>()
+  valoresConsultas.forEach(v => {
+    valoresPorObraSocial.set(v.obra_social, v.valor)
+  })
+
+  // Agrupar por médico y obra social, aplicando regla de residentes
+  const resumenMap = new Map<string, ResumenPorMedico>()
+
+  detalles.forEach(detalle => {
+    // Aplicar regla de residentes
+    const esResidente = detalle.medico_es_residente === true
+    const debeContar = !esResidenteHorarioFormativo(
+      detalle.fecha,
+      detalle.hora,
+      esResidente
+    )
+
+    // Si no debe contarse (residente en horario formativo), saltar
+    if (!debeContar) {
+      return
+    }
+
+    const obraSocial = detalle.obra_social || 'PARTICULARES'
+    const medicoNombre = detalle.medico_nombre || 'Desconocido'
+    const medicoId = detalle.medico_id || 'sin-id'
+
+    // Clave única: medico_id + obra_social
+    const clave = `${medicoId}|${obraSocial}`
+
+    // Obtener valor unitario de la obra social
+    const valorUnitario = valoresPorObraSocial.get(obraSocial) || 0
+
+    // Actualizar o crear resumen
+    if (resumenMap.has(clave)) {
+      const resumen = resumenMap.get(clave)!
+      resumen.cantidad += 1
+      resumen.total = resumen.cantidad * resumen.valor_unitario
+    } else {
+      resumenMap.set(clave, {
+        medico_id: detalle.medico_id,
+        medico_nombre: medicoNombre,
+        obra_social: obraSocial,
+        cantidad: 1,
+        valor_unitario: valorUnitario,
+        total: valorUnitario
+      })
+    }
+  })
+
+  // Convertir a array y ordenar por médico y obra social
+  return Array.from(resumenMap.values()).sort((a, b) => {
+    if (a.medico_nombre !== b.medico_nombre) {
+      return a.medico_nombre.localeCompare(b.medico_nombre)
+    }
+    return a.obra_social.localeCompare(b.obra_social)
+  })
+}
+
+/**
+ * Calcula el resumen por prestador (POST-RETENCIÓN)
+ * Agrupa por médico y calcula retención del 20%
+ */
+export async function calcularResumenPorPrestador(
+  mes: number,
+  anio: number
+): Promise<ResumenPorPrestador[]> {
+  // Obtener resumen por médico (ya aplica regla de residentes)
+  const resumenPorMedico = await calcularResumenPorMedico(mes, anio)
+
+  // Agrupar por médico
+  const resumenMap = new Map<string, ResumenPorPrestador>()
+
+  resumenPorMedico.forEach(resumen => {
+    const medicoId = resumen.medico_id || 'sin-id'
+    const medicoNombre = resumen.medico_nombre
+
+    if (resumenMap.has(medicoId)) {
+      const prestador = resumenMap.get(medicoId)!
+      prestador.cantidad += resumen.cantidad
+      prestador.total_bruto += resumen.total
+      prestador.retencion_20 = prestador.total_bruto * 0.2
+      prestador.total_neto = prestador.total_bruto - prestador.retencion_20
+    } else {
+      const totalBruto = resumen.total
+      const retencion = totalBruto * 0.2
+      const totalNeto = totalBruto - retencion
+
+      resumenMap.set(medicoId, {
+        medico_id: resumen.medico_id,
+        medico_nombre: medicoNombre,
+        cantidad: resumen.cantidad,
+        total_bruto: totalBruto,
+        retencion_20: retencion,
+        total_neto: totalNeto
+      })
+    }
+  })
+
+  // Convertir a array y ordenar por nombre
+  return Array.from(resumenMap.values()).sort((a, b) =>
+    a.medico_nombre.localeCompare(b.medico_nombre)
+  )
+}
+

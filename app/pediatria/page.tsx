@@ -1,14 +1,17 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { UploadExcel } from '@/components/custom/UploadExcel'
 import { ExcelDataTable } from '@/components/custom/ExcelDataTable'
 import { EstadisticasObraSocial } from '@/components/custom/EstadisticasObraSocial'
 import { readExcelFile, ExcelData } from '@/lib/excel-reader'
-import { AlertCircle, CheckCircle2, Sparkles } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Sparkles, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import { Button } from '@/components/ui/button'
 
 export default function PediatriaPage() {
+    const router = useRouter()
     const [isProcessing, setIsProcessing] = useState(false)
     const [excelData, setExcelData] = useState<ExcelData | null>(null)
     const [error, setError] = useState<string | null>(null)
@@ -61,6 +64,16 @@ export default function PediatriaPage() {
             <div className="max-w-6xl mx-auto space-y-8 relative z-10">
                 {/* Header con Logo */}
                 <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-4">
+                        <Button
+                            onClick={() => router.push('/')}
+                            variant="outline"
+                            className="border-green-500/50 text-green-400 hover:bg-green-500/20"
+                        >
+                            <ArrowLeft className="h-4 w-4 mr-2" />
+                            Volver
+                        </Button>
+                    </div>
                     <div>
                         <div className="flex items-center gap-4 mb-4">
                             <Link href="/" className="hover:opacity-80 transition-opacity">

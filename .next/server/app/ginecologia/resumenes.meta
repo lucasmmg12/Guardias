@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/ginecologia/layout,_N_T_/ginecologia/resumenes/layout,_N_T_/ginecologia/resumenes/page,_N_T_/ginecologia/resumenes"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/ginecologia/resumenes/__PAGE__",
+    "/ginecologia/resumenes",
+    "/ginecologia",
+    "/_index",
+    "/_head"
+  ]
+}

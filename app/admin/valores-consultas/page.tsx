@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { ValorConsultaObraSocial } from '@/lib/types'
 import { UploadExcel } from '@/components/custom/UploadExcel'
@@ -8,7 +9,7 @@ import { InlineEditCell } from '@/components/custom/InlineEditCell'
 import { NotificationModal, NotificationType } from '@/components/custom/NotificationModal'
 import { ObraSocialFormModal } from '@/components/custom/ObraSocialFormModal'
 import { Button } from '@/components/ui/button'
-import { Lightbulb, Star, Plus, Copy, CopyCheck, Upload, Trash2, FileDown } from 'lucide-react'
+import { Lightbulb, Star, Plus, Copy, CopyCheck, Upload, Trash2, FileDown, ArrowLeft } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { exportPDFValoresConsultas } from '@/lib/pdf-exporter-valores-consultas'
 
@@ -111,6 +112,7 @@ function normalizarTipoConsulta(header: string): string {
 }
 
 export default function ValoresConsultasPage() {
+  const router = useRouter()
   const [mes, setMes] = useState(new Date().getMonth() + 1)
   const [anio, setAnio] = useState(new Date().getFullYear())
   const [valores, setValores] = useState<ValorConsultaObraSocial[]>([])

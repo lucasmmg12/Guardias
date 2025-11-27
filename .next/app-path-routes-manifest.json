@@ -4,6 +4,7 @@
   "/admin/medicos/page": "/admin/medicos",
   "/admin/valores-consultas/page": "/admin/valores-consultas",
   "/ginecologia/page": "/ginecologia",
+  "/ginecologia/resumenes/page": "/ginecologia/resumenes",
   "/page": "/",
   "/pediatria/page": "/pediatria"
 }
