@@ -63,10 +63,11 @@ export default function ValoresConsultasPage() {
 
       if (error) throw error
 
-      setValores(data || [])
+      const valoresData = (data || []) as ValorConsultaObraSocial[]
+      setValores(valoresData)
       
       // Extraer obras sociales únicas
-      const obrasUnicas = [...new Set((data || []).map(v => v.obra_social))]
+      const obrasUnicas = [...new Set(valoresData.map(v => v.obra_social))]
       setObrasSociales(obrasUnicas)
     } catch (error) {
       console.error('Error cargando valores:', error)
@@ -185,6 +186,7 @@ export default function ValoresConsultasPage() {
       if (nuevosValores.length > 0) {
         const { error } = await supabase
           .from('valores_consultas_obra_social')
+          // @ts-ignore - La tabla no está en los tipos generados de Supabase aún
           .insert(nuevosValores)
 
         if (error) throw error
@@ -222,7 +224,9 @@ export default function ValoresConsultasPage() {
 
       if (error) throw error
 
-      if (!valoresAnteriores || valoresAnteriores.length === 0) {
+      const valoresAnterioresData = (valoresAnteriores || []) as ValorConsultaObraSocial[]
+
+      if (valoresAnterioresData.length === 0) {
         alert('No hay valores en el mes anterior para copiar')
         return
       }
@@ -235,7 +239,7 @@ export default function ValoresConsultasPage() {
         .eq('anio', anio)
 
       // Copiar valores con o sin aumento
-      const nuevosValores = valoresAnteriores.map(v => ({
+      const nuevosValores = valoresAnterioresData.map(v => ({
         obra_social: v.obra_social,
         tipo_consulta: v.tipo_consulta,
         valor: copiarConAumento 
@@ -248,6 +252,7 @@ export default function ValoresConsultasPage() {
 
       const { error: insertError } = await supabase
         .from('valores_consultas_obra_social')
+        // @ts-ignore - La tabla no está en los tipos generados de Supabase aún
         .insert(nuevosValores)
 
       if (insertError) throw insertError
@@ -293,6 +298,7 @@ export default function ValoresConsultasPage() {
 
       const { error } = await supabase
         .from('valores_consultas_obra_social')
+        // @ts-ignore - La tabla no está en los tipos generados de Supabase aún
         .insert(nuevosValores)
 
       if (error) throw error
@@ -313,6 +319,7 @@ export default function ValoresConsultasPage() {
     try {
       const { error } = await supabase
         .from('valores_consultas_obra_social')
+        // @ts-ignore - La tabla no está en los tipos generados de Supabase aún
         .update({ valor: newValue })
         .eq('obra_social', obraSocial)
         .eq('tipo_consulta', tipoConsulta)

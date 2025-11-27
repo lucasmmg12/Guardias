@@ -2,6 +2,7 @@
   "/_global-error/page": "/_global-error",
   "/_not-found/page": "/_not-found",
   "/admin/medicos/page": "/admin/medicos",
+  "/admin/valores-consultas/page": "/admin/valores-consultas",
   "/ginecologia/page": "/ginecologia",
   "/page": "/",
   "/pediatria/page": "/pediatria"

@@ -46,6 +46,12 @@
       "namedRegex": "^/admin/medicos(?:/)?$"
     },
     {
+      "page": "/admin/valores-consultas",
+      "regex": "^/admin/valores\\-consultas(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/valores\\-consultas(?:/)?$"
+    },
+    {
       "page": "/ginecologia",
       "regex": "^/ginecologia(?:/)?$",
       "routeKeys": {},
