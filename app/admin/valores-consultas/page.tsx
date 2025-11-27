@@ -5,6 +5,8 @@ import { supabase } from '@/lib/supabase/client'
 import { ValorConsultaObraSocial } from '@/lib/types'
 import { UploadExcel } from '@/components/custom/UploadExcel'
 import { InlineEditCell } from '@/components/custom/InlineEditCell'
+import { NotificationModal, NotificationType } from '@/components/custom/NotificationModal'
+import { ObraSocialFormModal } from '@/components/custom/ObraSocialFormModal'
 import { Button } from '@/components/ui/button'
 import { Lightbulb, Star, Plus, Copy, CopyCheck, Upload } from 'lucide-react'
 import * as XLSX from 'xlsx'
@@ -26,7 +28,7 @@ const MESES = [
 
 const TIPOS_CONSULTA = [
   'CONSULTA',
-  'CONSULTA DE GUARDIA CLINIC',
+  'CONSULTA DE GUARDIA CLINICA',
   'CONSULTA PEDIATRICA Y NEONATAL',
   'CONSULTA DE GUARDIA PEDIATRICA',
   'CONSULTA GINECOLOGICA',
@@ -37,6 +39,76 @@ const TIPOS_CONSULTA = [
   'E.C.G.',
 ]
 
+// Función para normalizar nombres de tipos de consulta (maneja variaciones)
+function normalizarTipoConsulta(header: string): string {
+  const headerUpper = header.toUpperCase().trim()
+  
+  // Mapeo de variaciones a nombres estándar
+  const mapeo: { [key: string]: string } = {
+    'CONSULTA': 'CONSULTA',
+    'CONSULTA DE GUARDIA CLINIC': 'CONSULTA DE GUARDIA CLINICA',
+    'CONSULTA DE GUARDIA CLINICA': 'CONSULTA DE GUARDIA CLINICA',
+    'CONSULTA DE GUARDIA CLÍNICA': 'CONSULTA DE GUARDIA CLINICA',
+    'CONSULTA DE GUARDIA CLÍNIC': 'CONSULTA DE GUARDIA CLINICA',
+    'CONSULTA PEDIATRICA Y NEONATAL': 'CONSULTA PEDIATRICA Y NEONATAL',
+    'CONSULTA DE GUARDIA PEDIATRICA': 'CONSULTA DE GUARDIA PEDIATRICA',
+    'CONSULTA GINECOLOGICA': 'CONSULTA GINECOLOGICA',
+    'CONSULTA DE GUARDIA GINECOLOGICA': 'CONSULTA DE GUARDIA GINECOLOGICA',
+    'CONSULTA EN INTERNADOS': 'CONSULTA EN INTERNADOS',
+    'INTERCONSULTAS': 'INTERCONSULTAS',
+    'CONSULTA CARDIOLOGICA': 'CONSULTA CARDIOLOGICA',
+    'E.C.G.': 'E.C.G.',
+    'ECG': 'E.C.G.',
+  }
+  
+  // Buscar coincidencia exacta
+  if (mapeo[headerUpper]) {
+    return mapeo[headerUpper]
+  }
+  
+  // Buscar coincidencia parcial (contiene)
+  for (const [variacion, estandar] of Object.entries(mapeo)) {
+    if (headerUpper.includes(variacion) || variacion.includes(headerUpper)) {
+      return estandar
+    }
+  }
+  
+  // Si no encuentra coincidencia, normalizar y buscar por palabras clave
+  if (headerUpper.includes('GUARDIA') && headerUpper.includes('CLINIC')) {
+    return 'CONSULTA DE GUARDIA CLINICA'
+  }
+  if (headerUpper.includes('GUARDIA') && headerUpper.includes('PEDIATRIC')) {
+    return 'CONSULTA DE GUARDIA PEDIATRICA'
+  }
+  if (headerUpper.includes('GUARDIA') && headerUpper.includes('GINECOLOGIC')) {
+    return 'CONSULTA DE GUARDIA GINECOLOGICA'
+  }
+  if (headerUpper.includes('PEDIATRIC') && headerUpper.includes('NEONATAL')) {
+    return 'CONSULTA PEDIATRICA Y NEONATAL'
+  }
+  if (headerUpper.includes('INTERNADOS')) {
+    return 'CONSULTA EN INTERNADOS'
+  }
+  if (headerUpper.includes('INTERCONSULTA')) {
+    return 'INTERCONSULTAS'
+  }
+  if (headerUpper.includes('CARDIOLOGIC')) {
+    return 'CONSULTA CARDIOLOGICA'
+  }
+  if (headerUpper.includes('GINECOLOGIC') && !headerUpper.includes('GUARDIA')) {
+    return 'CONSULTA GINECOLOGICA'
+  }
+  if (headerUpper.includes('ECG') || headerUpper === 'E.C.G.') {
+    return 'E.C.G.'
+  }
+  if (headerUpper === 'CONSULTA' || headerUpper.includes('CONSULTA') && !headerUpper.includes('GUARDIA')) {
+    return 'CONSULTA'
+  }
+  
+  // Si no se encuentra ninguna coincidencia, devolver el header original normalizado
+  return headerUpper
+}
+
 export default function ValoresConsultasPage() {
   const [mes, setMes] = useState(new Date().getMonth() + 1)
   const [anio, setAnio] = useState(new Date().getFullYear())
@@ -44,12 +116,36 @@ export default function ValoresConsultasPage() {
   const [obrasSociales, setObrasSociales] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [showUpload, setShowUpload] = useState(false)
+  const [showObraSocialModal, setShowObraSocialModal] = useState(false)
   const [copiarConAumento, setCopiarConAumento] = useState(false)
   const [porcentajeAumento, setPorcentajeAumento] = useState(0)
+  const [notification, setNotification] = useState<{
+    isOpen: boolean
+    type: NotificationType
+    title?: string
+    message: string
+  }>({
+    isOpen: false,
+    type: 'info',
+    message: ''
+  })
 
   useEffect(() => {
     cargarValores()
   }, [mes, anio])
+
+  const showNotification = (type: NotificationType, message: string, title?: string) => {
+    setNotification({
+      isOpen: true,
+      type,
+      message,
+      title
+    })
+  }
+
+  const closeNotification = () => {
+    setNotification(prev => ({ ...prev, isOpen: false }))
+  }
 
   async function cargarValores() {
     try {
@@ -105,7 +201,7 @@ export default function ValoresConsultasPage() {
       )
 
       if (obraSocialIndex === -1) {
-        alert('No se encontró la columna "OBRA SOCIAL / PREPAGA" en el archivo')
+        showNotification('error', 'No se encontró la columna "OBRA SOCIAL / PREPAGA" en el archivo', 'Error de formato')
         return
       }
 
@@ -163,9 +259,12 @@ export default function ValoresConsultasPage() {
           }
           
           if (valor !== null && valor > 0) {
+            // Normalizar el nombre del tipo de consulta
+            const tipoConsultaNormalizado = normalizarTipoConsulta(header)
+            
             nuevosValores.push({
               obra_social: String(obraSocial).trim(),
-              tipo_consulta: header.trim(),
+              tipo_consulta: tipoConsultaNormalizado,
               valor: valor,
               vigencia: vigencia,
               mes: mes,
@@ -194,10 +293,10 @@ export default function ValoresConsultasPage() {
 
       await cargarValores()
       setShowUpload(false)
-      alert(`Se importaron ${nuevosValores.length} valores correctamente`)
+      showNotification('success', `Se importaron ${nuevosValores.length} valores correctamente`, 'Importación exitosa')
     } catch (error) {
       console.error('Error importando Excel:', error)
-      alert('Error al importar el archivo Excel: ' + (error instanceof Error ? error.message : 'Error desconocido'))
+      showNotification('error', 'Error al importar el archivo Excel: ' + (error instanceof Error ? error.message : 'Error desconocido'), 'Error de importación')
     } finally {
       setLoading(false)
     }
@@ -227,7 +326,7 @@ export default function ValoresConsultasPage() {
       const valoresAnterioresData = (valoresAnteriores || []) as ValorConsultaObraSocial[]
 
       if (valoresAnterioresData.length === 0) {
-        alert('No hay valores en el mes anterior para copiar')
+        showNotification('warning', 'No hay valores en el mes anterior para copiar', 'Sin datos')
         return
       }
 
@@ -258,19 +357,16 @@ export default function ValoresConsultasPage() {
       if (insertError) throw insertError
 
       await cargarValores()
-      alert(`Se copiaron ${nuevosValores.length} valores desde ${MESES[mesAnterior - 1].label} ${anioAnterior}`)
+      showNotification('success', `Se copiaron ${nuevosValores.length} valores desde ${MESES[mesAnterior - 1].label} ${anioAnterior}`, 'Copia exitosa')
     } catch (error) {
       console.error('Error copiando desde mes anterior:', error)
-      alert('Error al copiar valores: ' + (error instanceof Error ? error.message : 'Error desconocido'))
+      showNotification('error', 'Error al copiar valores: ' + (error instanceof Error ? error.message : 'Error desconocido'), 'Error')
     } finally {
       setLoading(false)
     }
   }
 
-  async function handleAgregarObraSocial() {
-    const nombre = prompt('Ingrese el nombre de la obra social (ej: "001 - PROVINCIA"):')
-    if (!nombre || !nombre.trim()) return
-
+  async function handleAgregarObraSocial(nombre: string) {
     try {
       // Verificar si ya existe para este mes/año
       const { data: existentes } = await supabase
@@ -282,8 +378,7 @@ export default function ValoresConsultasPage() {
         .limit(1)
 
       if (existentes && existentes.length > 0) {
-        alert('Esta obra social ya existe para el mes y año seleccionados')
-        return
+        throw new Error('Esta obra social ya existe para el mes y año seleccionados')
       }
 
       // Crear valores para todos los tipos de consulta con valor 0
@@ -304,10 +399,10 @@ export default function ValoresConsultasPage() {
       if (error) throw error
 
       await cargarValores()
-      alert('Obra social agregada correctamente')
+      showNotification('success', 'Obra social agregada correctamente', 'Éxito')
     } catch (error) {
       console.error('Error agregando obra social:', error)
-      alert('Error al agregar obra social: ' + (error instanceof Error ? error.message : 'Error desconocido'))
+      throw error
     }
   }
 
@@ -428,7 +523,7 @@ export default function ValoresConsultasPage() {
         {/* Botones de Acción */}
         <div className="flex items-center gap-3 flex-wrap">
           <Button
-            onClick={handleAgregarObraSocial}
+            onClick={() => setShowObraSocialModal(true)}
             className="bg-green-600 hover:bg-green-500 text-white"
             disabled={loading}
           >
@@ -605,6 +700,25 @@ export default function ValoresConsultasPage() {
             </table>
           </div>
         </div>
+
+        {/* Modal de Notificación */}
+        <NotificationModal
+          isOpen={notification.isOpen}
+          onClose={closeNotification}
+          type={notification.type}
+          title={notification.title}
+          message={notification.message}
+          duration={notification.type === 'success' ? 3000 : 0}
+        />
+
+        {/* Modal de Agregar Obra Social */}
+        <ObraSocialFormModal
+          isOpen={showObraSocialModal}
+          onClose={() => setShowObraSocialModal(false)}
+          onSave={handleAgregarObraSocial}
+          mes={mes}
+          anio={anio}
+        />
       </div>
     </div>
   )
