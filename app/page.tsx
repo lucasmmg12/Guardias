@@ -124,7 +124,7 @@ export default function HomePage() {
                     }}
                 >
                     <h3 className="text-lg font-semibold text-gray-200 mb-4">Acceso Rápido</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                         <Link 
                             href="/admin/medicos" 
                             className="text-center p-4 rounded-lg transition-all duration-300 hover:scale-105"
@@ -157,6 +157,17 @@ export default function HomePage() {
                         >
                             <div className="text-2xl mb-2">➕</div>
                             <div className="text-sm text-gray-300">Adicionales</div>
+                        </Link>
+                        <Link 
+                            href="/admin/valores-consultas" 
+                            className="text-center p-4 rounded-lg transition-all duration-300 hover:scale-105"
+                            style={{
+                                background: 'rgba(0, 0, 0, 0.2)',
+                                border: '1px solid rgba(34, 197, 94, 0.2)',
+                            }}
+                        >
+                            <div className="text-2xl mb-2">🏥</div>
+                            <div className="text-sm text-gray-300">Valores Consultas</div>
                         </Link>
                         <Link 
                             href="/liquidaciones" 

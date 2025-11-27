@@ -44,6 +44,11 @@ export interface Database {
         Insert: FeriadoInsert
         Update: FeriadoUpdate
       }
+      valores_consultas_obra_social: {
+        Row: ValorConsultaObraSocial
+        Insert: ValorConsultaObraSocialInsert
+        Update: ValorConsultaObraSocialUpdate
+      }
     }
     Views: {
       v_resumen_liquidaciones_guardia: {
@@ -364,6 +369,42 @@ export interface FeriadoUpdate {
   fecha?: string
   descripcion?: string
   tipo?: string
+  created_at?: string
+  updated_at?: string
+}
+
+export interface ValorConsultaObraSocial {
+  id: string
+  obra_social: string
+  tipo_consulta: string
+  valor: number
+  vigencia: string | null
+  mes: number
+  anio: number
+  created_at: string
+  updated_at: string
+}
+
+export interface ValorConsultaObraSocialInsert {
+  id?: string
+  obra_social: string
+  tipo_consulta: string
+  valor: number
+  vigencia?: string | null
+  mes: number
+  anio: number
+  created_at?: string
+  updated_at?: string
+}
+
+export interface ValorConsultaObraSocialUpdate {
+  id?: string
+  obra_social?: string
+  tipo_consulta?: string
+  valor?: number
+  vigencia?: string | null
+  mes?: number
+  anio?: number
   created_at?: string
   updated_at?: string
 }
