@@ -3,7 +3,8 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { ExcelRow, ExcelData } from '@/lib/excel-reader'
 import { InlineEditCell } from './InlineEditCell'
-import { CheckCircle2, AlertCircle, Trash2, Clock, UserX } from 'lucide-react'
+import { ExpandableSection } from './ExpandableSection'
+import { CheckCircle2, AlertCircle, Trash2, Clock, UserX, Database } from 'lucide-react'
 import { esParticular, tieneHorario, obtenerIndicesDuplicados, esResidenteHorarioFormativo } from '@/lib/utils'
 import { supabase } from '@/lib/supabase/client'
 import { Medico } from '@/lib/types'
@@ -12,9 +13,11 @@ interface ExcelDataTableProps {
   data: ExcelData
   especialidad?: 'Pediatría' | 'Ginecología'
   onCellUpdate?: (rowIndex: number, column: string, newValue: any) => Promise<void>
+  mes?: number
+  anio?: number
 }
 
-export function ExcelDataTable({ data, especialidad, onCellUpdate }: ExcelDataTableProps) {
+export function ExcelDataTable({ data, especialidad, onCellUpdate, mes, anio }: ExcelDataTableProps) {
   const [rows, setRows] = useState<ExcelRow[]>(data.rows)
   const [saving, setSaving] = useState<{ [key: string]: boolean }>({})
   const [medicos, setMedicos] = useState<Medico[]>([])
@@ -236,7 +239,33 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate }: ExcelDataTa
     
     const updatedRows = rows.filter((_, index) => index !== rowIndex)
     setRows(updatedRows)
-  }, [rows])
+    // Actualizar data.rows también
+    data.rows = updatedRows
+  }, [rows, data])
+
+  // Funciones para eliminar múltiples filas
+  const handleDeleteRows = useCallback((indices: Set<number>) => {
+    const updatedRows = rows.filter((_, index) => !indices.has(index))
+    setRows(updatedRows)
+    data.rows = updatedRows
+  }, [rows, data])
+
+  // Obtener filas filtradas por tipo
+  const filasParticularesList = useMemo(() => {
+    return rows.filter((row, index) => filasParticulares.has(index))
+  }, [rows, filasParticulares])
+
+  const filasSinHorarioList = useMemo(() => {
+    return rows.filter((row, index) => filasSinHorario.has(index))
+  }, [rows, filasSinHorario])
+
+  const filasDuplicadasList = useMemo(() => {
+    return rows.filter((row, index) => filasDuplicadas.has(index))
+  }, [rows, filasDuplicadas])
+
+  const filasResidenteFormativoList = useMemo(() => {
+    return rows.filter((row, index) => filasResidenteHorarioFormativo.has(index))
+  }, [rows, filasResidenteHorarioFormativo])
 
   return (
     <div className="w-full space-y-4">
@@ -260,101 +289,106 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate }: ExcelDataTa
         </div>
       )}
 
-      {/* Alerta de PARTICULARES */}
-      {cantidadParticulares > 0 && (
-        <div 
-          className="p-4 rounded-xl border-2 animate-pulse"
-          style={{
-            background: 'rgba(251, 191, 36, 0.15)',
-            backdropFilter: 'blur(20px)',
-            borderColor: 'rgba(251, 191, 36, 0.5)',
-          }}
-        >
-          <div className="flex items-center gap-3 text-yellow-400">
-            <AlertCircle className="h-6 w-6 flex-shrink-0" />
-            <div className="flex-1">
-              <div className="font-bold text-lg mb-1">
-                ⚠️ {cantidadParticulares} registro{cantidadParticulares > 1 ? 's' : ''} sin obra social detectado{cantidadParticulares > 1 ? 's' : ''}
-              </div>
-              <div className="text-sm text-yellow-300">
-                Estos registros deben ser revisados. Si son pacientes particulares, edite la columna "Cliente" y agregue: <strong>"042 - PARTICULARES"</strong>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Sección expandible: Registros sin obra social */}
+      <ExpandableSection
+        title={`⚠️ ${cantidadParticulares} registro${cantidadParticulares > 1 ? 's' : ''} sin obra social detectado${cantidadParticulares > 1 ? 's' : ''}`}
+        count={cantidadParticulares}
+        description='Estos registros deben ser revisados. Si son pacientes particulares, edite la columna "Cliente" y agregue: "042 - PARTICULARES"'
+        icon={<AlertCircle className="h-6 w-6 flex-shrink-0" />}
+        bgColor="rgba(251, 191, 36, 0.15)"
+        borderColor="rgba(251, 191, 36, 0.5)"
+        textColor="#fbbf24"
+        rows={filasParticularesList}
+        data={data}
+        onCellUpdate={onCellUpdate}
+        allowEdit={true}
+        mes={mes}
+        anio={anio}
+        sectionKey="sin_obra_social"
+      />
 
-      {/* Alerta de Sin Horario */}
-      {cantidadSinHorario > 0 && (
-        <div 
-          className="p-4 rounded-xl border-2 animate-pulse"
-          style={{
-            background: 'rgba(239, 68, 68, 0.15)',
-            backdropFilter: 'blur(20px)',
-            borderColor: 'rgba(239, 68, 68, 0.5)',
-          }}
-        >
-          <div className="flex items-center gap-3 text-red-400">
-            <Clock className="h-6 w-6 flex-shrink-0" />
-            <div className="flex-1">
-              <div className="font-bold text-lg mb-1">
-                ⚠️ {cantidadSinHorario} registro{cantidadSinHorario > 1 ? 's' : ''} sin horario de inicio detectado{cantidadSinHorario > 1 ? 's' : ''}
-              </div>
-              <div className="text-sm text-red-300">
-                Estos registros indican que el paciente <strong>no se atendió</strong>. Deben ser eliminados. Use el botón de eliminar en cada fila.
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Sección expandible: Registros sin horario */}
+      <ExpandableSection
+        title={`⚠️ ${cantidadSinHorario} registro${cantidadSinHorario > 1 ? 's' : ''} sin horario de inicio detectado${cantidadSinHorario > 1 ? 's' : ''}`}
+        count={cantidadSinHorario}
+        description="Estos registros indican que el paciente no se atendió. Deben ser eliminados."
+        icon={<Clock className="h-6 w-6 flex-shrink-0" />}
+        bgColor="rgba(239, 68, 68, 0.15)"
+        borderColor="rgba(239, 68, 68, 0.5)"
+        textColor="#ef4444"
+        rows={filasSinHorarioList}
+        data={data}
+        onDeleteRow={handleDeleteRow}
+        onDeleteAll={() => {
+          handleDeleteRows(filasSinHorario)
+        }}
+        allowDelete={true}
+        mes={mes}
+        anio={anio}
+        sectionKey="sin_horario"
+      />
 
-      {/* Alerta de Duplicados */}
-      {cantidadDuplicados > 0 && (
-        <div 
-          className="p-4 rounded-xl border-2 animate-pulse"
-          style={{
-            background: 'rgba(168, 85, 247, 0.15)',
-            backdropFilter: 'blur(20px)',
-            borderColor: 'rgba(168, 85, 247, 0.5)',
-          }}
-        >
-          <div className="flex items-center gap-3 text-purple-400">
-            <AlertCircle className="h-6 w-6 flex-shrink-0" />
-            <div className="flex-1">
-              <div className="font-bold text-lg mb-1">
-                ⚠️ {cantidadDuplicados} registro{cantidadDuplicados > 1 ? 's' : ''} duplicado{cantidadDuplicados > 1 ? 's' : ''} detectado{cantidadDuplicados > 1 ? 's' : ''}
-              </div>
-              <div className="text-sm text-purple-300">
-                Se detectaron filas completamente iguales (misma fecha, misma hora, mismo todo). Revise y elimine los duplicados si es necesario.
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Sección expandible: Registros duplicados */}
+      <ExpandableSection
+        title={`⚠️ ${cantidadDuplicados} registro${cantidadDuplicados > 1 ? 's' : ''} duplicado${cantidadDuplicados > 1 ? 's' : ''} detectado${cantidadDuplicados > 1 ? 's' : ''}`}
+        count={cantidadDuplicados}
+        description="Se detectaron filas completamente iguales (misma fecha, misma hora, mismo todo). Revise y elimine los duplicados si es necesario."
+        icon={<AlertCircle className="h-6 w-6 flex-shrink-0" />}
+        bgColor="rgba(168, 85, 247, 0.15)"
+        borderColor="rgba(168, 85, 247, 0.5)"
+        textColor="#a855f7"
+        rows={filasDuplicadasList}
+        data={data}
+        onDeleteRow={handleDeleteRow}
+        onDeleteAll={() => {
+          handleDeleteRows(filasDuplicadas)
+        }}
+        allowDelete={true}
+        mes={mes}
+        anio={anio}
+        sectionKey="duplicados"
+      />
 
-      {/* Alerta de Residente en Horario Formativo */}
-      {cantidadResidenteHorarioFormativo > 0 && (
-        <div 
-          className="p-4 rounded-xl border-2 animate-pulse"
-          style={{
-            background: 'rgba(59, 130, 246, 0.15)',
-            backdropFilter: 'blur(20px)',
-            borderColor: 'rgba(59, 130, 246, 0.5)',
-          }}
-        >
-          <div className="flex items-center gap-3 text-blue-400">
-            <UserX className="h-6 w-6 flex-shrink-0" />
-            <div className="flex-1">
-              <div className="font-bold text-lg mb-1">
-                ℹ️ {cantidadResidenteHorarioFormativo} consulta{cantidadResidenteHorarioFormativo > 1 ? 's' : ''} de residente{cantidadResidenteHorarioFormativo > 1 ? 's' : ''} en horario formativo detectada{cantidadResidenteHorarioFormativo > 1 ? 's' : ''}
-              </div>
-              <div className="text-sm text-blue-300">
-                Estas consultas son de <strong>residentes</strong> realizadas entre <strong>lunes a sábado de 07:00 a 15:00</strong>. <strong>NO se deben pagar</strong> según las reglas del sistema.
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Sección expandible: Residentes en horario formativo */}
+      <ExpandableSection
+        title={`ℹ️ ${cantidadResidenteHorarioFormativo} consulta${cantidadResidenteHorarioFormativo > 1 ? 's' : ''} de residente${cantidadResidenteHorarioFormativo > 1 ? 's' : ''} en horario formativo detectada${cantidadResidenteHorarioFormativo > 1 ? 's' : ''}`}
+        count={cantidadResidenteHorarioFormativo}
+        description="Estas consultas son de residentes realizadas entre lunes a sábado de 07:00 a 15:00. NO se deben pagar según las reglas del sistema."
+        icon={<UserX className="h-6 w-6 flex-shrink-0" />}
+        bgColor="rgba(59, 130, 246, 0.15)"
+        borderColor="rgba(59, 130, 246, 0.5)"
+        textColor="#3b82f6"
+        rows={filasResidenteFormativoList}
+        data={data}
+        onDeleteRow={handleDeleteRow}
+        onDeleteAll={() => {
+          handleDeleteRows(filasResidenteHorarioFormativo)
+        }}
+        allowDelete={true}
+        mes={mes}
+        anio={anio}
+        sectionKey="residente_formativo"
+      />
+
+      {/* 5to recuadro: Detalle completo */}
+      <ExpandableSection
+        title={`📊 Ver detalle completo (${rows.length} registros)`}
+        count={rows.length}
+        description="Muestra todos los registros del Excel para revisión completa."
+        icon={<Database className="h-6 w-6 flex-shrink-0" />}
+        bgColor="rgba(34, 197, 94, 0.15)"
+        borderColor="rgba(34, 197, 94, 0.5)"
+        textColor="#22c55e"
+        rows={rows}
+        data={data}
+        onCellUpdate={onCellUpdate}
+        onDeleteRow={handleDeleteRow}
+        allowEdit={true}
+        allowDelete={true}
+        mes={mes}
+        anio={anio}
+        sectionKey="detalle_completo"
+      />
 
       {/* Tabla de datos */}
       <div className="overflow-x-auto rounded-xl" style={{
