@@ -359,21 +359,78 @@ export default function GinecologiaPage() {
                             <div className="p-3 bg-white/5 rounded-lg border border-white/5">
                                 <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Pago por Hora</div>
                                 <div className="font-semibold text-white">Según Tarifa</div>
-                                <div className="text-xs text-gray-400">Valor hora vigente</div>
+                                <div className="text-xs text-gray-400">Valor hora vigente por obra social</div>
                             </div>
 
                             <div className="p-3 bg-white/5 rounded-lg border border-white/5">
-                                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Residentes</div>
-                                <div className="text-sm">
-                                    <span className="text-blue-400">07:30 - 15:00</span> = $0
+                                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">👨‍⚕️ Regla de Residentes en Horario Formativo</div>
+                                <div className="text-sm mt-2 space-y-2">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-red-400 font-semibold">NO SE PAGA</span>
+                                        <span className="text-xs text-gray-400">si se cumplen todas las condiciones:</span>
+                                    </div>
+                                    <ul className="text-xs space-y-1 ml-2 text-gray-300">
+                                        <li className="flex items-start gap-2">
+                                            <span className="text-blue-400">•</span>
+                                            <span>Médico es <strong>RESIDENTE</strong> (verificado en BD)</span>
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <span className="text-blue-400">•</span>
+                                            <span>Día: <strong>Lunes a Sábado</strong> (no domingo)</span>
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <span className="text-blue-400">•</span>
+                                            <span>Horario: <strong className="text-blue-400">07:00 a 15:00</strong></span>
+                                        </li>
+                                        <li className="text-xs text-gray-400 mt-1 ml-4">
+                                            (Incluye 07:00, excluye 15:00)
+                                        </li>
+                                    </ul>
                                 </div>
-                                <div className="text-xs text-gray-400 mt-1">Horario formativo</div>
                             </div>
 
                             <div className="p-3 bg-white/5 rounded-lg border border-white/5">
-                                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Planta</div>
-                                <div className="text-sm text-green-400">100% Pago</div>
-                                <div className="text-xs text-gray-400">Sin restricciones horarias</div>
+                                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">✅ Casos que SÍ se Pagan</div>
+                                <ul className="text-xs space-y-1 mt-2 text-gray-300">
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-green-400">✓</span>
+                                        <span>Residente fuera del horario formativo (ej: 16:00, 20:00)</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-green-400">✓</span>
+                                        <span>Residente en <strong>Domingo</strong> (cualquier hora)</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-green-400">✓</span>
+                                        <span>Médico de <strong>Planta</strong> (no residente) - siempre se paga</span>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div className="p-3 bg-white/5 rounded-lg border border-white/5">
+                                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">📊 Ejemplos de Horarios</div>
+                                <div className="text-xs space-y-1 mt-2">
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-300">07:00 (Residente, L-S)</span>
+                                        <span className="text-red-400">$0</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-300">14:59 (Residente, L-S)</span>
+                                        <span className="text-red-400">$0</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-300">15:00 (Residente, L-S)</span>
+                                        <span className="text-green-400">Se paga</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-300">10:00 (Residente, Domingo)</span>
+                                        <span className="text-green-400">Se paga</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-300">10:00 (Planta, cualquier día)</span>
+                                        <span className="text-green-400">Se paga</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
