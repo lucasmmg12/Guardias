@@ -1,14 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { UploadExcel } from '@/components/custom/UploadExcel'
 import { ExcelDataTable } from '@/components/custom/ExcelDataTable'
 import { EstadisticasObraSocial } from '@/components/custom/EstadisticasObraSocial'
 import { MesSelectorModal } from '@/components/custom/MesSelectorModal'
 import { NotificationModal, NotificationType } from '@/components/custom/NotificationModal'
+import { DetalleGuardiaTable } from '@/components/custom/DetalleGuardiaTable'
 import { readExcelFile, ExcelData } from '@/lib/excel-reader'
 import { procesarExcelGinecologia } from '@/lib/ginecologia-processor'
+import { supabase } from '@/lib/supabase/client'
+import { LiquidacionGuardia, EstadoLiquidacion } from '@/lib/types'
 import { AlertCircle, CheckCircle2, Sparkles, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -25,6 +28,8 @@ export default function GinecologiaPage() {
     const [anioSeleccionado, setAnioSeleccionado] = useState(new Date().getFullYear())
     const [archivoActual, setArchivoActual] = useState<File | null>(null)
     const [isGuardando, setIsGuardando] = useState(false)
+    const [liquidacionActual, setLiquidacionActual] = useState<LiquidacionGuardia | null>(null)
+    const [mostrarTablaDetalles, setMostrarTablaDetalles] = useState(false)
     const [notification, setNotification] = useState<{
         isOpen: boolean
         type: NotificationType
@@ -166,18 +171,34 @@ export default function GinecologiaPage() {
                         'Procesamiento con errores'
                     )
                     console.error('Errores completos:', resultado.errores)
-                } else if (resultado.advertencias.length > 0) {
-                    showNotification(
-                        'warning',
-                        `Se procesaron ${resultado.procesadas} de ${resultado.totalFilas} filas. ${resultado.advertencias.length} advertencias.`,
-                        'Procesamiento completado'
-                    )
                 } else {
-                    showNotification(
-                        'success',
-                        `Se procesaron y guardaron ${resultado.procesadas} consultas correctamente.`,
-                        'Guardado exitoso'
-                    )
+                    // Cargar la liquidación guardada
+                    if (resultado.liquidacionId) {
+                        const { data: liquidacionData } = await supabase
+                            .from('liquidaciones_guardia')
+                            .select('*')
+                            .eq('id', resultado.liquidacionId)
+                            .single()
+                        
+                        if (liquidacionData) {
+                            setLiquidacionActual(liquidacionData as LiquidacionGuardia)
+                            setMostrarTablaDetalles(true)
+                        }
+                    }
+
+                    if (resultado.advertencias.length > 0) {
+                        showNotification(
+                            'warning',
+                            `Se procesaron ${resultado.procesadas} de ${resultado.totalFilas} filas. ${resultado.advertencias.length} advertencias. Revisa los datos guardados.`,
+                            'Procesamiento completado'
+                        )
+                    } else {
+                        showNotification(
+                            'success',
+                            `Se procesaron y guardaron ${resultado.procesadas} consultas. Revisa y edita los datos antes de liquidar.`,
+                            'Guardado exitoso'
+                        )
+                    }
                 }
             } catch (err: any) {
                 console.error('Error guardando datos:', err)
@@ -191,6 +212,39 @@ export default function GinecologiaPage() {
             }
         }
     }
+
+    // Cargar liquidación existente al montar (si hay una en progreso)
+    useEffect(() => {
+        async function cargarLiquidacionEnProgreso() {
+            try {
+                const { data, error } = await supabase
+                    .from('liquidaciones_guardia')
+                    .select('*')
+                    .eq('especialidad', 'Ginecología')
+                    .in('estado', ['pendiente_revision', 'revisado', 'listo_para_liquidar'])
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .single()
+
+                if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+                    console.error('Error cargando liquidación:', error)
+                    return
+                }
+
+                if (data) {
+                    const liquidacion = data as LiquidacionGuardia
+                    setLiquidacionActual(liquidacion)
+                    setMostrarTablaDetalles(true)
+                    setMesSeleccionado(liquidacion.mes)
+                    setAnioSeleccionado(liquidacion.anio)
+                }
+            } catch (error) {
+                console.error('Error cargando liquidación:', error)
+            }
+        }
+
+        cargarLiquidacionEnProgreso()
+    }, [])
 
     // Extraer mes y año del período del Excel (usar el seleccionado)
     const obtenerMesAnio = () => {
@@ -296,8 +350,47 @@ export default function GinecologiaPage() {
                     </div>
                 </div>
 
-                {/* Tabla de datos del Excel */}
-                {excelData && (
+                {/* Tabla de detalles guardados (si hay liquidación) */}
+                {mostrarTablaDetalles && liquidacionActual && (
+                    <div 
+                        className="relative rounded-2xl shadow-2xl overflow-hidden p-8"
+                        style={{
+                            background: 'rgba(255, 255, 255, 0.1)',
+                            backdropFilter: 'blur(20px)',
+                            border: '1px solid rgba(59, 130, 246, 0.3)',
+                            boxShadow: '0 8px 32px 0 rgba(59, 130, 246, 0.3)',
+                        }}
+                    >
+                        <div className="relative">
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-2xl font-bold text-blue-400">
+                                    📊 Detalles Guardados - Revisión y Edición
+                                </h2>
+                                <Button
+                                    onClick={() => {
+                                        setMostrarTablaDetalles(false)
+                                        setLiquidacionActual(null)
+                                        setExcelData(null)
+                                    }}
+                                    variant="outline"
+                                    className="border-blue-500/50 text-blue-400 hover:bg-blue-500/20"
+                                >
+                                    Cargar Nuevo Excel
+                                </Button>
+                            </div>
+                            <DetalleGuardiaTable
+                                liquidacionId={liquidacionActual.id}
+                                liquidacion={liquidacionActual}
+                                onEstadoChange={(nuevoEstado) => {
+                                    setLiquidacionActual(prev => prev ? { ...prev, estado: nuevoEstado } : null)
+                                }}
+                            />
+                        </div>
+                    </div>
+                )}
+
+                {/* Tabla de datos del Excel (solo si no hay liquidación guardada) */}
+                {excelData && !mostrarTablaDetalles && (
                     <div 
                         className="relative rounded-2xl shadow-2xl overflow-hidden p-8"
                         style={{
@@ -309,8 +402,11 @@ export default function GinecologiaPage() {
                     >
                         <div className="relative">
                             <h2 className="text-2xl font-bold text-blue-400 mb-6">
-                                📊 Datos del Excel
+                                📊 Vista Previa del Excel
                             </h2>
+                            <p className="text-gray-400 mb-4 text-sm">
+                                Esta es una vista previa. Los datos se guardarán después de confirmar el mes y año.
+                            </p>
                             <ExcelDataTable
                                 data={excelData}
                                 especialidad="Ginecología"

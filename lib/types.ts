@@ -62,7 +62,7 @@ export interface Database {
 }
 
 // Enums
-export type EstadoLiquidacion = 'borrador' | 'procesando' | 'finalizada' | 'error'
+export type EstadoLiquidacion = 'borrador' | 'procesando' | 'pendiente_revision' | 'revisado' | 'listo_para_liquidar' | 'finalizada' | 'error'
 export type EstadoRevision = 'pendiente' | 'aprobado' | 'observado' | 'rechazado'
 export type Especialidad = 'Pediatría' | 'Ginecología' | 'Obstetricia' | 'Cirugía' | 'Clínica'
 

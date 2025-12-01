@@ -618,11 +618,12 @@ export async function procesarExcelGinecologia(
         }
 
         // Obtener valor de consulta
-        const obraSocialFinal = obraSocial || 'PARTICULARES'
-        const valorUnitario = valoresPorObraSocial.get(obraSocialFinal) || 0
+        // NO asignar 'PARTICULARES' automáticamente - el usuario debe editarlo manualmente
+        const obraSocialFinal = obraSocial || null // Dejar null si no hay obra social
+        const valorUnitario = obraSocialFinal ? (valoresPorObraSocial.get(obraSocialFinal) || 0) : 0
 
-        // Si no hay valor para la obra social, registrar advertencia
-        if (valorUnitario === 0 && obraSocialFinal !== 'PARTICULARES') {
+        // Si no hay valor para la obra social, registrar advertencia (solo si hay obra social)
+        if (obraSocialFinal && valorUnitario === 0) {
           resultado.advertencias.push(`Fila ${i + 1}: No hay valor configurado para obra social: ${obraSocialFinal}`)
         }
 
@@ -646,7 +647,7 @@ export async function procesarExcelGinecologia(
           fecha,
           hora: horaFormato,
           paciente: paciente || null,
-          obra_social: obraSocialFinal,
+          obra_social: obraSocialFinal, // Puede ser null si no hay obra social
           medico_nombre: medicoNombre || medico?.nombre || 'Desconocido',
           medico_matricula: medico?.matricula_provincial || null,
           medico_es_residente: esResidente,
@@ -716,7 +717,7 @@ export async function procesarExcelGinecologia(
         total_consultas: totalConsultas,
         total_bruto: totalBruto,
         total_neto: totalNeto,
-        estado: 'finalizada'
+        estado: 'pendiente_revision' // Estado inicial: pendiente de revisión
       })
       .eq('id', liquidacionId)
 
