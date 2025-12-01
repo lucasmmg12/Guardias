@@ -6,8 +6,9 @@ import { supabase } from '@/lib/supabase/client'
 import { calcularResumenPorMedico, calcularResumenPorPrestador, ResumenPorMedico, ResumenPorPrestador } from '@/lib/ginecologia-resumenes'
 import { exportPDFResumenPorMedico } from '@/lib/pdf-exporter-resumen-medico'
 import { exportPDFResumenPorPrestador } from '@/lib/pdf-exporter-resumen-prestador'
+import { LiquidacionGuardia } from '@/lib/types'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, FileDown, Download } from 'lucide-react'
+import { ArrowLeft, FileDown, Download, History, Eye } from 'lucide-react'
 
 const MESES = [
   { value: 1, label: 'Enero' },
@@ -30,12 +31,19 @@ export default function ResumenesGinecologiaPage() {
   const [anio, setAnio] = useState(new Date().getFullYear())
   const [resumenesPorMedico, setResumenesPorMedico] = useState<Map<string, ResumenPorMedico[]>>(new Map())
   const [resumenesPorPrestador, setResumenesPorPrestador] = useState<ResumenPorPrestador[]>([])
+  const [historial, setHistorial] = useState<LiquidacionGuardia[]>([])
   const [loading, setLoading] = useState(false)
-  const [tabActiva, setTabActiva] = useState<'medicos' | 'prestadores'>('medicos')
+  const [loadingHistorial, setLoadingHistorial] = useState(false)
+  const [tabActiva, setTabActiva] = useState<'medicos' | 'prestadores' | 'historial'>('medicos')
+  const [liquidacionExpandida, setLiquidacionExpandida] = useState<string | null>(null)
 
   useEffect(() => {
-    cargarResumenes()
-  }, [mes, anio])
+    if (tabActiva === 'historial') {
+      cargarHistorial()
+    } else {
+      cargarResumenes()
+    }
+  }, [mes, anio, tabActiva])
 
   async function cargarResumenes() {
     setLoading(true)
@@ -62,6 +70,26 @@ export default function ResumenesGinecologiaPage() {
       console.error('Error cargando resúmenes:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function cargarHistorial() {
+    setLoadingHistorial(true)
+    try {
+      const { data, error } = await supabase
+        .from('liquidaciones_guardia')
+        .select('*')
+        .eq('especialidad', 'Ginecología')
+        .order('anio', { ascending: false })
+        .order('mes', { ascending: false })
+
+      if (error) throw error
+
+      setHistorial((data as LiquidacionGuardia[]) || [])
+    } catch (error) {
+      console.error('Error cargando historial:', error)
+    } finally {
+      setLoadingHistorial(false)
     }
   }
 
@@ -171,10 +199,158 @@ export default function ResumenesGinecologiaPage() {
           >
             Resumen por Prestador
           </button>
+          <button
+            onClick={() => setTabActiva('historial')}
+            className={`px-4 py-2 font-semibold transition-colors flex items-center gap-2 ${
+              tabActiva === 'historial'
+                ? 'text-green-400 border-b-2 border-green-400'
+                : 'text-gray-400 hover:text-gray-300'
+            }`}
+          >
+            <History className="h-4 w-4" />
+            Historial
+          </button>
         </div>
 
         {/* Contenido de Tabs */}
-        {loading ? (
+        {tabActiva === 'historial' ? (
+          /* Tab: Historial */
+          <div className="space-y-6">
+            {loadingHistorial ? (
+              <div className="text-center py-12 text-gray-400">Cargando historial...</div>
+            ) : historial.length === 0 ? (
+              <div 
+                className="rounded-xl p-8 text-center"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  backdropFilter: 'blur(20px)',
+                  border: '1px solid rgba(255, 193, 7, 0.3)',
+                }}
+              >
+                <div className="text-yellow-400 text-xl font-bold mb-4">
+                  No hay liquidaciones procesadas
+                </div>
+                <div className="text-gray-400 mb-6">
+                  Aún no se ha procesado ningún archivo Excel de Ginecología.
+                </div>
+                <Button
+                  onClick={() => router.push('/ginecologia')}
+                  className="bg-green-600 hover:bg-green-500 text-white"
+                >
+                  Ir a Ginecología
+                </Button>
+              </div>
+            ) : (
+              <div
+                className="rounded-xl p-6"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  backdropFilter: 'blur(20px)',
+                  border: '1px solid rgba(34, 197, 94, 0.3)',
+                }}
+              >
+                <h2 className="text-2xl font-bold text-green-400 mb-4">Historial de Liquidaciones</h2>
+                
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-700">
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-green-400">Período</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-green-400">N° Liquidación</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-green-400">Archivo</th>
+                        <th className="px-4 py-3 text-center text-sm font-semibold text-green-400">Estado</th>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-green-400">Consultas</th>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-green-400">Total Bruto</th>
+                        <th className="px-4 py-3 text-right text-sm font-semibold text-green-400">Total Neto</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-green-400">Fecha Procesamiento</th>
+                        <th className="px-4 py-3 text-center text-sm font-semibold text-green-400">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {historial.map((liquidacion) => {
+                        const fechaProcesamiento = liquidacion.created_at 
+                          ? new Date(liquidacion.created_at).toLocaleDateString('es-AR', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })
+                          : 'N/A'
+                        
+                        const nombreMes = MESES.find(m => m.value === liquidacion.mes)?.label || `Mes ${liquidacion.mes}`
+                        const estaExpandida = liquidacionExpandida === liquidacion.id
+
+                        return (
+                          <>
+                            <tr key={liquidacion.id} className="border-b border-gray-800 hover:bg-gray-800/50">
+                              <td className="px-4 py-3 text-sm text-gray-300 font-medium">
+                                {nombreMes} {liquidacion.anio}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-300">
+                                {liquidacion.numero_liquidacion || '-'}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-300">
+                                <div className="max-w-xs truncate" title={liquidacion.archivo_nombre || ''}>
+                                  {liquidacion.archivo_nombre || 'Sin archivo'}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 text-sm text-center">
+                                <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                                  liquidacion.estado === 'finalizada' 
+                                    ? 'bg-green-500/20 text-green-400'
+                                    : liquidacion.estado === 'procesando'
+                                    ? 'bg-yellow-500/20 text-yellow-400'
+                                    : liquidacion.estado === 'error'
+                                    ? 'bg-red-500/20 text-red-400'
+                                    : 'bg-gray-500/20 text-gray-400'
+                                }`}>
+                                  {liquidacion.estado}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-300 text-right">
+                                {liquidacion.total_consultas || 0}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-300 text-right">
+                                {formatearMoneda(liquidacion.total_bruto || 0)}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-300 text-right font-semibold">
+                                {formatearMoneda(liquidacion.total_neto || 0)}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-300">
+                                {fechaProcesamiento}
+                              </td>
+                              <td className="px-4 py-3 text-center">
+                                <Button
+                                  onClick={() => {
+                                    setLiquidacionExpandida(estaExpandida ? null : liquidacion.id)
+                                  }}
+                                  variant="outline"
+                                  size="sm"
+                                  className="border-green-500/50 text-green-400 hover:bg-green-500/20"
+                                >
+                                  <Eye className="h-4 w-4 mr-1" />
+                                  {estaExpandida ? 'Ocultar' : 'Ver'}
+                                </Button>
+                              </td>
+                            </tr>
+                            {estaExpandida && (
+                              <tr>
+                                <td colSpan={9} className="px-4 py-4 bg-gray-900/50">
+                                  <DetalleLiquidacion liquidacionId={liquidacion.id} />
+                                </td>
+                              </tr>
+                            )}
+                          </>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : loading ? (
           <div className="text-center py-12 text-gray-400">Cargando resúmenes...</div>
         ) : resumenesPorMedico.size === 0 && resumenesPorPrestador.length === 0 ? (
           <div 
@@ -351,6 +527,108 @@ export default function ResumenesGinecologiaPage() {
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+// Componente para mostrar el detalle de una liquidación
+function DetalleLiquidacion({ liquidacionId }: { liquidacionId: string }) {
+  const [detalles, setDetalles] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    cargarDetalles()
+  }, [liquidacionId])
+
+  async function cargarDetalles() {
+    setLoading(true)
+    try {
+      const { data, error } = await supabase
+        .from('detalle_guardia')
+        .select('*')
+        .eq('liquidacion_id', liquidacionId)
+        .order('fecha', { ascending: true })
+        .order('hora', { ascending: true })
+        .limit(100) // Limitar a 100 para no sobrecargar
+
+      if (error) throw error
+      setDetalles(data || [])
+    } catch (error) {
+      console.error('Error cargando detalles:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function formatearMoneda(valor: number | null): string {
+    if (!valor) return '$0.00'
+    return new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(valor)
+  }
+
+  function formatearFecha(fecha: string | null): string {
+    if (!fecha) return '-'
+    return new Date(fecha).toLocaleDateString('es-AR')
+  }
+
+  if (loading) {
+    return <div className="text-center py-4 text-gray-400">Cargando detalles...</div>
+  }
+
+  if (detalles.length === 0) {
+    return <div className="text-center py-4 text-gray-400">No hay detalles disponibles</div>
+  }
+
+  return (
+    <div className="mt-4">
+      <h3 className="text-lg font-semibold text-green-400 mb-3">
+        Detalle de Consultas ({detalles.length} registros)
+      </h3>
+      <div className="overflow-x-auto max-h-96 overflow-y-auto">
+        <table className="w-full text-sm">
+          <thead className="sticky top-0 bg-gray-900">
+            <tr className="border-b border-gray-700">
+              <th className="px-3 py-2 text-left text-xs font-semibold text-green-400">Fecha</th>
+              <th className="px-3 py-2 text-left text-xs font-semibold text-green-400">Hora</th>
+              <th className="px-3 py-2 text-left text-xs font-semibold text-green-400">Médico</th>
+              <th className="px-3 py-2 text-left text-xs font-semibold text-green-400">Paciente</th>
+              <th className="px-3 py-2 text-left text-xs font-semibold text-green-400">Obra Social</th>
+              <th className="px-3 py-2 text-right text-xs font-semibold text-green-400">Monto Facturado</th>
+              <th className="px-3 py-2 text-right text-xs font-semibold text-green-400">Importe Calculado</th>
+              <th className="px-3 py-2 text-center text-xs font-semibold text-green-400">Horario Formativo</th>
+            </tr>
+          </thead>
+          <tbody>
+            {detalles.map((detalle) => (
+              <tr key={detalle.id} className="border-b border-gray-800 hover:bg-gray-800/30">
+                <td className="px-3 py-2 text-xs text-gray-300">{formatearFecha(detalle.fecha)}</td>
+                <td className="px-3 py-2 text-xs text-gray-300">{detalle.hora || '-'}</td>
+                <td className="px-3 py-2 text-xs text-gray-300">{detalle.medico_nombre || '-'}</td>
+                <td className="px-3 py-2 text-xs text-gray-300">{detalle.paciente || '-'}</td>
+                <td className="px-3 py-2 text-xs text-gray-300">{detalle.obra_social || '-'}</td>
+                <td className="px-3 py-2 text-xs text-gray-300 text-right">{formatearMoneda(detalle.monto_facturado)}</td>
+                <td className="px-3 py-2 text-xs text-gray-300 text-right font-semibold">{formatearMoneda(detalle.importe_calculado)}</td>
+                <td className="px-3 py-2 text-xs text-center">
+                  {detalle.es_horario_formativo ? (
+                    <span className="text-yellow-400">Sí</span>
+                  ) : (
+                    <span className="text-gray-500">No</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {detalles.length >= 100 && (
+        <div className="mt-2 text-xs text-gray-400 text-center">
+          Mostrando los primeros 100 registros
+        </div>
+      )}
     </div>
   )
 }
