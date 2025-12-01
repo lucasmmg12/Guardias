@@ -244,7 +244,7 @@ export default function GinecologiaPage() {
                 console.error('Error cargando liquidación:', error)
             }
         }
-
+        
         cargarLiquidacionEnProgreso()
     }, [])
 
@@ -455,8 +455,8 @@ export default function GinecologiaPage() {
                     <div className="relative">
                         <div className="flex items-center justify-between mb-6">
                             <h2 className="text-2xl font-bold text-blue-400">
-                                📤 Cargar Liquidación
-                            </h2>
+                            📤 Cargar Liquidación
+                        </h2>
                             <Button
                                 onClick={() => router.push('/ginecologia/resumenes')}
                                 variant="outline"
@@ -589,6 +589,8 @@ export default function GinecologiaPage() {
                                 data={excelData}
                                 especialidad="Ginecología"
                                 onCellUpdate={handleCellUpdate}
+                                mes={mesSeleccionado}
+                                anio={anioSeleccionado}
                             />
                         </div>
                     </div>
