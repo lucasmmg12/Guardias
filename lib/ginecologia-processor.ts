@@ -432,7 +432,72 @@ export async function procesarExcelGinecologia(
 
     resultado.liquidacionId = liquidacionId
 
-    // 4. Procesar cada fila del Excel
+    // 4. Extraer todos los nombres únicos de "Responsable" del Excel
+    const nombresUnicos = new Set<string>()
+    const nombresOriginales = new Map<string, string>() // nombre normalizado -> nombre original
+    
+    console.log(`Extrayendo nombres únicos de ${excelData.rows.length} filas del Excel`)
+    
+    for (const row of excelData.rows) {
+      const medicoNombre = buscarValor(row, [
+        'Responsable', 'responsable', 'RESPONSABLE',
+        'Médico', 'medico', 'MEDICO', 'Medico',
+        'Profesional', 'profesional', 'PROFESIONAL',
+        'Médico responsable', 'Médico Responsable', 'Medico Responsable',
+        'MÉDICO RESPONSABLE'
+      ])
+      
+      if (medicoNombre && typeof medicoNombre === 'string' && medicoNombre.trim() !== '') {
+        const nombreNormalizado = normalizarNombre(medicoNombre.trim())
+        if (nombreNormalizado !== '') {
+          nombresUnicos.add(nombreNormalizado)
+          // Guardar el nombre original (el primero que encontramos)
+          if (!nombresOriginales.has(nombreNormalizado)) {
+            nombresOriginales.set(nombreNormalizado, medicoNombre.trim())
+          }
+        }
+      }
+    }
+    
+    console.log(`[Mapeo] Nombres únicos encontrados en Excel: ${nombresUnicos.size}`)
+    console.log(`[Mapeo] Nombres únicos:`, Array.from(nombresUnicos).slice(0, 10))
+    
+    // 5. Buscar cada nombre único en la BD y crear mapa
+    const mapaNombresMedicos = new Map<string, Medico>() // nombre normalizado -> médico
+    
+    for (const nombreNormalizado of nombresUnicos) {
+      const medico = buscarMedico(nombresOriginales.get(nombreNormalizado) || nombreNormalizado, medicos)
+      if (medico) {
+        mapaNombresMedicos.set(nombreNormalizado, medico)
+      }
+    }
+    
+    // Logging detallado del mapeo
+    const nombresEncontrados = Array.from(mapaNombresMedicos.keys())
+    const nombresNoEncontrados = Array.from(nombresUnicos).filter(n => !mapaNombresMedicos.has(n))
+    
+    console.log(`[Mapeo] Médicos encontrados: ${nombresEncontrados.length}/${nombresUnicos.size}`)
+    console.log(`[Mapeo] Médicos NO encontrados: ${nombresNoEncontrados.length}`)
+    
+    if (nombresEncontrados.length > 0) {
+      console.log(`[Mapeo] Médicos encontrados:`)
+      nombresEncontrados.forEach(nombreNorm => {
+        const medico = mapaNombresMedicos.get(nombreNorm)!
+        const nombreOriginal = nombresOriginales.get(nombreNorm) || nombreNorm
+        console.log(`  - "${nombreOriginal}" -> "${medico.nombre}" (${medico.matricula_provincial === null ? 'RESIDENTE' : 'NO RESIDENTE'})`)
+      })
+    }
+    
+    if (nombresNoEncontrados.length > 0) {
+      console.log(`[Mapeo] Médicos NO encontrados:`)
+      nombresNoEncontrados.forEach(nombreNorm => {
+        const nombreOriginal = nombresOriginales.get(nombreNorm) || nombreNorm
+        console.log(`  - "${nombreOriginal}" (normalizado: "${nombreNorm}")`)
+      })
+      resultado.advertencias.push(`Médicos no encontrados en BD (${nombresNoEncontrados.length}): ${nombresNoEncontrados.slice(0, 5).map(n => nombresOriginales.get(n) || n).join(', ')}${nombresNoEncontrados.length > 5 ? '...' : ''}`)
+    }
+    
+    // 6. Procesar cada fila del Excel usando el mapa
     const detalles: DetalleGuardiaInsert[] = []
     resultado.totalFilas = excelData.rows.length
 
@@ -533,24 +598,23 @@ export async function procesarExcelGinecologia(
           continue
         }
 
-        // Buscar médico SOLO por nombre (es el único dato que trae el Excel)
-        const medico = buscarMedico(medicoNombre, medicos)
-        
-        // Log para debugging: mostrar qué médico se encontró
-        if (medicoNombre) {
-          if (medico) {
-            console.log(`[Fila ${i + 1}] Médico encontrado: "${medicoNombre}" -> "${medico.nombre}" (${medico.matricula_provincial === null ? 'RESIDENTE' : 'NO RESIDENTE - Mat: ' + medico.matricula_provincial})`)
-          } else {
-            console.log(`[Fila ${i + 1}] Médico NO encontrado: "${medicoNombre}"`)
-          }
+        // Buscar médico en el mapa (ya pre-calculado)
+        let medico: Medico | null = null
+        if (medicoNombre && typeof medicoNombre === 'string' && medicoNombre.trim() !== '') {
+          const nombreNormalizado = normalizarNombre(medicoNombre.trim())
+          medico = mapaNombresMedicos.get(nombreNormalizado) || null
         }
         
         // Determinar si es residente: matricula_provincial IS NULL = residente
         const esResidente = medico ? (medico.matricula_provincial === null) : false
 
-        // Si no se encuentra el médico, registrar advertencia pero continuar
+        // Si no se encuentra el médico, registrar advertencia pero continuar (solo una vez por nombre único)
         if (!medico && medicoNombre) {
-          resultado.advertencias.push(`Fila ${i + 1}: Médico no encontrado en BD: "${medicoNombre}". Nombres disponibles: ${medicos.slice(0, 5).map(m => m.nombre).join(', ')}${medicos.length > 5 ? '...' : ''}`)
+          // Solo registrar advertencia si es la primera vez que vemos este nombre
+          const nombreNormalizado = normalizarNombre(medicoNombre.trim())
+          if (!mapaNombresMedicos.has(nombreNormalizado)) {
+            // Ya se registró en el mapeo inicial, no duplicar
+          }
         }
 
         // Obtener valor de consulta
