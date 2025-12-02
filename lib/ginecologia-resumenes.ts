@@ -83,6 +83,13 @@ export async function calcularResumenPorMedico(
       return
     }
 
+    // Excluir también consultas con valor cero (importe_calculado = 0 o monto_facturado = 0)
+    // Estas pueden ser consultas sin valor configurado o que no deben pagarse
+    const tieneValor = (detalle.importe_calculado ?? 0) > 0 || (detalle.monto_facturado ?? 0) > 0
+    if (!tieneValor) {
+      return
+    }
+
     const obraSocial = detalle.obra_social || 'PARTICULARES'
     const medicoNombre = detalle.medico_nombre || 'Desconocido'
     const medicoId = detalle.medico_id || 'sin-id'
@@ -92,6 +99,11 @@ export async function calcularResumenPorMedico(
 
     // Obtener valor unitario de la obra social
     const valorUnitario = valoresPorObraSocial.get(obraSocial) || 0
+
+    // Si el valor unitario es 0, también excluir (obra social sin valor configurado)
+    if (valorUnitario === 0) {
+      return
+    }
 
     // Actualizar o crear resumen
     if (resumenMap.has(clave)) {
@@ -250,6 +262,7 @@ export async function obtenerResidentesFormativos(
   detalles.forEach(detalle => {
     // Usar directamente el campo es_horario_formativo que ya está guardado en la BD
     // Este campo se guarda durante el procesamiento del Excel
+    // El campo es boolean según la interfaz, pero puede ser null/undefined en algunos casos
     const esHorarioFormativo = detalle.es_horario_formativo === true
 
     // Solo procesar si es residente en horario formativo
