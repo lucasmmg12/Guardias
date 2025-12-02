@@ -147,15 +147,18 @@ export async function calcularResumenPorPrestador(
   // Obtener resumen por médico (ya aplica regla de residentes)
   const resumenPorMedico = await calcularResumenPorMedico(mes, anio)
 
-  // Agrupar por médico
+  // Agrupar por médico - USAR CLAVE ÚNICA (ID o nombre normalizado)
+  // Esto evita que médicos diferentes sin ID se agrupen incorrectamente
   const resumenMap = new Map<string, ResumenPorPrestador>()
 
   resumenPorMedico.forEach(resumen => {
-    const medicoId = resumen.medico_id || 'sin-id'
+    // Usar ID si existe, sino usar nombre normalizado para evitar agrupar médicos diferentes
+    const nombreNormalizado = resumen.medico_nombre.toLowerCase().trim().replace(/\s+/g, ' ')
+    const clave = resumen.medico_id || `nombre-${nombreNormalizado}`
     const medicoNombre = resumen.medico_nombre
 
-    if (resumenMap.has(medicoId)) {
-      const prestador = resumenMap.get(medicoId)!
+    if (resumenMap.has(clave)) {
+      const prestador = resumenMap.get(clave)!
       prestador.cantidad += resumen.cantidad
       prestador.total_bruto += resumen.total
       prestador.retencion_20 = prestador.total_bruto * 0.2
@@ -165,7 +168,7 @@ export async function calcularResumenPorPrestador(
       const retencion = totalBruto * 0.2
       const totalNeto = totalBruto - retencion
 
-      resumenMap.set(medicoId, {
+      resumenMap.set(clave, {
         medico_id: resumen.medico_id,
         medico_nombre: medicoNombre,
         cantidad: resumen.cantidad,
