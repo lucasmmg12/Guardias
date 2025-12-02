@@ -235,20 +235,6 @@ export function ExpandableSection({
                       </div>
                     </th>
                   ))}
-                  {allowDelete && (
-                    <th
-                      className="px-2 py-2 text-left text-xs font-semibold text-gray-300 bg-white/5 whitespace-nowrap sticky right-0"
-                      style={{
-                        position: 'sticky',
-                        top: 0,
-                        zIndex: 11,
-                        minWidth: '60px',
-                        maxWidth: '60px',
-                      }}
-                    >
-                      Acciones
-                    </th>
-                  )}
                 </tr>
               </thead>
               <tbody>
@@ -344,25 +330,6 @@ export function ExpandableSection({
                           </td>
                         )
                       })}
-                      {allowDelete && onDeleteRow && (
-                        <td className="px-2 py-1.5 text-center sticky right-0" style={{ background: rowBgColor !== 'transparent' ? rowBgColor : 'rgba(0, 0, 0, 0.5)' }}>
-                          <Button
-                            onClick={async (e) => {
-                              e.stopPropagation()
-                              setConfirmAction({
-                                type: 'single',
-                                rowIndex: originalRowIndex
-                              })
-                              setShowConfirmModal(true)
-                            }}
-                            size="sm"
-                            variant="ghost"
-                            className="text-red-400 hover:text-red-300 hover:bg-red-500/20"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </td>
-                      )}
                     </tr>
                   )
                 })}
