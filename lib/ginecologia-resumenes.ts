@@ -69,6 +69,57 @@ export async function calcularResumenPorMedico(
   valoresConsultas.forEach(v => {
     valoresPorObraSocial.set(v.obra_social, v.valor)
   })
+  
+  // Normalizar PARTICULARES: si existe "042 - PARTICULARES", también agregarlo como "PARTICULARES"
+  // y viceversa, para que funcione independientemente de cómo esté guardado
+  if (valoresPorObraSocial.has('042 - PARTICULARES') && !valoresPorObraSocial.has('PARTICULARES')) {
+    const valor042 = valoresPorObraSocial.get('042 - PARTICULARES')
+    if (valor042) {
+      valoresPorObraSocial.set('PARTICULARES', valor042)
+    }
+  }
+  
+  if (valoresPorObraSocial.has('PARTICULARES') && !valoresPorObraSocial.has('042 - PARTICULARES')) {
+    const valorParticulares = valoresPorObraSocial.get('PARTICULARES')
+    if (valorParticulares) {
+      valoresPorObraSocial.set('042 - PARTICULARES', valorParticulares)
+    }
+  }
+  
+  // Si no se encontró ninguno, buscar en la BD
+  if (!valoresPorObraSocial.has('PARTICULARES') && !valoresPorObraSocial.has('042 - PARTICULARES')) {
+    // Buscar "PARTICULARES" primero
+    const { data: valorParticular } = await supabase
+      .from('valores_consultas_obra_social')
+      .select('valor')
+      .eq('obra_social', 'PARTICULARES')
+      .eq('tipo_consulta', 'CONSULTA GINECOLOGICA')
+      .eq('mes', mes)
+      .eq('anio', anio)
+      .single()
+    
+    if (valorParticular && (valorParticular as any).valor) {
+      const valor = (valorParticular as any).valor
+      valoresPorObraSocial.set('PARTICULARES', valor)
+      valoresPorObraSocial.set('042 - PARTICULARES', valor)
+    } else {
+      // Intentar también con "042 - PARTICULARES"
+      const { data: valorParticular042 } = await supabase
+        .from('valores_consultas_obra_social')
+        .select('valor')
+        .eq('obra_social', '042 - PARTICULARES')
+        .eq('tipo_consulta', 'CONSULTA GINECOLOGICA')
+        .eq('mes', mes)
+        .eq('anio', anio)
+        .single()
+      
+      if (valorParticular042 && (valorParticular042 as any).valor) {
+        const valor = (valorParticular042 as any).valor
+        valoresPorObraSocial.set('PARTICULARES', valor)
+        valoresPorObraSocial.set('042 - PARTICULARES', valor)
+      }
+    }
+  }
 
   // Agrupar por médico y obra social, aplicando regla de residentes
   const resumenMap = new Map<string, ResumenPorMedico>()
@@ -103,6 +154,7 @@ export async function calcularResumenPorMedico(
       : `${nombreNormalizado}|${obraSocial}`
 
     // Obtener valor unitario de la obra social
+    // Ya se normalizó el mapa para que "PARTICULARES" y "042 - PARTICULARES" apunten al mismo valor
     const valorUnitario = valoresPorObraSocial.get(obraSocial) || 0
 
     // Si el valor unitario es 0, también excluir (obra social sin valor configurado)
