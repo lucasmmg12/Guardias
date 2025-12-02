@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { calcularResumenPorMedico, calcularResumenPorPrestador, ResumenPorMedico, ResumenPorPrestador } from '@/lib/ginecologia-resumenes'
@@ -8,7 +8,10 @@ import { exportPDFResumenPorMedico } from '@/lib/pdf-exporter-resumen-medico'
 import { exportPDFResumenPorPrestador } from '@/lib/pdf-exporter-resumen-prestador'
 import { LiquidacionGuardia } from '@/lib/types'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, FileDown, Download, History, Eye } from 'lucide-react'
+import { ArrowLeft, FileDown, Download, History, Eye, FileSpreadsheet } from 'lucide-react'
+import { ExcelDataTable } from '@/components/custom/ExcelDataTable'
+import { cargarExcelDataDesdeBD } from '@/lib/excel-reconstructor'
+import { ExcelData } from '@/lib/excel-reader'
 
 const MESES = [
   { value: 1, label: 'Enero' },
@@ -34,16 +37,185 @@ export default function ResumenesGinecologiaPage() {
   const [historial, setHistorial] = useState<LiquidacionGuardia[]>([])
   const [loading, setLoading] = useState(false)
   const [loadingHistorial, setLoadingHistorial] = useState(false)
-  const [tabActiva, setTabActiva] = useState<'medicos' | 'prestadores' | 'historial'>('medicos')
+  const [tabActiva, setTabActiva] = useState<'medicos' | 'prestadores' | 'historial' | 'excel'>('medicos')
   const [liquidacionExpandida, setLiquidacionExpandida] = useState<string | null>(null)
+  const [excelData, setExcelData] = useState<ExcelData | null>(null)
+  const [liquidacionActual, setLiquidacionActual] = useState<LiquidacionGuardia | null>(null)
+  const [loadingExcel, setLoadingExcel] = useState(false)
 
   useEffect(() => {
     if (tabActiva === 'historial') {
       cargarHistorial()
+    } else if (tabActiva === 'excel') {
+      cargarExcelData()
     } else {
       cargarResumenes()
     }
   }, [mes, anio, tabActiva])
+
+  // Cargar ExcelData desde la liquidación del mes seleccionado
+  async function cargarExcelData() {
+    setLoadingExcel(true)
+    try {
+      // Buscar liquidación del mes/año seleccionado
+      const { data: liquidacion, error } = await supabase
+        .from('liquidaciones_guardia')
+        .select('*')
+        .eq('especialidad', 'Ginecología')
+        .eq('mes', mes)
+        .eq('anio', anio)
+        .single()
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error cargando liquidación:', error)
+        setExcelData(null)
+        setLiquidacionActual(null)
+        return
+      }
+
+      if (liquidacion) {
+        const liq = liquidacion as LiquidacionGuardia
+        setLiquidacionActual(liq)
+        
+        // Cargar ExcelData desde BD
+        const excelDataCargado = await cargarExcelDataDesdeBD(liq.id, supabase)
+        if (excelDataCargado) {
+          setExcelData(excelDataCargado)
+        } else {
+          setExcelData(null)
+        }
+      } else {
+        setLiquidacionActual(null)
+        setExcelData(null)
+      }
+    } catch (error) {
+      console.error('Error cargando ExcelData:', error)
+      setExcelData(null)
+      setLiquidacionActual(null)
+    } finally {
+      setLoadingExcel(false)
+    }
+  }
+
+  // Función para actualizar celda (similar a ginecologia/page.tsx)
+  const cambiosPendientesRef = useRef<Map<string, { liquidacionId: string; filaExcel: number; columna: string; valor: any }>>(new Map())
+  const saveTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  const handleCellUpdate = useCallback(async (rowIndex: number, column: string, newValue: any) => {
+    if (!liquidacionActual || !excelData) return
+
+    const filaExcel = rowIndex + 1
+
+    // Actualizar ExcelData local inmediatamente (optimista)
+    if (excelData.rows[rowIndex]) {
+      excelData.rows[rowIndex][column] = newValue
+      setExcelData({ ...excelData })
+    }
+
+    // Guardar cambio pendiente
+    const key = `${liquidacionActual.id}-${filaExcel}-${column}`
+    cambiosPendientesRef.current.set(key, {
+      liquidacionId: liquidacionActual.id,
+      filaExcel,
+      columna: column,
+      valor: newValue
+    })
+
+    // Cancelar timer anterior
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current)
+    }
+
+    // Programar guardado automático (500ms de debounce)
+    saveTimerRef.current = setTimeout(async () => {
+      await guardarCambiosPendientes()
+    }, 500)
+  }, [liquidacionActual, excelData])
+
+  const guardarCambiosPendientes = async () => {
+    if (cambiosPendientesRef.current.size === 0 || !liquidacionActual) return
+
+    const cambios = Array.from(cambiosPendientesRef.current.values())
+
+    try {
+      // Agrupar cambios por fila
+      const cambiosPorFila = new Map<number, Map<string, any>>()
+      cambios.forEach(cambio => {
+        if (!cambiosPorFila.has(cambio.filaExcel)) {
+          cambiosPorFila.set(cambio.filaExcel, new Map())
+        }
+        const filaCambios = cambiosPorFila.get(cambio.filaExcel)!
+        
+        // Mapear nombre de columna del Excel a campo de BD
+        if (cambio.columna.toLowerCase().includes('cliente') || cambio.columna.toLowerCase().includes('obra')) {
+          filaCambios.set('obra_social', cambio.valor)
+        } else if (cambio.columna.toLowerCase().includes('responsable') || cambio.columna.toLowerCase().includes('medico')) {
+          filaCambios.set('medico_nombre', cambio.valor)
+        } else if (cambio.columna.toLowerCase().includes('paciente')) {
+          filaCambios.set('paciente', cambio.valor)
+        }
+      })
+
+      // Guardar cada fila
+      const promesas = Array.from(cambiosPorFila.entries()).map(async ([filaExcel, campos]) => {
+        const updateData: any = {}
+        campos.forEach((valor, campo) => {
+          updateData[campo] = valor
+        })
+        updateData.updated_at = new Date().toISOString()
+
+        const { error } = await supabase
+          .from('detalle_guardia')
+          // @ts-ignore
+          .update(updateData)
+          .eq('liquidacion_id', liquidacionActual.id)
+          .eq('fila_excel', filaExcel)
+
+        if (error) throw error
+      })
+
+      await Promise.all(promesas)
+
+      // Limpiar cambios pendientes
+      cambiosPendientesRef.current.clear()
+    } catch (error) {
+      console.error('Error guardando cambios:', error)
+    }
+  }
+
+  // Función para eliminar fila
+  const handleDeleteRow = useCallback(async (rowIndex: number) => {
+    if (!liquidacionActual || !excelData) return
+
+    if (!confirm('¿Está seguro de que desea eliminar esta fila?')) {
+      return
+    }
+
+    const filaExcel = rowIndex + 1
+
+    try {
+      // Eliminar de BD
+      const { error } = await supabase
+        .from('detalle_guardia')
+        .delete()
+        .eq('liquidacion_id', liquidacionActual.id)
+        .eq('fila_excel', filaExcel)
+
+      if (error) {
+        console.error('Error eliminando fila:', error)
+        return
+      }
+
+      // Actualizar ExcelData local
+      const updatedRows = excelData.rows.filter((_, index) => index !== rowIndex)
+      setExcelData({
+        ...excelData,
+        rows: updatedRows
+      })
+    } catch (error: any) {
+      console.error('Error eliminando fila:', error)
+    }
+  }, [liquidacionActual, excelData])
 
   async function cargarResumenes() {
     setLoading(true)
@@ -210,6 +382,17 @@ export default function ResumenesGinecologiaPage() {
             <History className="h-4 w-4" />
             Historial
           </button>
+          <button
+            onClick={() => setTabActiva('excel')}
+            className={`px-4 py-2 font-semibold transition-colors flex items-center gap-2 ${
+              tabActiva === 'excel'
+                ? 'text-green-400 border-b-2 border-green-400'
+                : 'text-gray-400 hover:text-gray-300'
+            }`}
+          >
+            <FileSpreadsheet className="h-4 w-4" />
+            Excel
+          </button>
         </div>
 
         {/* Contenido de Tabs */}
@@ -347,6 +530,62 @@ export default function ResumenesGinecologiaPage() {
                     </tbody>
                   </table>
                 </div>
+              </div>
+            )}
+          </div>
+        ) : tabActiva === 'excel' ? (
+          /* Tab: Excel */
+          <div className="space-y-6">
+            {loadingExcel ? (
+              <div className="text-center py-12 text-gray-400">Cargando Excel...</div>
+            ) : !liquidacionActual ? (
+              <div 
+                className="rounded-xl p-8 text-center"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  backdropFilter: 'blur(20px)',
+                  border: '1px solid rgba(255, 193, 7, 0.3)',
+                }}
+              >
+                <div className="text-yellow-400 text-xl font-bold mb-4">
+                  No hay liquidación para este período
+                </div>
+                <div className="text-gray-400 mb-6">
+                  No se ha procesado ningún archivo Excel para {MESES.find(m => m.value === mes)?.label || `Mes ${mes}`} {anio}.
+                </div>
+                <Button
+                  onClick={() => router.push('/ginecologia')}
+                  className="bg-green-600 hover:bg-green-500 text-white"
+                >
+                  Ir a Ginecología para procesar archivo
+                </Button>
+              </div>
+            ) : !excelData ? (
+              <div className="text-center py-12 text-gray-400">No se pudo cargar el Excel</div>
+            ) : (
+              <div 
+                className="rounded-xl p-6"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  backdropFilter: 'blur(20px)',
+                  border: '1px solid rgba(34, 197, 94, 0.3)',
+                }}
+              >
+                <h2 className="text-2xl font-bold text-green-400 mb-4">
+                  Excel - {MESES.find(m => m.value === mes)?.label || `Mes ${mes}`} {anio}
+                </h2>
+                <p className="text-gray-400 mb-4 text-sm">
+                  Los cambios se guardan automáticamente. Revisa duplicados, filas sin obra social y sin horario.
+                </p>
+                <ExcelDataTable
+                  data={excelData}
+                  especialidad="Ginecología"
+                  onCellUpdate={handleCellUpdate}
+                  onDeleteRow={handleDeleteRow}
+                  liquidacionId={liquidacionActual.id}
+                  mes={mes}
+                  anio={anio}
+                />
               </div>
             )}
           </div>

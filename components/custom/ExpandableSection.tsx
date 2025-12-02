@@ -24,6 +24,11 @@ interface ExpandableSectionProps {
   mes?: number
   anio?: number
   sectionKey: string
+  // Funciones de detección para aplicar colores (solo para detalle completo)
+  esParticularRow?: (rowIndex: number) => boolean
+  esSinHorarioRow?: (rowIndex: number) => boolean
+  esDuplicadoRow?: (rowIndex: number) => boolean
+  esResidenteFormativoRow?: (rowIndex: number) => boolean
 }
 
 export function ExpandableSection({
@@ -43,7 +48,11 @@ export function ExpandableSection({
   allowDelete = false,
   mes,
   anio,
-  sectionKey
+  sectionKey,
+  esParticularRow,
+  esSinHorarioRow,
+  esDuplicadoRow,
+  esResidenteFormativoRow
 }: ExpandableSectionProps) {
   const [isExpanded, setIsExpanded] = useState(false)
 
@@ -179,10 +188,32 @@ export function ExpandableSection({
                 {rows.map((row, rowIndex) => {
                   const originalRowIndex = data.rows.findIndex(r => r === row)
                   
+                  // Determinar colores según reglas (solo si es detalle completo)
+                  const esDetalleCompleto = sectionKey === 'detalle_completo'
+                  const esParticular = esDetalleCompleto && esParticularRow ? esParticularRow(originalRowIndex) : false
+                  const esSinHorario = esDetalleCompleto && esSinHorarioRow ? esSinHorarioRow(originalRowIndex) : false
+                  const esDuplicado = esDetalleCompleto && esDuplicadoRow ? esDuplicadoRow(originalRowIndex) : false
+                  const esResidenteFormativo = esDetalleCompleto && esResidenteFormativoRow ? esResidenteFormativoRow(originalRowIndex) : false
+                  
+                  // Determinar color de fondo según prioridad
+                  let rowBgColor = 'transparent'
+                  if (esSinHorario) {
+                    rowBgColor = 'rgba(239, 68, 68, 0.15)' // Rojo para sin horario
+                  } else if (esDuplicado) {
+                    rowBgColor = 'rgba(168, 85, 247, 0.15)' // Púrpura para duplicados
+                  } else if (esParticular) {
+                    rowBgColor = 'rgba(251, 191, 36, 0.15)' // Amarillo para sin obra social
+                  } else if (esResidenteFormativo) {
+                    rowBgColor = 'rgba(59, 130, 246, 0.15)' // Azul para residente formativo
+                  }
+                  
                   return (
                     <tr
                       key={originalRowIndex}
                       className="border-b transition-colors border-white/5 hover:bg-white/5"
+                      style={{
+                        backgroundColor: rowBgColor
+                      }}
                     >
                       {data.headers.map((header, colIndex) => {
                         const value = row[header] ?? null

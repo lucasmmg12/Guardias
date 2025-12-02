@@ -153,20 +153,35 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
     return columnLower === 'cliente' || columnLower === 'responsable'
   }
 
-  // Detectar filas con PARTICULARES (sin obra social)
+  // Detectar filas con PARTICULARES (sin obra social) - búsqueda flexible
   const filasParticulares = useMemo(() => {
     const indices: Set<number> = new Set()
-    const clienteIndex = data.headers.findIndex(h => h.toLowerCase().trim() === 'cliente')
     
-    if (clienteIndex === -1) return indices
+    // Buscar columna de cliente/obra social con múltiples variaciones
+    const clienteIndex = data.headers.findIndex(h => {
+      const hLower = h.toLowerCase().trim()
+      return hLower === 'cliente' || 
+             hLower.includes('obra social') || 
+             hLower === 'obra social' ||
+             hLower === 'obra' ||
+             (hLower.includes('obra') && hLower.includes('social'))
+    })
+    
+    if (clienteIndex === -1) {
+      console.warn('[ExcelDataTable] No se encontró columna de Cliente/Obra Social')
+      return indices
+    }
+    
+    const headerCliente = data.headers[clienteIndex]
     
     rows.forEach((row, index) => {
-      const cliente = row[data.headers[clienteIndex]]
+      const cliente = row[headerCliente]
       if (esParticular(cliente)) {
         indices.add(index)
       }
     })
     
+    console.log(`[ExcelDataTable] Filas sin obra social detectadas: ${indices.size}`)
     return indices
   }, [rows, data.headers])
 
@@ -403,7 +418,7 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
       <ExpandableSection
         title={`📊 Ver detalle completo (${rows.length} registros)`}
         count={rows.length}
-        description="Muestra todos los registros del Excel para revisión completa."
+        description="Muestra todos los registros del Excel para revisión completa con colores según reglas."
         icon={<Database className="h-6 w-6 flex-shrink-0" />}
         bgColor="rgba(34, 197, 94, 0.15)"
         borderColor="rgba(34, 197, 94, 0.5)"
@@ -417,185 +432,11 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
         mes={mes}
         anio={anio}
         sectionKey="detalle_completo"
+        esParticularRow={(rowIndex) => filasParticulares.has(rowIndex)}
+        esSinHorarioRow={(rowIndex) => filasSinHorario.has(rowIndex)}
+        esDuplicadoRow={(rowIndex) => filasDuplicadas.has(rowIndex)}
+        esResidenteFormativoRow={(rowIndex) => filasResidenteHorarioFormativo.has(rowIndex)}
       />
-
-      {/* Tabla de datos */}
-      <div className="overflow-x-auto rounded-xl" style={{
-        background: 'rgba(255, 255, 255, 0.05)',
-        backdropFilter: 'blur(20px)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-      }}>
-        <table className="w-full border-collapse text-xs">
-          <thead>
-            <tr className="border-b border-white/10">
-              {data.headers.map((header, index) => (
-                <th
-                  key={index}
-                  className="px-2 py-2 text-left text-xs font-semibold text-gray-300 bg-white/5 whitespace-nowrap"
-                  style={{
-                    position: 'sticky',
-                    top: 0,
-                    zIndex: 10,
-                    minWidth: '120px',
-                    maxWidth: '200px',
-                  }}
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span className="truncate">{header}</span>
-                    {isEditable(header) && (
-                      <span className="text-[10px] text-green-400 bg-green-400/20 px-1.5 py-0.5 rounded flex-shrink-0">
-                        Editable
-                      </span>
-                    )}
-                  </div>
-                </th>
-              ))}
-              {/* Columna de acciones */}
-              <th
-                className="px-2 py-2 text-left text-xs font-semibold text-gray-300 bg-white/5 whitespace-nowrap sticky right-0"
-                style={{
-                  position: 'sticky',
-                  top: 0,
-                  zIndex: 11,
-                  minWidth: '60px',
-                  maxWidth: '60px',
-                }}
-              >
-                Acciones
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 ? (
-              <tr>
-                <td colSpan={data.headers.length + 1} className="px-4 py-8 text-center text-gray-400 text-sm">
-                  No hay datos para mostrar
-                </td>
-              </tr>
-            ) : (
-              rows.map((row, rowIndex) => {
-                const esParticularRow = filasParticulares.has(rowIndex)
-                const esSinHorario = filasSinHorario.has(rowIndex)
-                const esDuplicado = filasDuplicadas.has(rowIndex)
-                const esResidenteFormativo = filasResidenteHorarioFormativo.has(rowIndex)
-                
-                // Determinar el estilo de la fila según la prioridad de problemas
-                // Prioridad: Sin horario > Duplicado > Residente formativo > Particular
-                let filaClassName = 'border-b transition-colors border-white/5 hover:bg-white/5'
-                if (esSinHorario) {
-                  filaClassName = 'bg-red-500/20 border-red-500/30 hover:bg-red-500/30 border-b'
-                } else if (esDuplicado) {
-                  filaClassName = 'bg-purple-500/20 border-purple-500/30 hover:bg-purple-500/30 border-b'
-                } else if (esResidenteFormativo) {
-                  filaClassName = 'bg-blue-500/20 border-blue-500/30 hover:bg-blue-500/30 border-b'
-                } else if (esParticularRow) {
-                  filaClassName = 'bg-yellow-500/20 border-yellow-500/30 hover:bg-yellow-500/30 border-b'
-                }
-                
-                return (
-                <tr
-                  key={rowIndex}
-                  className={filaClassName}
-                >
-                  {data.headers.map((header, colIndex) => {
-                    const value = row[header] ?? null
-                    const editable = isEditable(header)
-                    const savingKey = `${rowIndex}-${header}`
-                    const isSaving = saving[savingKey] || false
-
-                    return (
-                      <td
-                        key={colIndex}
-                        className="px-2 py-1.5 text-xs text-gray-300"
-                        style={{
-                          minWidth: '120px',
-                          maxWidth: '200px',
-                        }}
-                      >
-                        {editable ? (
-                          <div className="relative">
-                            <InlineEditCell
-                              value={value}
-                              type="text"
-                              onSave={async (newValue) => {
-                                await handleCellSave(rowIndex, header, newValue)
-                              }}
-                              isEditable={true}
-                              className={isSaving ? 'opacity-50' : ''}
-                              columnName={header}
-                            />
-                            {esParticularRow && header.toLowerCase().trim() === 'cliente' && (
-                              <div className="absolute -top-1 -right-1">
-                                <AlertCircle className="h-3 w-3 text-yellow-400" />
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="px-1 py-0.5 truncate" title={value ? String(value) : ''}>
-                            {value === null || value === '' ? (
-                              <span className="text-gray-500 italic text-[10px]">-</span>
-                            ) : (
-                              <span className="truncate block">{String(value)}</span>
-                            )}
-                          </div>
-                        )}
-                      </td>
-                    )
-                  })}
-                  {/* Columna de acciones */}
-                  <td
-                    className={`px-2 py-1.5 sticky right-0 ${
-                      esSinHorario 
-                        ? 'bg-red-500/20' 
-                        : esDuplicado 
-                        ? 'bg-purple-500/20' 
-                        : esResidenteFormativo
-                        ? 'bg-blue-500/20'
-                        : esParticularRow
-                        ? 'bg-yellow-500/20'
-                        : 'bg-white/5'
-                    }`}
-                    style={{
-                      minWidth: '60px',
-                      maxWidth: '60px',
-                      zIndex: 1,
-                    }}
-                  >
-                    <div className="flex items-center justify-center gap-1 relative">
-                      {(esSinHorario || esDuplicado) && (
-                        <button
-                          onClick={() => handleDeleteRowLocal(rowIndex)}
-                          className="p-1.5 text-red-400 hover:bg-red-500/30 rounded transition-colors"
-                          title="Eliminar fila"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      )}
-                      {esSinHorario && (
-                        <div className="absolute -top-1 -right-1">
-                          <Clock className="h-3 w-3 text-red-400" />
-                        </div>
-                      )}
-                      {esDuplicado && !esSinHorario && (
-                        <div className="absolute -top-1 -right-1">
-                          <AlertCircle className="h-3 w-3 text-purple-400" />
-                        </div>
-                      )}
-                      {esResidenteFormativo && !esSinHorario && !esDuplicado && (
-                        <div className="absolute -top-1 -right-1">
-                          <UserX className="h-3 w-3 text-blue-400" />
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              )})
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Resumen */}
       <div className="text-sm text-gray-400">
         Total de filas: <span className="text-green-400 font-semibold">{rows.length}</span>
         {' • '}
