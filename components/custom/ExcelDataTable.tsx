@@ -280,7 +280,7 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
 
   // Funciones para eliminar múltiples filas (optimizado: batch)
   const handleDeleteRows = useCallback(async (indices: Set<number>) => {
-    if (onDeleteRow && liquidacionId) {
+    if (onDeleteRow) {
       // Eliminar en batch usando el callback del padre
       const indicesArray = Array.from(indices).sort((a, b) => b - a) // Orden inverso para evitar problemas de índices
       for (const index of indicesArray) {
@@ -292,7 +292,7 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
       setRows(updatedRows)
       data.rows = updatedRows
     }
-  }, [rows, data, onDeleteRow, liquidacionId])
+  }, [rows, data, onDeleteRow])
 
   // Obtener filas filtradas por tipo
   const filasParticularesList = useMemo(() => {
@@ -310,6 +310,19 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
   const filasResidenteFormativoList = useMemo(() => {
     return rows.filter((row, index) => filasResidenteHorarioFormativo.has(index))
   }, [rows, filasResidenteHorarioFormativo])
+
+  // Funciones para eliminar todos de cada sección
+  const handleDeleteAllSinHorario = useCallback(async () => {
+    await handleDeleteRows(filasSinHorario)
+  }, [filasSinHorario, handleDeleteRows])
+
+  const handleDeleteAllDuplicados = useCallback(async () => {
+    await handleDeleteRows(filasDuplicadas)
+  }, [filasDuplicadas, handleDeleteRows])
+
+  const handleDeleteAllResidenteFormativo = useCallback(async () => {
+    await handleDeleteRows(filasResidenteHorarioFormativo)
+  }, [filasResidenteHorarioFormativo, handleDeleteRows])
 
   return (
     <div className="w-full space-y-4">
@@ -363,9 +376,7 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
         rows={filasSinHorarioList}
         data={data}
         onDeleteRow={handleDeleteRowLocal}
-        onDeleteAll={() => {
-          handleDeleteRows(filasSinHorario)
-        }}
+        onDeleteAll={handleDeleteAllSinHorario}
         allowDelete={true}
         mes={mes}
         anio={anio}
@@ -384,9 +395,7 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
         rows={filasDuplicadasList}
         data={data}
         onDeleteRow={handleDeleteRowLocal}
-        onDeleteAll={() => {
-          handleDeleteRows(filasDuplicadas)
-        }}
+        onDeleteAll={handleDeleteAllDuplicados}
         allowDelete={true}
         mes={mes}
         anio={anio}
@@ -405,9 +414,7 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
         rows={filasResidenteFormativoList}
         data={data}
         onDeleteRow={handleDeleteRowLocal}
-        onDeleteAll={() => {
-          handleDeleteRows(filasResidenteHorarioFormativo)
-        }}
+        onDeleteAll={handleDeleteAllResidenteFormativo}
         allowDelete={true}
         mes={mes}
         anio={anio}

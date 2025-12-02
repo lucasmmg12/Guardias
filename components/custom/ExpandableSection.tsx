@@ -5,6 +5,7 @@ import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ExcelRow, ExcelData } from '@/lib/excel-reader'
 import { InlineEditCell } from './InlineEditCell'
+import { ConfirmModal } from './ConfirmModal'
 
 interface ExpandableSectionProps {
   title: string
@@ -18,7 +19,7 @@ interface ExpandableSectionProps {
   data: ExcelData
   onCellUpdate?: (rowIndex: number, column: string, newValue: any) => Promise<void>
   onDeleteRow?: (rowIndex: number) => Promise<void> | void
-  onDeleteAll?: () => void
+  onDeleteAll?: () => Promise<void> | void
   allowEdit?: boolean
   allowDelete?: boolean
   mes?: number
@@ -55,6 +56,13 @@ export function ExpandableSection({
   esResidenteFormativoRow
 }: ExpandableSectionProps) {
   const [isExpanded, setIsExpanded] = useState(false)
+  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set())
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [confirmAction, setConfirmAction] = useState<{
+    type: 'single' | 'multiple' | 'all'
+    rowIndex?: number
+    count?: number
+  } | null>(null)
 
   // Cargar estado guardado al montar
   useEffect(() => {
@@ -72,6 +80,10 @@ export function ExpandableSection({
     setIsExpanded(newState)
     if (mes && anio) {
       localStorage.setItem(`expandable_${sectionKey}_${mes}_${anio}`, String(newState))
+    }
+    // Limpiar selección al colapsar
+    if (!newState) {
+      setSelectedRows(new Set())
     }
   }
 
@@ -107,21 +119,45 @@ export function ExpandableSection({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {allowDelete && isExpanded && onDeleteAll && (
-              <Button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  if (confirm(`¿Está seguro de que desea eliminar todos los ${count} registros?`)) {
-                    onDeleteAll()
-                  }
-                }}
-                size="sm"
-                variant="destructive"
-                className="mr-2"
-              >
-                <Trash2 className="h-4 w-4 mr-1" />
-                Eliminar todos
-              </Button>
+            {allowDelete && isExpanded && (
+              <>
+                {selectedRows.size > 0 && (
+                  <Button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setConfirmAction({
+                        type: 'multiple',
+                        count: selectedRows.size
+                      })
+                      setShowConfirmModal(true)
+                    }}
+                    size="sm"
+                    variant="destructive"
+                    className="mr-2"
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Eliminar seleccionados ({selectedRows.size})
+                  </Button>
+                )}
+                {onDeleteAll && (
+                  <Button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setConfirmAction({
+                        type: 'all',
+                        count: count
+                      })
+                      setShowConfirmModal(true)
+                    }}
+                    size="sm"
+                    variant="destructive"
+                    className="mr-2"
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Eliminar todos
+                  </Button>
+                )}
+              </>
             )}
             {isExpanded ? (
               <ChevronUp className="h-6 w-6" style={{ color: textColor }} />
@@ -146,6 +182,37 @@ export function ExpandableSection({
             <table className="w-full border-collapse text-xs">
               <thead>
                 <tr className="border-b border-white/10">
+                  {allowDelete && (
+                    <th
+                      className="px-2 py-2 text-center text-xs font-semibold text-gray-300 bg-white/5 whitespace-nowrap sticky left-0"
+                      style={{
+                        position: 'sticky',
+                        top: 0,
+                        zIndex: 12,
+                        minWidth: '50px',
+                        maxWidth: '50px',
+                        background: 'rgba(0, 0, 0, 0.8)',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedRows.size === rows.length && rows.length > 0}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            const allIndices = rows.map((_, idx) => {
+                              const originalRowIndex = data.rows.findIndex(r => r === rows[idx])
+                              return originalRowIndex
+                            }).filter(idx => idx !== -1)
+                            setSelectedRows(new Set(allIndices))
+                          } else {
+                            setSelectedRows(new Set())
+                          }
+                        }}
+                        className="w-4 h-4 rounded border-gray-500 bg-gray-800 text-green-500 focus:ring-green-500 focus:ring-2"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </th>
+                  )}
                   {data.headers.map((header, index) => (
                     <th
                       key={index}
@@ -187,6 +254,7 @@ export function ExpandableSection({
               <tbody>
                 {rows.map((row, rowIndex) => {
                   const originalRowIndex = data.rows.findIndex(r => r === row)
+                  const isSelected = selectedRows.has(originalRowIndex)
                   
                   // Determinar colores según reglas (solo si es detalle completo)
                   const esDetalleCompleto = sectionKey === 'detalle_completo'
@@ -207,14 +275,48 @@ export function ExpandableSection({
                     rowBgColor = 'rgba(59, 130, 246, 0.15)' // Azul para residente formativo
                   }
                   
+                  // Si está seleccionado, agregar borde
+                  if (isSelected) {
+                    rowBgColor = rowBgColor === 'transparent' 
+                      ? 'rgba(34, 197, 94, 0.2)' 
+                      : rowBgColor.replace('0.15', '0.25')
+                  }
+                  
                   return (
                     <tr
                       key={originalRowIndex}
                       className="border-b transition-colors border-white/5 hover:bg-white/5"
                       style={{
-                        backgroundColor: rowBgColor
+                        backgroundColor: rowBgColor,
+                        borderLeft: isSelected ? '3px solid rgba(34, 197, 94, 0.8)' : undefined
                       }}
                     >
+                      {allowDelete && (
+                        <td
+                          className="px-2 py-1.5 text-center sticky left-0 z-10"
+                          style={{
+                            minWidth: '50px',
+                            maxWidth: '50px',
+                            background: rowBgColor !== 'transparent' ? rowBgColor : 'rgba(0, 0, 0, 0.5)',
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => {
+                              const newSelected = new Set(selectedRows)
+                              if (e.target.checked) {
+                                newSelected.add(originalRowIndex)
+                              } else {
+                                newSelected.delete(originalRowIndex)
+                              }
+                              setSelectedRows(newSelected)
+                            }}
+                            className="w-4 h-4 rounded border-gray-500 bg-gray-800 text-green-500 focus:ring-green-500 focus:ring-2"
+                          />
+                        </td>
+                      )}
                       {data.headers.map((header, colIndex) => {
                         const value = row[header] ?? null
                         const editable = isEditable(header) && allowEdit
@@ -243,12 +345,15 @@ export function ExpandableSection({
                         )
                       })}
                       {allowDelete && onDeleteRow && (
-                        <td className="px-2 py-1.5 text-center sticky right-0 bg-gray-900">
+                        <td className="px-2 py-1.5 text-center sticky right-0" style={{ background: rowBgColor !== 'transparent' ? rowBgColor : 'rgba(0, 0, 0, 0.5)' }}>
                           <Button
-                            onClick={async () => {
-                              if (confirm('¿Está seguro de que desea eliminar esta fila?')) {
-                                await onDeleteRow(originalRowIndex)
-                              }
+                            onClick={async (e) => {
+                              e.stopPropagation()
+                              setConfirmAction({
+                                type: 'single',
+                                rowIndex: originalRowIndex
+                              })
+                              setShowConfirmModal(true)
                             }}
                             size="sm"
                             variant="ghost"
@@ -266,6 +371,52 @@ export function ExpandableSection({
           </div>
         </div>
       )}
+
+      {/* Modal de confirmación */}
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        onClose={() => {
+          setShowConfirmModal(false)
+          setConfirmAction(null)
+        }}
+        onConfirm={async () => {
+          if (!confirmAction) return
+
+          try {
+            if (confirmAction.type === 'all' && onDeleteAll) {
+              // Eliminar todos
+              await onDeleteAll()
+              setSelectedRows(new Set())
+            } else if (confirmAction.type === 'multiple' && onDeleteRow) {
+              // Eliminar seleccionados
+              const indicesArray = Array.from(selectedRows).sort((a, b) => b - a) // Orden inverso
+              for (const index of indicesArray) {
+                await onDeleteRow(index)
+              }
+              setSelectedRows(new Set())
+            } else if (confirmAction.type === 'single' && confirmAction.rowIndex !== undefined && onDeleteRow) {
+              // Eliminar uno
+              await onDeleteRow(confirmAction.rowIndex)
+              const newSelected = new Set(selectedRows)
+              newSelected.delete(confirmAction.rowIndex)
+              setSelectedRows(newSelected)
+            }
+          } catch (error) {
+            console.error('Error eliminando filas:', error)
+          }
+        }}
+        title="Confirmar eliminación"
+        message={
+          confirmAction?.type === 'all'
+            ? `¿Está seguro de que desea eliminar todos los ${confirmAction.count} registros? Esta acción no se puede deshacer.`
+            : confirmAction?.type === 'multiple'
+            ? `¿Está seguro de que desea eliminar los ${confirmAction.count} registros seleccionados? Esta acción no se puede deshacer.`
+            : '¿Está seguro de que desea eliminar esta fila? Esta acción no se puede deshacer.'
+        }
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        type="danger"
+      />
     </div>
   )
 }
