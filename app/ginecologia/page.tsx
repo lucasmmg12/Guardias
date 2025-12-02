@@ -1,19 +1,14 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { UploadExcel } from '@/components/custom/UploadExcel'
-import { ExcelDataTable } from '@/components/custom/ExcelDataTable'
-import { EstadisticasObraSocial } from '@/components/custom/EstadisticasObraSocial'
 import { MesSelectorModal } from '@/components/custom/MesSelectorModal'
 import { NotificationModal, NotificationType } from '@/components/custom/NotificationModal'
-import { DetalleGuardiaTable } from '@/components/custom/DetalleGuardiaTable'
 import { readExcelFile, ExcelData } from '@/lib/excel-reader'
 import { procesarExcelGinecologia } from '@/lib/ginecologia-processor'
-import { cargarExcelDataDesdeBD } from '@/lib/excel-reconstructor'
 import { supabase } from '@/lib/supabase/client'
-import { LiquidacionGuardia, EstadoLiquidacion } from '@/lib/types'
-import { AlertCircle, CheckCircle2, Sparkles, ArrowLeft, Clock } from 'lucide-react'
+import { AlertCircle, Sparkles, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 
@@ -29,8 +24,6 @@ export default function GinecologiaPage() {
     const [anioSeleccionado, setAnioSeleccionado] = useState(new Date().getFullYear())
     const [archivoActual, setArchivoActual] = useState<File | null>(null)
     const [isGuardando, setIsGuardando] = useState(false)
-    const [liquidacionActual, setLiquidacionActual] = useState<LiquidacionGuardia | null>(null)
-    const [mostrarTablaDetalles, setMostrarTablaDetalles] = useState(false)
     const [notification, setNotification] = useState<{
         isOpen: boolean
         type: NotificationType
@@ -173,31 +166,24 @@ export default function GinecologiaPage() {
                     )
                     console.error('Errores completos:', resultado.errores)
                 } else {
-                    // Cargar la liquidación guardada
-                    if (resultado.liquidacionId) {
-                        const { data: liquidacionData } = await supabase
-                            .from('liquidaciones_guardia')
-                            .select('*')
-                            .eq('id', resultado.liquidacionId)
-                            .single()
-                        
-                        if (liquidacionData) {
-                            const liquidacion = liquidacionData as LiquidacionGuardia
-                            setLiquidacionActual(liquidacion)
-                            // NO ocultar ExcelDataTable, mantenerlo visible para revisión
-                        }
-                    }
+                    // Limpiar datos del Excel después de procesar exitosamente
+                    setExcelData(null)
+                    setArchivoActual(null)
+
+                    // Obtener nombre del mes para el mensaje
+                    const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+                    const nombreMes = meses[mes - 1]
 
                     if (resultado.advertencias.length > 0) {
                         showNotification(
                             'warning',
-                            `Se procesaron ${resultado.procesadas} de ${resultado.totalFilas} filas. ${resultado.advertencias.length} advertencias. Revisa los datos en la tabla.`,
+                            `Se procesaron ${resultado.procesadas} de ${resultado.totalFilas} filas. ${resultado.advertencias.length} advertencias. Para editar los datos, ve a "Ver Resumen", selecciona el mes ${nombreMes} ${anio} y edita desde ahí.`,
                             'Procesamiento completado'
                         )
                     } else {
                         showNotification(
                             'success',
-                            `Se procesaron y guardaron ${resultado.procesadas} consultas. Revisa y edita los datos en la tabla.`,
+                            `Se procesaron y guardaron ${resultado.procesadas} consultas correctamente. Para editar los datos, ve a "Ver Resumen", selecciona el mes ${nombreMes} ${anio} y edita desde ahí.`,
                             'Guardado exitoso'
                         )
                     }
@@ -215,268 +201,12 @@ export default function GinecologiaPage() {
         }
     }
 
-    // Cargar liquidación existente al montar (si hay una en progreso)
-    useEffect(() => {
-        async function cargarLiquidacionEnProgreso() {
-            try {
-                const { data, error } = await supabase
-                    .from('liquidaciones_guardia')
-                    .select('*')
-                    .eq('especialidad', 'Ginecología')
-                    .in('estado', ['pendiente_revision', 'revisado', 'listo_para_liquidar', 'finalizada'])
-                    .order('created_at', { ascending: false })
-                    .limit(1)
-                    .single()
+    // Ya no cargamos liquidaciones en progreso aquí
+    // La edición se hace desde la página de Resúmenes
 
-                if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-                    console.error('Error cargando liquidación:', error)
-                    return
-                }
 
-                if (data) {
-                    const liquidacion = data as LiquidacionGuardia
-                    setLiquidacionActual(liquidacion)
-                    setMesSeleccionado(liquidacion.mes)
-                    setAnioSeleccionado(liquidacion.anio)
-                    
-                    // Cargar ExcelData desde los detalles guardados (optimizado)
-                    const excelDataCargado = await cargarExcelDataDesdeBD(
-                        liquidacion.id,
-                        supabase
-                    )
-                    
-                    if (excelDataCargado) {
-                        setExcelData(excelDataCargado)
-                    }
-                }
-            } catch (error) {
-                console.error('Error cargando liquidación:', error)
-            }
-        }
-        
-        cargarLiquidacionEnProgreso()
-    }, [])
-
-    // Extraer mes y año del período del Excel (usar el seleccionado)
-    const obtenerMesAnio = () => {
-        return { mes: mesSeleccionado, anio: anioSeleccionado }
-    }
-
-    // Mapa para guardar cambios pendientes (debounce)
-    const cambiosPendientesRef = useRef<Map<string, { liquidacionId: string; filaExcel: number; columna: string; valor: any }>>(new Map())
-    const saveTimerRef = useRef<NodeJS.Timeout | null>(null)
-    const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
-
-    const handleCellUpdate = async (rowIndex: number, column: string, newValue: any) => {
-        if (!liquidacionActual || !excelData) return
-
-        // El rowIndex en ExcelDataTable corresponde a la fila del Excel (empezando en 0)
-        // Pero fila_excel en la BD es el número de fila real del Excel (empezando en 1)
-        const filaExcel = rowIndex + 1
-
-        // Actualizar ExcelData local inmediatamente (optimista)
-        if (excelData.rows[rowIndex]) {
-            excelData.rows[rowIndex][column] = newValue
-            // Forzar re-render solo si es necesario
-            setExcelData({ ...excelData })
-        }
-
-        // Guardar cambio pendiente
-        const key = `${liquidacionActual.id}-${filaExcel}-${column}`
-        cambiosPendientesRef.current.set(key, {
-            liquidacionId: liquidacionActual.id,
-            filaExcel,
-            columna: column,
-            valor: newValue
-        })
-
-        // Cancelar timer anterior
-        if (saveTimerRef.current) {
-            clearTimeout(saveTimerRef.current)
-        }
-
-        // Programar guardado automático (500ms de debounce)
-        saveTimerRef.current = setTimeout(async () => {
-            await guardarCambiosPendientes()
-        }, 500)
-    }
-
-    // Función optimizada para eliminar fila (elimina de BD y actualiza local)
-    const handleDeleteRow = useCallback(async (rowIndex: number) => {
-        if (!liquidacionActual || !excelData) return
-
-        const filaExcel = rowIndex + 1
-
-        try {
-            // Eliminar de BD de forma optimizada (solo un query)
-            const { error } = await supabase
-                .from('detalle_guardia')
-                .delete()
-                .eq('liquidacion_id', liquidacionActual.id)
-                .eq('fila_excel', filaExcel)
-
-            if (error) {
-                console.error('Error eliminando fila:', error)
-                showNotification('error', 'Error al eliminar la fila', 'Error')
-                return
-            }
-
-            // Actualizar ExcelData local (optimista)
-            const updatedRows = excelData.rows.filter((_, index) => index !== rowIndex)
-            const nuevoExcelData = {
-                ...excelData,
-                rows: updatedRows
-            }
-            setExcelData(nuevoExcelData)
-
-            // Actualizar totales de liquidación de forma optimizada (en background, no bloquea UI)
-            // Usar requestIdleCallback si está disponible, sino setTimeout
-            const actualizarTotales = async () => {
-                const { data: detalles } = await supabase
-                    .from('detalle_guardia')
-                    .select('importe_calculado, monto_facturado')
-                    .eq('liquidacion_id', liquidacionActual.id) as { data: Array<{ importe_calculado: number | null; monto_facturado: number | null }> | null }
-
-                if (detalles) {
-                    const totalConsultas = detalles.length
-                    const totalBruto = detalles.reduce((sum, d) => sum + (d.monto_facturado || 0), 0)
-                    const totalNeto = detalles.reduce((sum, d) => sum + (d.importe_calculado || 0), 0)
-
-                    await supabase
-                        .from('liquidaciones_guardia')
-                        // @ts-ignore
-                        .update({
-                            total_consultas: totalConsultas,
-                            total_bruto: totalBruto,
-                            total_neto: totalNeto
-                        })
-                        .eq('id', liquidacionActual.id)
-                    
-                    // Actualizar liquidación actual local
-                    setLiquidacionActual(prev => prev ? {
-                        ...prev,
-                        total_consultas: totalConsultas,
-                        total_bruto: totalBruto,
-                        total_neto: totalNeto
-                    } : null)
-                }
-            }
-
-            // Ejecutar en background sin bloquear UI
-            if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-                requestIdleCallback(actualizarTotales, { timeout: 1000 })
-            } else {
-                setTimeout(actualizarTotales, 100)
-            }
-
-        } catch (error: any) {
-            console.error('Error eliminando fila:', error)
-            showNotification('error', 'Error al eliminar la fila', 'Error')
-        }
-    }, [liquidacionActual, excelData])
-
-    const guardarCambiosPendientes = async () => {
-        if (cambiosPendientesRef.current.size === 0) return
-
-        setSaveStatus('saving')
-        const cambios = Array.from(cambiosPendientesRef.current.values())
-
-        try {
-            // Agrupar cambios por fila
-            const cambiosPorFila = new Map<number, Map<string, any>>()
-            cambios.forEach(cambio => {
-                if (!cambiosPorFila.has(cambio.filaExcel)) {
-                    cambiosPorFila.set(cambio.filaExcel, new Map())
-                }
-                const filaCambios = cambiosPorFila.get(cambio.filaExcel)!
-                
-                // Mapear nombre de columna del Excel a campo de BD
-                if (cambio.columna.toLowerCase().includes('cliente') || cambio.columna.toLowerCase().includes('obra')) {
-                    filaCambios.set('obra_social', cambio.valor)
-                } else if (cambio.columna.toLowerCase().includes('responsable') || cambio.columna.toLowerCase().includes('medico')) {
-                    filaCambios.set('medico_nombre', cambio.valor)
-                } else if (cambio.columna.toLowerCase().includes('paciente')) {
-                    filaCambios.set('paciente', cambio.valor)
-                }
-            })
-
-            // Guardar cada fila
-            const promesas = Array.from(cambiosPorFila.entries()).map(async ([filaExcel, campos]) => {
-                const updateData: any = {}
-                campos.forEach((valor, campo) => {
-                    updateData[campo] = valor
-                })
-                updateData.updated_at = new Date().toISOString()
-
-                const { error } = await supabase
-                    .from('detalle_guardia')
-                    // @ts-ignore
-                    .update(updateData)
-                    .eq('liquidacion_id', liquidacionActual!.id)
-                    .eq('fila_excel', filaExcel)
-
-                if (error) throw error
-            })
-
-            await Promise.all(promesas)
-
-            // Limpiar cambios pendientes
-            cambiosPendientesRef.current.clear()
-            setSaveStatus('saved')
-
-            // Resetear estado después de 2 segundos
-            setTimeout(() => {
-                setSaveStatus('idle')
-            }, 2000)
-        } catch (error) {
-            console.error('Error guardando cambios:', error)
-            setSaveStatus('error')
-            
-            // Reintentar después de 3 segundos
-            setTimeout(() => {
-                if (cambiosPendientesRef.current.size > 0) {
-                    guardarCambiosPendientes()
-                }
-            }, 3000)
-        }
-    }
-
-    // Guardar antes de desmontar
-    useEffect(() => {
-        return () => {
-            if (saveTimerRef.current) {
-                clearTimeout(saveTimerRef.current)
-            }
-            if (cambiosPendientesRef.current.size > 0) {
-                guardarCambiosPendientes()
-            }
-        }
-    }, [])
-
-    // Guardar antes de cerrar/recargar
-    useEffect(() => {
-        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-            if (cambiosPendientesRef.current.size > 0) {
-                e.preventDefault()
-                e.returnValue = 'Tienes cambios sin guardar. ¿Estás seguro de que quieres salir?'
-                guardarCambiosPendientes()
-            }
-        }
-
-        window.addEventListener('beforeunload', handleBeforeUnload)
-        return () => window.removeEventListener('beforeunload', handleBeforeUnload)
-    }, [])
-
-    // Guardado periódico cada 10 segundos
-    useEffect(() => {
-        const interval = setInterval(() => {
-            if (cambiosPendientesRef.current.size > 0) {
-                guardarCambiosPendientes()
-            }
-        }, 10000)
-
-        return () => clearInterval(interval)
-    }, [])
+    // Las funciones de edición (handleCellUpdate, handleDeleteRow) ya no se usan aquí
+    // La edición se hace desde la página de Resúmenes
 
     return (
         <div className="min-h-screen relative p-8 pb-20 overflow-hidden">
@@ -571,144 +301,6 @@ export default function GinecologiaPage() {
                     </div>
                 </div>
 
-                {/* Selector de estado y barra de guardado (si hay liquidación) */}
-                {liquidacionActual && (
-                    <div 
-                        className="relative rounded-2xl shadow-2xl overflow-hidden p-6"
-                        style={{
-                            background: 'rgba(255, 255, 255, 0.1)',
-                            backdropFilter: 'blur(20px)',
-                            border: '1px solid rgba(59, 130, 246, 0.3)',
-                            boxShadow: '0 8px 32px 0 rgba(59, 130, 246, 0.3)',
-                        }}
-                    >
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <div className="flex items-center gap-2">
-                                    {saveStatus === 'saving' && (
-                                        <>
-                                            <Clock className="h-4 w-4 text-yellow-400 animate-spin" />
-                                            <span className="text-sm text-yellow-400">Guardando...</span>
-                                        </>
-                                    )}
-                                    {saveStatus === 'saved' && (
-                                        <>
-                                            <CheckCircle2 className="h-4 w-4 text-green-400" />
-                                            <span className="text-sm text-green-400">Guardado</span>
-                                        </>
-                                    )}
-                                    {saveStatus === 'error' && (
-                                        <>
-                                            <AlertCircle className="h-4 w-4 text-red-400" />
-                                            <span className="text-sm text-red-400">Error al guardar. Reintentando...</span>
-                                        </>
-                                    )}
-                                    {saveStatus === 'idle' && cambiosPendientesRef.current.size > 0 && (
-                                        <span className="text-sm text-gray-400">
-                                            {cambiosPendientesRef.current.size} cambio(s) pendiente(s)
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-4">
-                                <div className="flex items-center gap-2">
-                                    <label className="text-sm text-gray-300">Estado:</label>
-                                    <select
-                                        value={liquidacionActual.estado}
-                                        onChange={async (e) => {
-                                            const nuevoEstado = e.target.value as EstadoLiquidacion
-                                            try {
-                                                const { error } = await supabase
-                                                    .from('liquidaciones_guardia')
-                                                    // @ts-ignore
-                                                    .update({ estado: nuevoEstado })
-                                                    .eq('id', liquidacionActual.id)
-
-                                                if (error) throw error
-                                                setLiquidacionActual(prev => prev ? { ...prev, estado: nuevoEstado } : null)
-                                            } catch (error) {
-                                                console.error('Error actualizando estado:', error)
-                                                showNotification('error', 'Error al actualizar el estado', 'Error')
-                                            }
-                                        }}
-                                        className="px-3 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:border-green-400 focus:outline-none"
-                                    >
-                                        <option value="borrador">Borrador</option>
-                                        <option value="procesando">Procesando</option>
-                                        <option value="pendiente_revision">Pendiente de Revisión</option>
-                                        <option value="revisado">Revisado</option>
-                                        <option value="listo_para_liquidar">Listo para Liquidar</option>
-                                        <option value="finalizada">Finalizada</option>
-                                    </select>
-                                </div>
-                                {cambiosPendientesRef.current.size > 0 && (
-                                    <Button
-                                        onClick={() => guardarCambiosPendientes()}
-                                        size="sm"
-                                        className="bg-green-600 hover:bg-green-500"
-                                    >
-                                        Guardar ahora
-                                    </Button>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Tabla de datos del Excel (mostrar siempre después de procesar) */}
-                {excelData && (
-                    <div 
-                        className="relative rounded-2xl shadow-2xl overflow-hidden p-8"
-                        style={{
-                            background: 'rgba(255, 255, 255, 0.1)',
-                            backdropFilter: 'blur(20px)',
-                            border: '1px solid rgba(59, 130, 246, 0.3)',
-                            boxShadow: '0 8px 32px 0 rgba(59, 130, 246, 0.3)',
-                        }}
-                    >
-                        <div className="relative">
-                            <h2 className="text-2xl font-bold text-blue-400 mb-6">
-                                📊 Datos del Excel - Revisión y Edición
-                            </h2>
-                            {liquidacionActual && (
-                                <p className="text-gray-400 mb-4 text-sm">
-                                    Los cambios se guardan automáticamente. Revisa duplicados, filas sin obra social y sin horario.
-                                </p>
-                            )}
-                            <ExcelDataTable
-                                data={excelData}
-                                especialidad="Ginecología"
-                                onCellUpdate={handleCellUpdate}
-                                onDeleteRow={handleDeleteRow}
-                                liquidacionId={liquidacionActual?.id}
-                                mes={mesSeleccionado}
-                                anio={anioSeleccionado}
-                            />
-                        </div>
-                    </div>
-                )}
-
-                {/* Estadísticas por Obra Social */}
-                {excelData && excelData.periodo && (() => {
-                    const { mes, anio } = obtenerMesAnio()
-                    return (
-                        <div 
-                            className="relative rounded-2xl shadow-2xl overflow-hidden p-8"
-                            style={{
-                                background: 'rgba(255, 255, 255, 0.1)',
-                                backdropFilter: 'blur(20px)',
-                                border: '1px solid rgba(59, 130, 246, 0.3)',
-                                boxShadow: '0 8px 32px 0 rgba(59, 130, 246, 0.3)',
-                            }}
-                        >
-                            <EstadisticasObraSocial
-                                mes={mes}
-                                anio={anio}
-                                especialidad="Ginecología"
-                            />
-                        </div>
-                    )
-                })()}
 
                 {/* Reglas de Negocio */}
                 <div 
