@@ -4,12 +4,19 @@ import { Medico, DetalleGuardiaInsert, LiquidacionGuardiaInsert, ValorConsultaOb
 import { esResidenteHorarioFormativo, horaAMinutos } from './utils'
 import { calcularNumeroLiquidacion } from './utils'
 
+interface FilaExcluida {
+  numeroFila: number
+  razon: 'sin_fecha' | 'fecha_invalida'
+  datos: ExcelRow
+}
+
 interface ProcesamientoResult {
   liquidacionId: string
   totalFilas: number
   procesadas: number
   errores: string[]
   advertencias: string[]
+  filasExcluidas: FilaExcluida[]
 }
 
 /**
@@ -101,6 +108,17 @@ function normalizarNombre(nombre: string): string {
  */
 function buscarMedico(nombre: string | null, medicos: Medico[]): Medico | null {
   if (!nombre || typeof nombre !== 'string') return null
+  
+  const nombreTrimmed = nombre.trim()
+  if (nombreTrimmed === '') return null
+  
+  // ESTRATEGIA 0: Coincidencia exacta SIN normalizar (prioridad máxima)
+  // Si están escritos exactamente igual, encontrarlos inmediatamente
+  for (const medico of medicos) {
+    if (medico.nombre.trim() === nombreTrimmed) {
+      return medico
+    }
+  }
   
   const nombreNormalizado = normalizarNombre(nombre)
   if (nombreNormalizado === '') return null
@@ -332,7 +350,8 @@ export async function procesarExcelGinecologia(
     totalFilas: 0,
     procesadas: 0,
     errores: [],
-    advertencias: []
+    advertencias: [],
+    filasExcluidas: []
   }
 
   try {
@@ -585,6 +604,11 @@ export async function procesarExcelGinecologia(
         // Validar datos mínimos - OMITIR FILAS SIN FECHA SIN ADVERTENCIA
         if (!fecha) {
           filasSinFecha++
+          resultado.filasExcluidas.push({
+            numeroFila: i + 1,
+            razon: 'sin_fecha',
+            datos: row
+          })
           continue
         }
 
@@ -592,6 +616,11 @@ export async function procesarExcelGinecologia(
         const fechaAnio = parseInt(fecha.split('-')[0])
         if (fechaAnio < 2020 || fechaAnio > 2100) {
           filasFechaInvalida++
+          resultado.filasExcluidas.push({
+            numeroFila: i + 1,
+            razon: 'fecha_invalida',
+            datos: row
+          })
           resultado.advertencias.push(`Fila ${i + 1}: Fecha fuera de rango (${fecha}), se omite`)
           continue
         }
