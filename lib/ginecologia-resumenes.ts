@@ -171,23 +171,29 @@ export async function calcularResumenPorPrestador(
 }
 
 export interface ResumenResidenteFormativo {
-  fecha: string
-  hora: string | null
-  paciente: string | null
-  obra_social: string | null
-  medico_nombre: string | null
   medico_id: string | null
-  fila_excel: number | null
+  medico_nombre: string
+  obra_social: string
+  cantidad: number
+  valor_unitario: number
+  total: number
+}
+
+export interface TotalesResidentesFormativos {
+  resumenes: ResumenResidenteFormativo[]
+  totalConsultas: number
+  totalValor: number
 }
 
 /**
- * Obtiene todas las consultas de residentes en horario formativo
+ * Obtiene el resumen de consultas de residentes en horario formativo agrupado por médico y obra social
  * Estas consultas NO se muestran a los médicos pero SÍ se contabilizan para administración
+ * Retorna totales agrupados, no consultas individuales
  */
 export async function obtenerResidentesFormativos(
   mes: number,
   anio: number
-): Promise<ResumenResidenteFormativo[]> {
+): Promise<TotalesResidentesFormativos> {
   // Obtener liquidación de ginecología para el mes/año
   const { data: liquidacion } = await supabase
     .from('liquidaciones_guardia')
@@ -198,7 +204,11 @@ export async function obtenerResidentesFormativos(
     .single()
 
   if (!liquidacion || !(liquidacion as any).id) {
-    return []
+    return {
+      resumenes: [],
+      totalConsultas: 0,
+      totalValor: 0
+    }
   }
 
   const liquidacionId = (liquidacion as any).id
@@ -210,42 +220,94 @@ export async function obtenerResidentesFormativos(
     .eq('liquidacion_id', liquidacionId) as { data: DetalleGuardia[] | null }
 
   if (!detalles || detalles.length === 0) {
-    return []
+    return {
+      resumenes: [],
+      totalConsultas: 0,
+      totalValor: 0
+    }
   }
 
-  // Filtrar solo las consultas de residentes en horario formativo
-  const residentesFormativos = detalles
-    .filter(detalle => {
-      const esResidente = detalle.medico_es_residente === true
-      const esHorarioFormativo = esResidenteHorarioFormativo(
-        detalle.fecha,
-        detalle.hora,
-        esResidente
-      )
-      return esHorarioFormativo
-    })
-    .map(detalle => ({
-      fecha: detalle.fecha,
-      hora: detalle.hora,
-      paciente: detalle.paciente,
-      obra_social: detalle.obra_social,
-      medico_nombre: detalle.medico_nombre,
-      medico_id: detalle.medico_id,
-      fila_excel: detalle.fila_excel
-    }))
-    .sort((a, b) => {
-      // Ordenar por fecha y hora
-      const fechaA = new Date(a.fecha).getTime()
-      const fechaB = new Date(b.fecha).getTime()
-      if (fechaA !== fechaB) {
-        return fechaA - fechaB
-      }
-      // Si tienen la misma fecha, ordenar por hora
-      const horaA = a.hora || '00:00:00'
-      const horaB = b.hora || '00:00:00'
-      return horaA.localeCompare(horaB)
-    })
+  // Obtener valores de consultas ginecológicas
+  const { data: valoresConsultas } = await supabase
+    .from('valores_consultas_obra_social')
+    .select('*')
+    .eq('tipo_consulta', 'CONSULTA GINECOLOGICA')
+    .eq('mes', mes)
+    .eq('anio', anio) as { data: ValorConsultaObraSocial[] | null }
 
-  return residentesFormativos
+  if (!valoresConsultas || valoresConsultas.length === 0) {
+    return {
+      resumenes: [],
+      totalConsultas: 0,
+      totalValor: 0
+    }
+  }
+
+  // Crear mapa de valores por obra social
+  const valoresPorObraSocial = new Map<string, number>()
+  valoresConsultas.forEach(v => {
+    valoresPorObraSocial.set(v.obra_social, v.valor)
+  })
+
+  // Filtrar solo las consultas de residentes en horario formativo y agrupar
+  const resumenMap = new Map<string, ResumenResidenteFormativo>()
+
+  detalles.forEach(detalle => {
+    const esResidente = detalle.medico_es_residente === true
+    const esHorarioFormativo = esResidenteHorarioFormativo(
+      detalle.fecha,
+      detalle.hora,
+      esResidente
+    )
+
+    // Solo procesar si es residente en horario formativo
+    if (!esHorarioFormativo) {
+      return
+    }
+
+    const obraSocial = detalle.obra_social || 'PARTICULARES'
+    const medicoNombre = detalle.medico_nombre || 'Desconocido'
+    const medicoId = detalle.medico_id || 'sin-id'
+
+    // Clave única: medico_id + obra_social
+    const clave = `${medicoId}|${obraSocial}`
+
+    // Obtener valor unitario de la obra social
+    const valorUnitario = valoresPorObraSocial.get(obraSocial) || 0
+
+    // Actualizar o crear resumen
+    if (resumenMap.has(clave)) {
+      const resumen = resumenMap.get(clave)!
+      resumen.cantidad += 1
+      resumen.total = resumen.cantidad * resumen.valor_unitario
+    } else {
+      resumenMap.set(clave, {
+        medico_id: detalle.medico_id,
+        medico_nombre: medicoNombre,
+        obra_social: obraSocial,
+        cantidad: 1,
+        valor_unitario: valorUnitario,
+        total: valorUnitario
+      })
+    }
+  })
+
+  // Convertir a array y ordenar por médico y obra social
+  const resumenes = Array.from(resumenMap.values()).sort((a, b) => {
+    if (a.medico_nombre !== b.medico_nombre) {
+      return a.medico_nombre.localeCompare(b.medico_nombre)
+    }
+    return a.obra_social.localeCompare(b.obra_social)
+  })
+
+  // Calcular totales
+  const totalConsultas = resumenes.reduce((sum, r) => sum + r.cantidad, 0)
+  const totalValor = resumenes.reduce((sum, r) => sum + r.total, 0)
+
+  return {
+    resumenes,
+    totalConsultas,
+    totalValor
+  }
 }
 

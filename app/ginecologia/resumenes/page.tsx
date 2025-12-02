@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
-import { calcularResumenPorMedico, calcularResumenPorPrestador, ResumenPorMedico, ResumenPorPrestador, obtenerResidentesFormativos, ResumenResidenteFormativo } from '@/lib/ginecologia-resumenes'
+import { calcularResumenPorMedico, calcularResumenPorPrestador, ResumenPorMedico, ResumenPorPrestador, obtenerResidentesFormativos, TotalesResidentesFormativos } from '@/lib/ginecologia-resumenes'
 import { exportPDFResumenPorMedico } from '@/lib/pdf-exporter-resumen-medico'
 import { exportPDFResumenPorPrestador } from '@/lib/pdf-exporter-resumen-prestador'
 import { LiquidacionGuardia } from '@/lib/types'
@@ -57,7 +57,11 @@ export default function ResumenesGinecologiaPage() {
   const [excelData, setExcelData] = useState<ExcelData | null>(null)
   const [liquidacionActual, setLiquidacionActual] = useState<LiquidacionGuardia | null>(null)
   const [loadingExcel, setLoadingExcel] = useState(false)
-  const [residentesFormativos, setResidentesFormativos] = useState<ResumenResidenteFormativo[]>([])
+  const [residentesFormativos, setResidentesFormativos] = useState<TotalesResidentesFormativos>({
+    resumenes: [],
+    totalConsultas: 0,
+    totalValor: 0
+  })
   const [loadingResidentes, setLoadingResidentes] = useState(false)
 
   // Guardar mes y año en localStorage cuando cambian
@@ -634,11 +638,26 @@ export default function ResumenesGinecologiaPage() {
                 <strong className="text-yellow-400"> NO se deben pagar</strong> según las reglas del sistema, 
                 pero se contabilizan para administración.
               </p>
-              <div className="mt-4 p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
-                <p className="text-blue-300 text-sm">
-                  <strong>Total de consultas:</strong> {residentesFormativos.length} consultas
-                </p>
-                <p className="text-blue-300 text-xs mt-1">
+              <div className="mt-4 p-4 rounded-lg bg-blue-500/10 border border-blue-500/30">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-blue-300 text-sm mb-1">
+                      <strong>Total de consultas:</strong>
+                    </p>
+                    <p className="text-blue-200 text-2xl font-bold">
+                      {residentesFormativos.totalConsultas} consultas
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-blue-300 text-sm mb-1">
+                      <strong>Valor total (no pagado):</strong>
+                    </p>
+                    <p className="text-blue-200 text-2xl font-bold">
+                      {formatearMoneda(residentesFormativos.totalValor)}
+                    </p>
+                  </div>
+                </div>
+                <p className="text-blue-300 text-xs mt-3 pt-3 border-t border-blue-500/30">
                   Estas consultas <strong>NO aparecen</strong> en los resúmenes por médico, 
                   ya que los residentes no deben verlas en sus liquidaciones.
                 </p>
@@ -646,52 +665,66 @@ export default function ResumenesGinecologiaPage() {
             </div>
 
             {loadingResidentes ? (
-              <div className="text-center py-12 text-gray-400">Cargando consultas...</div>
-            ) : residentesFormativos.length === 0 ? (
+              <div className="text-center py-12 text-gray-400">Cargando resumen...</div>
+            ) : residentesFormativos.resumenes.length === 0 ? (
               <div className="text-center py-12 text-gray-400">
                 No hay consultas de residentes en horario formativo para este período
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-sm">
-                  <thead>
-                    <tr className="border-b border-white/10">
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 bg-white/5">Fecha</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 bg-white/5">Hora</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 bg-white/5">Paciente</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 bg-white/5">Obra Social</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 bg-white/5">Residente</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {residentesFormativos.map((consulta, index) => (
-                      <tr
-                        key={index}
-                        className="border-b border-white/5 hover:bg-white/5 transition-colors"
-                      >
-                        <td className="px-4 py-3 text-gray-300">
-                          {new Date(consulta.fecha).toLocaleDateString('es-AR', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            year: 'numeric'
-                          })}
+              <div className="space-y-4">
+                {/* Resumen agrupado por residente y obra social */}
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse text-sm">
+                    <thead>
+                      <tr className="border-b border-white/10">
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 bg-white/5">Residente</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 bg-white/5">Obra Social</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-300 bg-white/5">Cantidad</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-300 bg-white/5">Valor Unitario</th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-300 bg-white/5">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {residentesFormativos.resumenes.map((resumen, index) => (
+                        <tr
+                          key={index}
+                          className="border-b border-white/5 hover:bg-white/5 transition-colors"
+                        >
+                          <td className="px-4 py-3 text-gray-300">
+                            {resumen.medico_nombre}
+                          </td>
+                          <td className="px-4 py-3 text-gray-300">
+                            {resumen.obra_social}
+                          </td>
+                          <td className="px-4 py-3 text-gray-300 text-right">
+                            {resumen.cantidad}
+                          </td>
+                          <td className="px-4 py-3 text-gray-300 text-right">
+                            {formatearMoneda(resumen.valor_unitario)}
+                          </td>
+                          <td className="px-4 py-3 text-gray-300 text-right font-semibold">
+                            {formatearMoneda(resumen.total)}
+                          </td>
+                        </tr>
+                      ))}
+                      {/* Fila de totales */}
+                      <tr className="border-t-2 border-blue-400/50 bg-blue-500/10">
+                        <td colSpan={2} className="px-4 py-3 text-gray-200 font-bold">
+                          TOTAL
                         </td>
-                        <td className="px-4 py-3 text-gray-300">
-                          {consulta.hora || '-'}
+                        <td className="px-4 py-3 text-gray-200 text-right font-bold">
+                          {residentesFormativos.totalConsultas}
                         </td>
-                        <td className="px-4 py-3 text-gray-300">
-                          {consulta.paciente || '-'}
+                        <td className="px-4 py-3 text-gray-200 text-right">
+                          -
                         </td>
-                        <td className="px-4 py-3 text-gray-300">
-                          {consulta.obra_social || 'PARTICULARES'}
-                        </td>
-                        <td className="px-4 py-3 text-gray-300">
-                          {consulta.medico_nombre || 'Desconocido'}
+                        <td className="px-4 py-3 text-blue-300 text-right font-bold text-lg">
+                          {formatearMoneda(residentesFormativos.totalValor)}
                         </td>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </div>
