@@ -210,10 +210,15 @@ export default function ResumenesGinecologiaPage() {
   const handleDeleteRow = useCallback(async (rowIndex: number) => {
     if (!liquidacionActual || !excelData) return
 
-    const filaExcel = rowIndex + 1
+    // Obtener la fila y su fila_excel
+    const row = excelData.rows[rowIndex]
+    if (!row) return
+
+    // Intentar obtener fila_excel desde metadata, o usar índice + 1 como fallback
+    const filaExcel = (row as any).__fila_excel ?? (rowIndex + 1)
 
     try {
-      // Eliminar de BD
+      // Eliminar de BD usando fila_excel directamente
       const { error } = await supabase
         .from('detalle_guardia')
         .delete()
@@ -224,14 +229,6 @@ export default function ResumenesGinecologiaPage() {
         console.error('Error eliminando fila:', error)
         return
       }
-
-      // Actualizar ExcelData local inmediatamente (optimista)
-      const updatedRows = excelData.rows.filter((_, index) => index !== rowIndex)
-      const nuevoExcelData = {
-        ...excelData,
-        rows: updatedRows
-      }
-      setExcelData(nuevoExcelData)
 
       // Recargar ExcelData desde BD para asegurar sincronización
       // Esto actualiza los índices y asegura que todo esté correcto

@@ -38,6 +38,12 @@ export function reconstruirExcelDataDesdeDetalles(
   const rows: ExcelRow[] = detallesOrdenados.map(detalle => {
     const row: ExcelRow = {}
     
+    // Almacenar fila_excel como metadata en el row (usando una clave especial)
+    // Esto nos permite acceder al fila_excel cuando necesitamos eliminar
+    if (detalle.fila_excel !== null && detalle.fila_excel !== undefined) {
+      ;(row as any).__fila_excel = detalle.fila_excel
+    }
+    
     // Mapear campos de detalle_guardia a columnas del Excel
     headers.forEach(header => {
       const headerLower = header.toLowerCase().trim()

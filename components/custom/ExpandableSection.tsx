@@ -560,9 +560,26 @@ export function ExpandableSection({
               setSelectedRows(new Set())
             } else if (confirmAction.type === 'multiple' && onDeleteRow) {
               // Eliminar seleccionados
+              // IMPORTANTE: Obtener los índices originales ANTES de empezar a eliminar
+              // porque después de cada eliminación, los índices cambian al recargar los datos
               const indicesArray = Array.from(selectedRows).sort((a, b) => b - a) // Orden inverso
+              
+              // Obtener los fila_excel de todas las filas seleccionadas ANTES de eliminar
+              const filasExcel = indicesArray
+                .map(index => {
+                  const row = data.rows[index]
+                  return row ? (row as any).__fila_excel : null
+                })
+                .filter((filaExcel): filaExcel is number => filaExcel !== null && filaExcel !== undefined)
+              
+              // Eliminar cada fila usando su índice original
+              // El handleDeleteRow ya maneja la recarga de datos después de cada eliminación
+              // Pero como estamos usando fila_excel, no importa si los índices cambian
               for (const index of indicesArray) {
-                await onDeleteRow(index)
+                // Verificar que la fila todavía existe antes de intentar eliminarla
+                if (index < data.rows.length) {
+                  await onDeleteRow(index)
+                }
               }
               setSelectedRows(new Set())
             } else if (confirmAction.type === 'single' && confirmAction.rowIndex !== undefined && onDeleteRow) {
