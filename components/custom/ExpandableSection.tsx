@@ -304,9 +304,9 @@ export function ExpandableSection({
                 <tr className="border-b border-white/5 bg-white/2">
                   {allowDelete && (
                     <td
-                      className="px-2 py-1 sticky left-0"
+                      className="px-2 py-2 sticky left-0"
                       style={{
-                        background: 'rgba(0, 0, 0, 0.8)',
+                        background: 'rgba(0, 0, 0, 0.9)',
                         zIndex: 11,
                         position: 'sticky',
                         top: filters.size > 0 ? '80px' : '40px',
@@ -316,11 +316,12 @@ export function ExpandableSection({
                   {data.headers.map((header, index) => (
                     <td
                       key={index}
-                      className="px-1 py-1"
+                      className="px-1 py-2"
                       style={{
                         position: 'sticky',
                         top: filters.size > 0 ? '80px' : '40px',
                         zIndex: 9,
+                        background: 'rgba(0, 0, 0, 0.9)',
                       }}
                     >
                       <div className="relative">
@@ -329,7 +330,7 @@ export function ExpandableSection({
                           value={filters.get(header) || ''}
                           onChange={(e) => handleFilterChange(header, e.target.value)}
                           placeholder="Filtrar..."
-                          className="w-full px-2 py-1 text-xs bg-gray-800/50 border border-gray-600 rounded text-white placeholder-gray-500 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500"
+                          className="w-full px-2 py-1.5 text-xs bg-gray-800/70 border border-gray-600 rounded text-white placeholder-gray-500 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500"
                           onClick={(e) => e.stopPropagation()}
                         />
                         {filters.get(header) && (
@@ -338,7 +339,7 @@ export function ExpandableSection({
                               e.stopPropagation()
                               handleFilterChange(header, '')
                             }}
-                            className="absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                            className="absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white z-10"
                           >
                             <X className="h-3 w-3" />
                           </button>
@@ -348,7 +349,7 @@ export function ExpandableSection({
                   ))}
                 </tr>
               </thead>
-              <tbody>
+              <tbody style={{ paddingTop: '4px' }}>
                 {filteredRows.map((row, rowIndex) => {
                   const originalRowIndex = data.rows.findIndex(r => r === row)
                   const isSelected = selectedRows.has(originalRowIndex)
@@ -390,11 +391,12 @@ export function ExpandableSection({
                     >
                       {allowDelete && (
                         <td
-                          className="px-2 py-1.5 text-center sticky left-0 z-10"
+                          className="px-2 py-1.5 text-center sticky left-0"
                           style={{
                             minWidth: '50px',
                             maxWidth: '50px',
                             background: rowBgColor !== 'transparent' ? rowBgColor : 'rgba(0, 0, 0, 0.5)',
+                            zIndex: 8,
                           }}
                           onClick={(e) => e.stopPropagation()}
                         >
@@ -425,6 +427,8 @@ export function ExpandableSection({
                             style={{
                               minWidth: '120px',
                               maxWidth: '200px',
+                              position: 'relative',
+                              zIndex: 1,
                             }}
                           >
                             {editable && onCellUpdate ? (
