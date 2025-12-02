@@ -336,11 +336,10 @@ export async function procesarExcelGinecologia(
   }
 
   try {
-    // 1. Cargar TODOS los médicos de ginecología (activos e inactivos)
+    // 1. Cargar TODOS los médicos (sin filtrar por especialidad)
     const { data: medicosData, error: errorMedicos } = await supabase
       .from('medicos')
-      .select('*')
-      .eq('especialidad', 'Ginecología') as { data: Medico[] | null; error: any }
+      .select('*') as { data: Medico[] | null; error: any }
 
     if (errorMedicos) {
       resultado.errores.push(`Error cargando médicos: ${errorMedicos.message}`)
@@ -583,10 +582,9 @@ export async function procesarExcelGinecologia(
           }
         }
         
-        // Validar datos mínimos - PERMITIR FILAS SIN FECHA PERO REGISTRAR ADVERTENCIA
+        // Validar datos mínimos - OMITIR FILAS SIN FECHA SIN ADVERTENCIA
         if (!fecha) {
           filasSinFecha++
-          resultado.advertencias.push(`Fila ${i + 1}: Sin fecha válida (${fechaStr || 'vacía'}), se omite`)
           continue
         }
 
@@ -619,9 +617,30 @@ export async function procesarExcelGinecologia(
 
         // Obtener valor de consulta
         const obraSocialFinal = obraSocial || 'PARTICULARES' // Asignar 'PARTICULARES' automáticamente si no hay obra social
-        const valorUnitario = valoresPorObraSocial.get(obraSocialFinal) || 0
-
-        // Si no hay valor para la obra social, registrar advertencia
+        
+        // Buscar valor en el Map
+        let valorUnitario = valoresPorObraSocial.get(obraSocialFinal) || 0
+        
+        // Si es PARTICULARES y no se encontró valor, buscar específicamente "PARTICULARES" en la BD
+        if (valorUnitario === 0 && obraSocialFinal === 'PARTICULARES') {
+          // Buscar valor para PARTICULARES en la BD
+          const { data: valorParticular } = await supabase
+            .from('valores_consultas_obra_social')
+            .select('valor')
+            .eq('obra_social', 'PARTICULARES')
+            .eq('tipo_consulta', 'CONSULTA GINECOLOGICA')
+            .eq('mes', mes)
+            .eq('anio', anio)
+            .single()
+          
+          if (valorParticular && (valorParticular as any).valor) {
+            valorUnitario = (valorParticular as any).valor
+            // Agregar al Map para futuras consultas
+            valoresPorObraSocial.set('PARTICULARES', valorUnitario)
+          }
+        }
+        
+        // Solo registrar advertencia si NO es PARTICULARES y no tiene valor
         if (valorUnitario === 0 && obraSocialFinal !== 'PARTICULARES') {
           resultado.advertencias.push(`Fila ${i + 1}: No hay valor configurado para obra social: ${obraSocialFinal}`)
         }
