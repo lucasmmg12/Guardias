@@ -18,6 +18,12 @@ export function exportFilteredDataToExcel({
     throw new Error('No hay datos para exportar')
   }
 
+  // Excel limita los nombres de hojas a 31 caracteres
+  const maxSheetNameLength = 31
+  const truncatedSheetName = sheetName.length > maxSheetNameLength
+    ? sheetName.substring(0, maxSheetNameLength)
+    : sheetName
+
   // Preparar datos para Excel: convertir cada fila en un objeto con los headers como claves
   const datos = rows.map(row => {
     const fila: Record<string, any> = {}
@@ -42,7 +48,7 @@ export function exportFilteredDataToExcel({
 
   // Crear workbook
   const workbook = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName)
+  XLSX.utils.book_append_sheet(workbook, worksheet, truncatedSheetName)
 
   // Generar archivo
   const excelBuffer = XLSX.write(workbook, {
