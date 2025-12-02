@@ -252,13 +252,23 @@ export async function obtenerResidentesFormativos(
   // Filtrar solo las consultas de residentes en horario formativo y agrupar
   const resumenMap = new Map<string, ResumenResidenteFormativo>()
 
+  // Debug: contar detalles y residentes
+  let totalDetalles = detalles.length
+  let detallesConResidente = 0
+  let detallesHorarioFormativo = 0
+
   detalles.forEach(detalle => {
-    const esResidente = detalle.medico_es_residente === true
-    const esHorarioFormativo = esResidenteHorarioFormativo(
-      detalle.fecha,
-      detalle.hora,
-      esResidente
-    )
+    // Usar el campo es_horario_formativo que ya está guardado en la BD
+    // Este campo se guarda durante el procesamiento del Excel
+    const esHorarioFormativo = detalle.es_horario_formativo === true
+    
+    // Debug: contar residentes y horarios formativos
+    if (detalle.medico_es_residente === true) {
+      detallesConResidente++
+    }
+    if (esHorarioFormativo) {
+      detallesHorarioFormativo++
+    }
 
     // Solo procesar si es residente en horario formativo
     if (!esHorarioFormativo) {
@@ -303,6 +313,17 @@ export async function obtenerResidentesFormativos(
   // Calcular totales
   const totalConsultas = resumenes.reduce((sum, r) => sum + r.cantidad, 0)
   const totalValor = resumenes.reduce((sum, r) => sum + r.total, 0)
+
+  // Debug logging
+  console.log('[Residentes Formativos] Debug:', {
+    totalDetalles,
+    detallesConResidente,
+    detallesHorarioFormativo,
+    resumenesCount: resumenes.length,
+    totalConsultas,
+    totalValor,
+    valoresConsultasCount: valoresConsultas.length
+  })
 
   return {
     resumenes,
