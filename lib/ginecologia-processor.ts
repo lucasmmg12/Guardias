@@ -1,8 +1,7 @@
 import { supabase } from './supabase/client'
 import { ExcelData, ExcelRow } from './excel-reader'
 import { Medico, DetalleGuardiaInsert, LiquidacionGuardiaInsert, ValorConsultaObraSocial } from './types'
-import { esResidenteHorarioFormativo, horaAMinutos } from './utils'
-import { calcularNumeroLiquidacion } from './utils'
+import { esResidenteHorarioFormativo, horaAMinutos, calcularNumeroLiquidacion, esParticular } from './utils'
 
 interface FilaExcluida {
   numeroFila: number
@@ -645,13 +644,22 @@ export async function procesarExcelGinecologia(
         }
 
         // Obtener valor de consulta
-        const obraSocialFinal = obraSocial || 'PARTICULARES' // Asignar 'PARTICULARES' automáticamente si no hay obra social
+        // Si está vacío o es un nombre de persona, asignar '042 - PARTICULARES'
+        let obraSocialFinal: string
+        if (!obraSocial || obraSocial.trim() === '') {
+          obraSocialFinal = '042 - PARTICULARES'
+        } else if (esParticular(obraSocial)) {
+          // Si es un nombre de persona, también asignar '042 - PARTICULARES'
+          obraSocialFinal = '042 - PARTICULARES'
+        } else {
+          obraSocialFinal = obraSocial.trim()
+        }
         
         // Buscar valor en el Map
         let valorUnitario = valoresPorObraSocial.get(obraSocialFinal) || 0
         
-        // Si es PARTICULARES y no se encontró valor, buscar específicamente "PARTICULARES" en la BD
-        if (valorUnitario === 0 && obraSocialFinal === 'PARTICULARES') {
+        // Si es PARTICULARES (o 042 - PARTICULARES) y no se encontró valor, buscar en la BD
+        if (valorUnitario === 0 && (obraSocialFinal === 'PARTICULARES' || obraSocialFinal === '042 - PARTICULARES')) {
           // Buscar valor para PARTICULARES en la BD
           const { data: valorParticular } = await supabase
             .from('valores_consultas_obra_social')
@@ -666,11 +674,28 @@ export async function procesarExcelGinecologia(
             valorUnitario = (valorParticular as any).valor
             // Agregar al Map para futuras consultas
             valoresPorObraSocial.set('PARTICULARES', valorUnitario)
+            valoresPorObraSocial.set('042 - PARTICULARES', valorUnitario)
+          } else {
+            // Intentar también con "042 - PARTICULARES"
+            const { data: valorParticular042 } = await supabase
+              .from('valores_consultas_obra_social')
+              .select('valor')
+              .eq('obra_social', '042 - PARTICULARES')
+              .eq('tipo_consulta', 'CONSULTA GINECOLOGICA')
+              .eq('mes', mes)
+              .eq('anio', anio)
+              .single()
+            
+            if (valorParticular042 && (valorParticular042 as any).valor) {
+              valorUnitario = (valorParticular042 as any).valor
+              valoresPorObraSocial.set('PARTICULARES', valorUnitario)
+              valoresPorObraSocial.set('042 - PARTICULARES', valorUnitario)
+            }
           }
         }
         
         // Solo registrar advertencia si NO es PARTICULARES y no tiene valor
-        if (valorUnitario === 0 && obraSocialFinal !== 'PARTICULARES') {
+        if (valorUnitario === 0 && obraSocialFinal !== 'PARTICULARES' && obraSocialFinal !== '042 - PARTICULARES') {
           resultado.advertencias.push(`Fila ${i + 1}: No hay valor configurado para obra social: ${obraSocialFinal}`)
         }
 
