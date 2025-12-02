@@ -128,9 +128,15 @@ export async function calcularResumenPorMedico(
     // Excluir consultas de residentes en horario formativo del resumen por médico
     // Usar directamente el campo es_horario_formativo que ya está guardado en la BD
     const esHorarioFormativo = detalle.es_horario_formativo === true
+    
+    // También excluir si es residente y tiene valores en 0 (probablemente horario formativo)
+    // Esto cubre casos donde el campo es_horario_formativo no está correctamente guardado
+    const esResidenteConValorCero = detalle.medico_es_residente === true && 
+                                     (detalle.importe_calculado ?? 0) === 0 && 
+                                     (detalle.monto_facturado ?? 0) === 0
 
-    // Si es horario formativo, no debe contarse en el resumen del médico
-    if (esHorarioFormativo) {
+    // Si es horario formativo o residente con valor cero, no debe contarse en el resumen
+    if (esHorarioFormativo || esResidenteConValorCero) {
       return
     }
 
