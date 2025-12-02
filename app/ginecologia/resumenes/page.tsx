@@ -454,6 +454,17 @@ export default function ResumenesGinecologiaPage() {
             Historial
           </button>
           <button
+            onClick={() => setTabActiva('residentes')}
+            className={`px-4 py-2 font-semibold transition-colors flex items-center gap-2 ${
+              tabActiva === 'residentes'
+                ? 'text-green-400 border-b-2 border-green-400'
+                : 'text-gray-400 hover:text-gray-300'
+            }`}
+          >
+            <GraduationCap className="h-4 w-4" />
+            Residentes Formativos
+          </button>
+          <button
             onClick={() => setTabActiva('excel')}
             className={`px-4 py-2 font-semibold transition-colors flex items-center gap-2 ${
               tabActiva === 'excel'
