@@ -3,12 +3,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
-import { calcularResumenPorMedico, calcularResumenPorPrestador, ResumenPorMedico, ResumenPorPrestador } from '@/lib/ginecologia-resumenes'
+import { calcularResumenPorMedico, calcularResumenPorPrestador, ResumenPorMedico, ResumenPorPrestador, obtenerResidentesFormativos, ResumenResidenteFormativo } from '@/lib/ginecologia-resumenes'
 import { exportPDFResumenPorMedico } from '@/lib/pdf-exporter-resumen-medico'
 import { exportPDFResumenPorPrestador } from '@/lib/pdf-exporter-resumen-prestador'
 import { LiquidacionGuardia } from '@/lib/types'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, FileDown, Download, History, Eye, FileSpreadsheet } from 'lucide-react'
+import { ArrowLeft, FileDown, Download, History, Eye, FileSpreadsheet, GraduationCap } from 'lucide-react'
 import { ExcelDataTable } from '@/components/custom/ExcelDataTable'
 import { cargarExcelDataDesdeBD } from '@/lib/excel-reconstructor'
 import { ExcelData } from '@/lib/excel-reader'
@@ -52,11 +52,13 @@ export default function ResumenesGinecologiaPage() {
   const [historial, setHistorial] = useState<LiquidacionGuardia[]>([])
   const [loading, setLoading] = useState(false)
   const [loadingHistorial, setLoadingHistorial] = useState(false)
-  const [tabActiva, setTabActiva] = useState<'medicos' | 'prestadores' | 'historial' | 'excel'>('medicos')
+  const [tabActiva, setTabActiva] = useState<'medicos' | 'prestadores' | 'historial' | 'excel' | 'residentes'>('medicos')
   const [liquidacionExpandida, setLiquidacionExpandida] = useState<string | null>(null)
   const [excelData, setExcelData] = useState<ExcelData | null>(null)
   const [liquidacionActual, setLiquidacionActual] = useState<LiquidacionGuardia | null>(null)
   const [loadingExcel, setLoadingExcel] = useState(false)
+  const [residentesFormativos, setResidentesFormativos] = useState<ResumenResidenteFormativo[]>([])
+  const [loadingResidentes, setLoadingResidentes] = useState(false)
 
   // Guardar mes y año en localStorage cuando cambian
   useEffect(() => {
@@ -71,6 +73,8 @@ export default function ResumenesGinecologiaPage() {
       cargarHistorial()
     } else if (tabActiva === 'excel') {
       cargarExcelData()
+    } else if (tabActiva === 'residentes') {
+      cargarResidentesFormativos()
     } else {
       cargarResumenes()
     }
@@ -317,6 +321,18 @@ export default function ResumenesGinecologiaPage() {
       console.error('Error cargando historial:', error)
     } finally {
       setLoadingHistorial(false)
+    }
+  }
+
+  async function cargarResidentesFormativos() {
+    setLoadingResidentes(true)
+    try {
+      const residentes = await obtenerResidentesFormativos(mes, anio)
+      setResidentesFormativos(residentes)
+    } catch (error) {
+      console.error('Error cargando residentes formativos:', error)
+    } finally {
+      setLoadingResidentes(false)
     }
   }
 
@@ -585,6 +601,86 @@ export default function ResumenesGinecologiaPage() {
                     </tbody>
                   </table>
                 </div>
+              </div>
+            )}
+          </div>
+        ) : tabActiva === 'residentes' ? (
+          /* Tab: Residentes Formativos - Solo para Administración */
+          <div 
+            className="rounded-xl p-6"
+            style={{
+              background: 'rgba(255, 255, 255, 0.05)',
+              backdropFilter: 'blur(20px)',
+              border: '1px solid rgba(59, 130, 246, 0.3)', // Azul para residentes
+            }}
+          >
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-blue-400 mb-2">
+                Consultas de Residentes en Horario Formativo
+              </h2>
+              <p className="text-gray-400 text-sm mb-2">
+                Estas consultas son de residentes realizadas entre lunes a sábado de 07:00 a 15:00. 
+                <strong className="text-yellow-400"> NO se deben pagar</strong> según las reglas del sistema, 
+                pero se contabilizan para administración.
+              </p>
+              <div className="mt-4 p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
+                <p className="text-blue-300 text-sm">
+                  <strong>Total de consultas:</strong> {residentesFormativos.length} consultas
+                </p>
+                <p className="text-blue-300 text-xs mt-1">
+                  Estas consultas <strong>NO aparecen</strong> en los resúmenes por médico, 
+                  ya que los residentes no deben verlas en sus liquidaciones.
+                </p>
+              </div>
+            </div>
+
+            {loadingResidentes ? (
+              <div className="text-center py-12 text-gray-400">Cargando consultas...</div>
+            ) : residentesFormativos.length === 0 ? (
+              <div className="text-center py-12 text-gray-400">
+                No hay consultas de residentes en horario formativo para este período
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-sm">
+                  <thead>
+                    <tr className="border-b border-white/10">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 bg-white/5">Fecha</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 bg-white/5">Hora</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 bg-white/5">Paciente</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 bg-white/5">Obra Social</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 bg-white/5">Residente</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {residentesFormativos.map((consulta, index) => (
+                      <tr
+                        key={index}
+                        className="border-b border-white/5 hover:bg-white/5 transition-colors"
+                      >
+                        <td className="px-4 py-3 text-gray-300">
+                          {new Date(consulta.fecha).toLocaleDateString('es-AR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric'
+                          })}
+                        </td>
+                        <td className="px-4 py-3 text-gray-300">
+                          {consulta.hora || '-'}
+                        </td>
+                        <td className="px-4 py-3 text-gray-300">
+                          {consulta.paciente || '-'}
+                        </td>
+                        <td className="px-4 py-3 text-gray-300">
+                          {consulta.obra_social || 'PARTICULARES'}
+                        </td>
+                        <td className="px-4 py-3 text-gray-300">
+                          {consulta.medico_nombre || 'Desconocido'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>

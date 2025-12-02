@@ -170,3 +170,82 @@ export async function calcularResumenPorPrestador(
   )
 }
 
+export interface ResumenResidenteFormativo {
+  fecha: string
+  hora: string | null
+  paciente: string | null
+  obra_social: string | null
+  medico_nombre: string | null
+  medico_id: string | null
+  fila_excel: number | null
+}
+
+/**
+ * Obtiene todas las consultas de residentes en horario formativo
+ * Estas consultas NO se muestran a los médicos pero SÍ se contabilizan para administración
+ */
+export async function obtenerResidentesFormativos(
+  mes: number,
+  anio: number
+): Promise<ResumenResidenteFormativo[]> {
+  // Obtener liquidación de ginecología para el mes/año
+  const { data: liquidacion } = await supabase
+    .from('liquidaciones_guardia')
+    .select('id')
+    .eq('especialidad', 'Ginecología')
+    .eq('mes', mes)
+    .eq('anio', anio)
+    .single()
+
+  if (!liquidacion || !(liquidacion as any).id) {
+    return []
+  }
+
+  const liquidacionId = (liquidacion as any).id
+
+  // Obtener todos los detalles de guardia de esta liquidación
+  const { data: detalles } = await supabase
+    .from('detalle_guardia')
+    .select('*')
+    .eq('liquidacion_id', liquidacionId) as { data: DetalleGuardia[] | null }
+
+  if (!detalles || detalles.length === 0) {
+    return []
+  }
+
+  // Filtrar solo las consultas de residentes en horario formativo
+  const residentesFormativos = detalles
+    .filter(detalle => {
+      const esResidente = detalle.medico_es_residente === true
+      const esHorarioFormativo = esResidenteHorarioFormativo(
+        detalle.fecha,
+        detalle.hora,
+        esResidente
+      )
+      return esHorarioFormativo
+    })
+    .map(detalle => ({
+      fecha: detalle.fecha,
+      hora: detalle.hora,
+      paciente: detalle.paciente,
+      obra_social: detalle.obra_social,
+      medico_nombre: detalle.medico_nombre,
+      medico_id: detalle.medico_id,
+      fila_excel: detalle.fila_excel
+    }))
+    .sort((a, b) => {
+      // Ordenar por fecha y hora
+      const fechaA = new Date(a.fecha).getTime()
+      const fechaB = new Date(b.fecha).getTime()
+      if (fechaA !== fechaB) {
+        return fechaA - fechaB
+      }
+      // Si tienen la misma fecha, ordenar por hora
+      const horaA = a.hora || '00:00:00'
+      const horaB = b.hora || '00:00:00'
+      return horaA.localeCompare(horaB)
+    })
+
+  return residentesFormativos
+}
+
