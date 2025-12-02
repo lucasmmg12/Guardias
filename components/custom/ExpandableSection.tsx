@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { ChevronDown, ChevronUp, Trash2, Search, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ExcelRow, ExcelData } from '@/lib/excel-reader'
@@ -64,8 +64,13 @@ export function ExpandableSection({
     count?: number
   } | null>(null)
   
-  // Estado para filtros por columna
+  // Estado para filtros por columna (valor inmediato para el input)
+  const [filterInputs, setFilterInputs] = useState<Map<string, string>>(new Map())
+  // Estado para filtros aplicados (con debounce)
   const [filters, setFilters] = useState<Map<string, string>>(new Map())
+  
+  // Refs para los timers de debounce
+  const debounceTimers = useRef<Map<string, NodeJS.Timeout>>(new Map())
 
   // Cargar estado guardado al montar
   useEffect(() => {
@@ -119,23 +124,73 @@ export function ExpandableSection({
   // Actualizar count basado en filas filtradas
   const displayCount = filteredRows.length
 
-  // Función para actualizar filtro de una columna
-  const handleFilterChange = (header: string, value: string) => {
-    const newFilters = new Map(filters)
-    if (value.trim() === '') {
-      newFilters.delete(header)
-    } else {
-      newFilters.set(header, value)
+  // Función para actualizar filtro de una columna con debounce
+  const handleFilterChange = useCallback((header: string, value: string) => {
+    // Actualizar el input inmediatamente (sin delay visual)
+    setFilterInputs(prev => {
+      const newMap = new Map(prev)
+      if (value.trim() === '') {
+        newMap.delete(header)
+      } else {
+        newMap.set(header, value)
+      }
+      return newMap
+    })
+
+    // Cancelar timer anterior para esta columna
+    const existingTimer = debounceTimers.current.get(header)
+    if (existingTimer) {
+      clearTimeout(existingTimer)
     }
-    setFilters(newFilters)
-  }
+
+    // Crear nuevo timer con debounce de 300ms
+    const timer = setTimeout(() => {
+      setFilters(prev => {
+        const newMap = new Map(prev)
+        if (value.trim() === '') {
+          newMap.delete(header)
+        } else {
+          newMap.set(header, value)
+        }
+        return newMap
+      })
+      debounceTimers.current.delete(header)
+    }, 300)
+
+    debounceTimers.current.set(header, timer)
+  }, [])
+
+  // Limpiar timers al desmontar
+  useEffect(() => {
+    return () => {
+      debounceTimers.current.forEach(timer => clearTimeout(timer))
+      debounceTimers.current.clear()
+    }
+  }, [])
 
   // Limpiar todos los filtros
   const clearAllFilters = () => {
+    // Limpiar todos los timers
+    debounceTimers.current.forEach(timer => clearTimeout(timer))
+    debounceTimers.current.clear()
+    // Limpiar estados
     setFilters(new Map())
+    setFilterInputs(new Map())
   }
 
   if (count === 0) return null
+
+  // Calcular altura dinámica para sticky positioning
+  // Header tiene aproximadamente 40px de altura
+  const headerHeight = 40
+  // Banner de filtros activos tiene aproximadamente 40px de altura
+  const bannerHeight = filters.size > 0 ? 40 : 0
+  // Fila de filtros tiene aproximadamente 48px de altura (py-2 + input)
+  const filterRowHeight = 48
+  // Top para la fila de filtros = altura del banner + altura del header
+  const filterTop = `${bannerHeight + headerHeight}px`
+  // Padding del tbody = altura de la fila de filtros + espacio adicional para evitar solapamiento
+  const tbodyPaddingTop = `${filterRowHeight + 12}px` // 12px de espacio extra
 
   return (
     <div className="w-full space-y-2">
@@ -309,7 +364,7 @@ export function ExpandableSection({
                         background: 'rgba(0, 0, 0, 0.9)',
                         zIndex: 11,
                         position: 'sticky',
-                        top: filters.size > 0 ? '80px' : '40px',
+                        top: filterTop,
                       }}
                     ></td>
                   )}
@@ -319,7 +374,7 @@ export function ExpandableSection({
                       className="px-1 py-2"
                       style={{
                         position: 'sticky',
-                        top: filters.size > 0 ? '80px' : '40px',
+                        top: filterTop,
                         zIndex: 9,
                         background: 'rgba(0, 0, 0, 0.9)',
                       }}
@@ -327,13 +382,13 @@ export function ExpandableSection({
                       <div className="relative">
                         <input
                           type="text"
-                          value={filters.get(header) || ''}
+                          value={filterInputs.get(header) || ''}
                           onChange={(e) => handleFilterChange(header, e.target.value)}
                           placeholder="Filtrar..."
                           className="w-full px-2 py-1.5 text-xs bg-gray-800/70 border border-gray-600 rounded text-white placeholder-gray-500 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500"
                           onClick={(e) => e.stopPropagation()}
                         />
-                        {filters.get(header) && (
+                        {filterInputs.get(header) && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
@@ -349,7 +404,7 @@ export function ExpandableSection({
                   ))}
                 </tr>
               </thead>
-              <tbody style={{ paddingTop: '4px' }}>
+              <tbody style={{ paddingTop: tbodyPaddingTop }}>
                 {filteredRows.map((row, rowIndex) => {
                   const originalRowIndex = data.rows.findIndex(r => r === row)
                   const isSelected = selectedRows.has(originalRowIndex)
