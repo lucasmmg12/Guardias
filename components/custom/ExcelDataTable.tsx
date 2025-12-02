@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { ExcelRow, ExcelData } from '@/lib/excel-reader'
 import { InlineEditCell } from './InlineEditCell'
 import { ExpandableSection } from './ExpandableSection'
@@ -13,15 +13,27 @@ interface ExcelDataTableProps {
   data: ExcelData
   especialidad?: 'Pediatría' | 'Ginecología'
   onCellUpdate?: (rowIndex: number, column: string, newValue: any) => Promise<void>
+  onDeleteRow?: (rowIndex: number) => Promise<void>
+  liquidacionId?: string
   mes?: number
   anio?: number
 }
 
-export function ExcelDataTable({ data, especialidad, onCellUpdate, mes, anio }: ExcelDataTableProps) {
+export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, liquidacionId, mes, anio }: ExcelDataTableProps) {
   const [rows, setRows] = useState<ExcelRow[]>(data.rows)
   const [saving, setSaving] = useState<{ [key: string]: boolean }>({})
   const [medicos, setMedicos] = useState<Medico[]>([])
   const [medicosLoading, setMedicosLoading] = useState(false)
+
+  // Sincronizar rows cuando data cambia (optimizado: solo si cambió la longitud)
+  // Usar referencia para evitar comparaciones costosas
+  const rowsLengthRef = useRef(data.rows.length)
+  useEffect(() => {
+    if (data.rows.length !== rowsLengthRef.current) {
+      rowsLengthRef.current = data.rows.length
+      setRows(data.rows)
+    }
+  }, [data.rows.length])
 
   // Cargar médicos una sola vez cuando se monta el componente
   useEffect(() => {
@@ -231,24 +243,41 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, mes, anio }: 
   const cantidadDuplicados = filasDuplicadas.size
   const cantidadResidenteHorarioFormativo = filasResidenteHorarioFormativo.size
 
-  // Función para eliminar una fila
-  const handleDeleteRow = useCallback((rowIndex: number) => {
-    if (!confirm('¿Está seguro de que desea eliminar esta fila?')) {
-      return
+  // Función para eliminar una fila (usa callback del padre si está disponible)
+  const handleDeleteRowLocal = useCallback(async (rowIndex: number) => {
+    if (onDeleteRow) {
+      // Usar callback del padre (elimina de BD y actualiza ExcelData)
+      await onDeleteRow(rowIndex)
+      // El padre actualizará excelData, pero también actualizamos local para UI inmediata
+      const updatedRows = rows.filter((_, index) => index !== rowIndex)
+      setRows(updatedRows)
+      data.rows = updatedRows
+    } else {
+      // Fallback: solo actualizar local (modo legacy)
+      if (!confirm('¿Está seguro de que desea eliminar esta fila?')) {
+        return
+      }
+      const updatedRows = rows.filter((_, index) => index !== rowIndex)
+      setRows(updatedRows)
+      data.rows = updatedRows
     }
-    
-    const updatedRows = rows.filter((_, index) => index !== rowIndex)
-    setRows(updatedRows)
-    // Actualizar data.rows también
-    data.rows = updatedRows
-  }, [rows, data])
+  }, [rows, data, onDeleteRow])
 
-  // Funciones para eliminar múltiples filas
-  const handleDeleteRows = useCallback((indices: Set<number>) => {
-    const updatedRows = rows.filter((_, index) => !indices.has(index))
-    setRows(updatedRows)
-    data.rows = updatedRows
-  }, [rows, data])
+  // Funciones para eliminar múltiples filas (optimizado: batch)
+  const handleDeleteRows = useCallback(async (indices: Set<number>) => {
+    if (onDeleteRow && liquidacionId) {
+      // Eliminar en batch usando el callback del padre
+      const indicesArray = Array.from(indices).sort((a, b) => b - a) // Orden inverso para evitar problemas de índices
+      for (const index of indicesArray) {
+        await onDeleteRow(index)
+      }
+    } else {
+      // Fallback: solo actualizar local
+      const updatedRows = rows.filter((_, index) => !indices.has(index))
+      setRows(updatedRows)
+      data.rows = updatedRows
+    }
+  }, [rows, data, onDeleteRow, liquidacionId])
 
   // Obtener filas filtradas por tipo
   const filasParticularesList = useMemo(() => {
@@ -318,7 +347,7 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, mes, anio }: 
         textColor="#ef4444"
         rows={filasSinHorarioList}
         data={data}
-        onDeleteRow={handleDeleteRow}
+        onDeleteRow={handleDeleteRowLocal}
         onDeleteAll={() => {
           handleDeleteRows(filasSinHorario)
         }}
@@ -339,7 +368,7 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, mes, anio }: 
         textColor="#a855f7"
         rows={filasDuplicadasList}
         data={data}
-        onDeleteRow={handleDeleteRow}
+        onDeleteRow={handleDeleteRowLocal}
         onDeleteAll={() => {
           handleDeleteRows(filasDuplicadas)
         }}
@@ -360,7 +389,7 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, mes, anio }: 
         textColor="#3b82f6"
         rows={filasResidenteFormativoList}
         data={data}
-        onDeleteRow={handleDeleteRow}
+        onDeleteRow={handleDeleteRowLocal}
         onDeleteAll={() => {
           handleDeleteRows(filasResidenteHorarioFormativo)
         }}
@@ -382,7 +411,7 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, mes, anio }: 
         rows={rows}
         data={data}
         onCellUpdate={onCellUpdate}
-        onDeleteRow={handleDeleteRow}
+        onDeleteRow={handleDeleteRowLocal}
         allowEdit={true}
         allowDelete={true}
         mes={mes}
@@ -535,7 +564,7 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, mes, anio }: 
                     <div className="flex items-center justify-center gap-1 relative">
                       {(esSinHorario || esDuplicado) && (
                         <button
-                          onClick={() => handleDeleteRow(rowIndex)}
+                          onClick={() => handleDeleteRowLocal(rowIndex)}
                           className="p-1.5 text-red-400 hover:bg-red-500/30 rounded transition-colors"
                           title="Eliminar fila"
                         >

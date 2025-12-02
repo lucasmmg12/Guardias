@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { UploadExcel } from '@/components/custom/UploadExcel'
 import { ExcelDataTable } from '@/components/custom/ExcelDataTable'
@@ -10,6 +10,7 @@ import { NotificationModal, NotificationType } from '@/components/custom/Notific
 import { DetalleGuardiaTable } from '@/components/custom/DetalleGuardiaTable'
 import { readExcelFile, ExcelData } from '@/lib/excel-reader'
 import { procesarExcelGinecologia } from '@/lib/ginecologia-processor'
+import { cargarExcelDataDesdeBD } from '@/lib/excel-reconstructor'
 import { supabase } from '@/lib/supabase/client'
 import { LiquidacionGuardia, EstadoLiquidacion } from '@/lib/types'
 import { AlertCircle, CheckCircle2, Sparkles, ArrowLeft, Clock } from 'lucide-react'
@@ -237,8 +238,16 @@ export default function GinecologiaPage() {
                     setLiquidacionActual(liquidacion)
                     setMesSeleccionado(liquidacion.mes)
                     setAnioSeleccionado(liquidacion.anio)
-                    // Cargar ExcelData desde los detalles guardados si es necesario
-                    // Por ahora, solo cargar la liquidación para mostrar el estado
+                    
+                    // Cargar ExcelData desde los detalles guardados (optimizado)
+                    const excelDataCargado = await cargarExcelDataDesdeBD(
+                        liquidacion.id,
+                        supabase
+                    )
+                    
+                    if (excelDataCargado) {
+                        setExcelData(excelDataCargado)
+                    }
                 }
             } catch (error) {
                 console.error('Error cargando liquidación:', error)
@@ -265,6 +274,13 @@ export default function GinecologiaPage() {
         // Pero fila_excel en la BD es el número de fila real del Excel (empezando en 1)
         const filaExcel = rowIndex + 1
 
+        // Actualizar ExcelData local inmediatamente (optimista)
+        if (excelData.rows[rowIndex]) {
+            excelData.rows[rowIndex][column] = newValue
+            // Forzar re-render solo si es necesario
+            setExcelData({ ...excelData })
+        }
+
         // Guardar cambio pendiente
         const key = `${liquidacionActual.id}-${filaExcel}-${column}`
         cambiosPendientesRef.current.set(key, {
@@ -284,6 +300,84 @@ export default function GinecologiaPage() {
             await guardarCambiosPendientes()
         }, 500)
     }
+
+    // Función optimizada para eliminar fila (elimina de BD y actualiza local)
+    const handleDeleteRow = useCallback(async (rowIndex: number) => {
+        if (!liquidacionActual || !excelData) return
+
+        if (!confirm('¿Está seguro de que desea eliminar esta fila?')) {
+            return
+        }
+
+        const filaExcel = rowIndex + 1
+
+        try {
+            // Eliminar de BD de forma optimizada (solo un query)
+            const { error } = await supabase
+                .from('detalle_guardia')
+                .delete()
+                .eq('liquidacion_id', liquidacionActual.id)
+                .eq('fila_excel', filaExcel)
+
+            if (error) {
+                console.error('Error eliminando fila:', error)
+                showNotification('error', 'Error al eliminar la fila', 'Error')
+                return
+            }
+
+            // Actualizar ExcelData local (optimista)
+            const updatedRows = excelData.rows.filter((_, index) => index !== rowIndex)
+            const nuevoExcelData = {
+                ...excelData,
+                rows: updatedRows
+            }
+            setExcelData(nuevoExcelData)
+
+            // Actualizar totales de liquidación de forma optimizada (en background, no bloquea UI)
+            // Usar requestIdleCallback si está disponible, sino setTimeout
+            const actualizarTotales = async () => {
+                const { data: detalles } = await supabase
+                    .from('detalle_guardia')
+                    .select('importe_calculado, monto_facturado')
+                    .eq('liquidacion_id', liquidacionActual.id) as { data: Array<{ importe_calculado: number | null; monto_facturado: number | null }> | null }
+
+                if (detalles) {
+                    const totalConsultas = detalles.length
+                    const totalBruto = detalles.reduce((sum, d) => sum + (d.monto_facturado || 0), 0)
+                    const totalNeto = detalles.reduce((sum, d) => sum + (d.importe_calculado || 0), 0)
+
+                    await supabase
+                        .from('liquidaciones_guardia')
+                        // @ts-ignore
+                        .update({
+                            total_consultas: totalConsultas,
+                            total_bruto: totalBruto,
+                            total_neto: totalNeto
+                        })
+                        .eq('id', liquidacionActual.id)
+                    
+                    // Actualizar liquidación actual local
+                    setLiquidacionActual(prev => prev ? {
+                        ...prev,
+                        total_consultas: totalConsultas,
+                        total_bruto: totalBruto,
+                        total_neto: totalNeto
+                    } : null)
+                }
+            }
+
+            // Ejecutar en background sin bloquear UI
+            if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+                requestIdleCallback(actualizarTotales, { timeout: 1000 })
+            } else {
+                setTimeout(actualizarTotales, 100)
+            }
+
+        } catch (error: any) {
+            console.error('Error eliminando fila:', error)
+            showNotification('error', 'Error al eliminar la fila', 'Error')
+        }
+    }, [liquidacionActual, excelData])
 
     const guardarCambiosPendientes = async () => {
         if (cambiosPendientesRef.current.size === 0) return
@@ -589,6 +683,8 @@ export default function GinecologiaPage() {
                                 data={excelData}
                                 especialidad="Ginecología"
                                 onCellUpdate={handleCellUpdate}
+                                onDeleteRow={handleDeleteRow}
+                                liquidacionId={liquidacionActual?.id}
                                 mes={mesSeleccionado}
                                 anio={anioSeleccionado}
                             />

@@ -17,7 +17,7 @@ interface ExpandableSectionProps {
   rows: ExcelRow[]
   data: ExcelData
   onCellUpdate?: (rowIndex: number, column: string, newValue: any) => Promise<void>
-  onDeleteRow?: (rowIndex: number) => void
+  onDeleteRow?: (rowIndex: number) => Promise<void> | void
   onDeleteAll?: () => void
   allowEdit?: boolean
   allowDelete?: boolean
@@ -214,9 +214,9 @@ export function ExpandableSection({
                       {allowDelete && onDeleteRow && (
                         <td className="px-2 py-1.5 text-center sticky right-0 bg-gray-900">
                           <Button
-                            onClick={() => {
+                            onClick={async () => {
                               if (confirm('¿Está seguro de que desea eliminar esta fila?')) {
-                                onDeleteRow(originalRowIndex)
+                                await onDeleteRow(originalRowIndex)
                               }
                             }}
                             size="sm"
