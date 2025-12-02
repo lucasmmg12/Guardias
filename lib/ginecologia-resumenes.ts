@@ -1,5 +1,6 @@
 import { supabase } from './supabase/client'
 import { DetalleGuardia, ValorConsultaObraSocial, Medico } from './types'
+import { esResidenteHorarioFormativo } from './utils'
 
 export interface ResumenPorMedico {
   medico_id: string | null
@@ -126,8 +127,24 @@ export async function calcularResumenPorMedico(
 
   detalles.forEach(detalle => {
     // Excluir consultas de residentes en horario formativo del resumen por médico
-    // Usar directamente el campo es_horario_formativo que ya está guardado en la BD
-    const esHorarioFormativo = detalle.es_horario_formativo === true
+    // Estas NO se deben mostrar al médico, pero SÍ se contabilizan para administración
+    
+    // Primero verificar el campo guardado
+    let esHorarioFormativo = detalle.es_horario_formativo === true
+    
+    // Si es residente, recalcular si es horario formativo basándose en fecha y hora
+    // Esto asegura que se excluyan incluso si el campo no está guardado correctamente
+    if (detalle.medico_es_residente === true && detalle.fecha && detalle.hora) {
+      const esHorarioFormativoRecalculado = esResidenteHorarioFormativo(
+        detalle.fecha,
+        detalle.hora,
+        true
+      )
+      // Si el recálculo dice que es horario formativo, excluir del resumen por médico
+      if (esHorarioFormativoRecalculado) {
+        esHorarioFormativo = true
+      }
+    }
     
     // También excluir si es residente y tiene valores en 0 (probablemente horario formativo)
     // Esto cubre casos donde el campo es_horario_formativo no está correctamente guardado
@@ -135,7 +152,8 @@ export async function calcularResumenPorMedico(
                                      (detalle.importe_calculado ?? 0) === 0 && 
                                      (detalle.monto_facturado ?? 0) === 0
 
-    // Si es horario formativo o residente con valor cero, no debe contarse en el resumen
+    // Si es horario formativo o residente con valor cero, NO debe contarse en el resumen por médico
+    // (pero SÍ se contabilizan en "Residentes Formativos" para administración)
     if (esHorarioFormativo || esResidenteConValorCero) {
       return
     }
