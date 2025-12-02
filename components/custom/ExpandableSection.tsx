@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { ChevronDown, ChevronUp, Trash2, Search, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, Trash2, Search, X, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ExcelRow, ExcelData } from '@/lib/excel-reader'
 import { InlineEditCell } from './InlineEditCell'
 import { ConfirmModal } from './ConfirmModal'
+import { exportFilteredDataToExcel } from '@/lib/excel-exporter'
 
 interface ExpandableSectionProps {
   title: string
@@ -178,6 +179,23 @@ export function ExpandableSection({
     setFilterInputs(new Map())
   }
 
+  // Función para exportar datos filtrados
+  const handleExportExcel = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    try {
+      const nombreArchivo = `${title.toLowerCase().replace(/\s+/g, '_')}_filtrado`
+      exportFilteredDataToExcel({
+        rows: filteredRows,
+        headers: data.headers,
+        filename: nombreArchivo,
+        sheetName: title
+      })
+    } catch (error: any) {
+      console.error('Error exportando Excel:', error)
+      alert(`Error al exportar: ${error.message}`)
+    }
+  }
+
   if (count === 0) return null
 
   // Calcular altura dinámica para sticky positioning
@@ -217,6 +235,22 @@ export function ExpandableSection({
               </div>
           </div>
           <div className="flex items-center gap-2">
+            {/* Botón de descarga Excel */}
+            {isExpanded && filteredRows.length > 0 && (
+              <Button
+                onClick={handleExportExcel}
+                size="sm"
+                variant="outline"
+                className="mr-2"
+                style={{
+                  borderColor: borderColor,
+                  color: textColor,
+                }}
+              >
+                <Download className="h-4 w-4 mr-1" />
+                Descargar Excel ({filteredRows.length})
+              </Button>
+            )}
             {allowDelete && isExpanded && (
               <>
                 {selectedRows.size > 0 && (
