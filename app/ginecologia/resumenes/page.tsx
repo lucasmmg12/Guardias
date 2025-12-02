@@ -187,10 +187,6 @@ export default function ResumenesGinecologiaPage() {
   const handleDeleteRow = useCallback(async (rowIndex: number) => {
     if (!liquidacionActual || !excelData) return
 
-    if (!confirm('¿Está seguro de que desea eliminar esta fila?')) {
-      return
-    }
-
     const filaExcel = rowIndex + 1
 
     try {

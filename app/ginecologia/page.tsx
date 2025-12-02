@@ -305,10 +305,6 @@ export default function GinecologiaPage() {
     const handleDeleteRow = useCallback(async (rowIndex: number) => {
         if (!liquidacionActual || !excelData) return
 
-        if (!confirm('¿Está seguro de que desea eliminar esta fila?')) {
-            return
-        }
-
         const filaExcel = rowIndex + 1
 
         try {
@@ -759,7 +755,7 @@ export default function GinecologiaPage() {
                                         </li>
                                     </ul>
                                 </div>
-                            </div>
+                                </div>
 
                             <div className="p-3 bg-white/5 rounded-lg border border-white/5">
                                 <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">✅ Casos que SÍ se Pagan</div>
@@ -802,10 +798,10 @@ export default function GinecologiaPage() {
                                         <span className="text-gray-300">10:00 (Planta, cualquier día)</span>
                                         <span className="text-green-400">Se paga</span>
                                     </div>
-                                </div>
                             </div>
                         </div>
                     </div>
+            </div>
             </div>
 
             {/* Modal de selección de mes */}

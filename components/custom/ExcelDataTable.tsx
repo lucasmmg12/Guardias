@@ -259,21 +259,20 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
   const cantidadResidenteHorarioFormativo = filasResidenteHorarioFormativo.size
 
   // Función para eliminar una fila (usa callback del padre si está disponible)
+  // NOTA: La confirmación se maneja en ExpandableSection con el modal personalizado
   const handleDeleteRowLocal = useCallback(async (rowIndex: number) => {
     if (onDeleteRow) {
       // Usar callback del padre (elimina de BD y actualiza ExcelData)
+      // La confirmación ya se hizo en ExpandableSection
       await onDeleteRow(rowIndex)
       // El padre actualizará excelData, pero también actualizamos local para UI inmediata
       const updatedRows = rows.filter((_, index) => index !== rowIndex)
       setRows(updatedRows)
       data.rows = updatedRows
     } else {
-      // Fallback: solo actualizar local (modo legacy)
-      if (!confirm('¿Está seguro de que desea eliminar esta fila?')) {
-        return
-      }
-      const updatedRows = rows.filter((_, index) => index !== rowIndex)
-      setRows(updatedRows)
+      // Fallback: solo actualizar local (modo legacy, sin confirmación porque no hay modal)
+    const updatedRows = rows.filter((_, index) => index !== rowIndex)
+    setRows(updatedRows)
       data.rows = updatedRows
     }
   }, [rows, data, onDeleteRow])
