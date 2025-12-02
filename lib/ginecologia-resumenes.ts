@@ -92,10 +92,15 @@ export async function calcularResumenPorMedico(
 
     const obraSocial = detalle.obra_social || 'PARTICULARES'
     const medicoNombre = detalle.medico_nombre || 'Desconocido'
-    const medicoId = detalle.medico_id || 'sin-id'
+    const medicoId = detalle.medico_id
 
-    // Clave única: medico_id + obra_social
-    const clave = `${medicoId}|${obraSocial}`
+    // Clave única: usar medico_id si existe, sino usar nombre normalizado
+    // Esto evita que médicos diferentes se agrupen incorrectamente cuando no tienen ID
+    // Normalizar el nombre para evitar duplicados por diferencias de formato
+    const nombreNormalizado = medicoNombre.toLowerCase().trim().replace(/\s+/g, ' ')
+    const clave = medicoId 
+      ? `${medicoId}|${obraSocial}` 
+      : `${nombreNormalizado}|${obraSocial}`
 
     // Obtener valor unitario de la obra social
     const valorUnitario = valoresPorObraSocial.get(obraSocial) || 0
