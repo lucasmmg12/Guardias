@@ -1,5 +1,7 @@
 'use client'
 
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { X, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -24,7 +26,14 @@ export function ConfirmModal({
   cancelText = 'Cancelar',
   type = 'danger'
 }: ConfirmModalProps) {
-  if (!isOpen) return null
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+    return () => setMounted(false)
+  }, [])
+
+  if (!isOpen || !mounted) return null
 
   const getBorderColor = () => {
     switch (type) {
@@ -59,12 +68,18 @@ export function ConfirmModal({
     }
   }
 
-  return (
+  const modalContent = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 flex items-center justify-center p-4"
       style={{
         background: 'rgba(0, 0, 0, 0.8)',
         backdropFilter: 'blur(8px)',
+        zIndex: 9999,
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
       }}
       onClick={onClose}
     >
@@ -127,5 +142,7 @@ export function ConfirmModal({
       </div>
     </div>
   )
-}
 
+  // Renderizar el modal usando portal directamente en el body
+  return createPortal(modalContent, document.body)
+}
