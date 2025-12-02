@@ -30,8 +30,23 @@ const MESES = [
 
 export default function ResumenesGinecologiaPage() {
   const router = useRouter()
-  const [mes, setMes] = useState(new Date().getMonth() + 1)
-  const [anio, setAnio] = useState(new Date().getFullYear())
+  
+  // Cargar mes y año desde localStorage al inicializar
+  const [mes, setMes] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const savedMes = localStorage.getItem('ginecologia_resumenes_mes')
+      return savedMes ? parseInt(savedMes, 10) : new Date().getMonth() + 1
+    }
+    return new Date().getMonth() + 1
+  })
+  
+  const [anio, setAnio] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const savedAnio = localStorage.getItem('ginecologia_resumenes_anio')
+      return savedAnio ? parseInt(savedAnio, 10) : new Date().getFullYear()
+    }
+    return new Date().getFullYear()
+  })
   const [resumenesPorMedico, setResumenesPorMedico] = useState<Map<string, ResumenPorMedico[]>>(new Map())
   const [resumenesPorPrestador, setResumenesPorPrestador] = useState<ResumenPorPrestador[]>([])
   const [historial, setHistorial] = useState<LiquidacionGuardia[]>([])
@@ -42,6 +57,14 @@ export default function ResumenesGinecologiaPage() {
   const [excelData, setExcelData] = useState<ExcelData | null>(null)
   const [liquidacionActual, setLiquidacionActual] = useState<LiquidacionGuardia | null>(null)
   const [loadingExcel, setLoadingExcel] = useState(false)
+
+  // Guardar mes y año en localStorage cuando cambian
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('ginecologia_resumenes_mes', mes.toString())
+      localStorage.setItem('ginecologia_resumenes_anio', anio.toString())
+    }
+  }, [mes, anio])
 
   useEffect(() => {
     if (tabActiva === 'historial') {
@@ -183,7 +206,7 @@ export default function ResumenesGinecologiaPage() {
     }
   }
 
-  // Función para eliminar fila
+  // Función para eliminar fila - MEJORADA para recargar datos después de eliminar
   const handleDeleteRow = useCallback(async (rowIndex: number) => {
     if (!liquidacionActual || !excelData) return
 
@@ -202,12 +225,51 @@ export default function ResumenesGinecologiaPage() {
         return
       }
 
-      // Actualizar ExcelData local
+      // Actualizar ExcelData local inmediatamente (optimista)
       const updatedRows = excelData.rows.filter((_, index) => index !== rowIndex)
-      setExcelData({
+      const nuevoExcelData = {
         ...excelData,
         rows: updatedRows
-      })
+      }
+      setExcelData(nuevoExcelData)
+
+      // Recargar ExcelData desde BD para asegurar sincronización
+      // Esto actualiza los índices y asegura que todo esté correcto
+      const excelDataRecargado = await cargarExcelDataDesdeBD(liquidacionActual.id, supabase)
+      if (excelDataRecargado) {
+        setExcelData(excelDataRecargado)
+      }
+
+      // Actualizar totales de liquidación en background
+      const actualizarTotales = async () => {
+        const { data: detalles } = await supabase
+          .from('detalle_guardia')
+          .select('importe_calculado, monto_facturado')
+          .eq('liquidacion_id', liquidacionActual.id) as { data: Array<{ importe_calculado: number | null; monto_facturado: number | null }> | null }
+
+        if (detalles) {
+          const totalConsultas = detalles.length
+          const totalBruto = detalles.reduce((sum, d) => sum + (d.monto_facturado || 0), 0)
+          const totalNeto = detalles.reduce((sum, d) => sum + (d.importe_calculado || 0), 0)
+
+          await supabase
+            .from('liquidaciones_guardia')
+            // @ts-ignore
+            .update({
+              total_consultas: totalConsultas,
+              total_bruto: totalBruto,
+              total_neto: totalNeto
+            })
+            .eq('id', liquidacionActual.id)
+        }
+      }
+
+      // Ejecutar en background
+      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+        requestIdleCallback(actualizarTotales, { timeout: 1000 })
+      } else {
+        setTimeout(actualizarTotales, 100)
+      }
     } catch (error: any) {
       console.error('Error eliminando fila:', error)
     }

@@ -25,15 +25,12 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
   const [medicos, setMedicos] = useState<Medico[]>([])
   const [medicosLoading, setMedicosLoading] = useState(false)
 
-  // Sincronizar rows cuando data cambia (optimizado: solo si cambió la longitud)
-  // Usar referencia para evitar comparaciones costosas
-  const rowsLengthRef = useRef(data.rows.length)
+  // Sincronizar rows cuando data cambia - MEJORADO para detectar cambios en el contenido
   useEffect(() => {
-    if (data.rows.length !== rowsLengthRef.current) {
-      rowsLengthRef.current = data.rows.length
-      setRows(data.rows)
-    }
-  }, [data.rows.length])
+    // Actualizar siempre que cambie data.rows (no solo la longitud)
+    // Usar JSON.stringify para comparación profunda, pero solo si cambió la longitud o referencia
+    setRows(data.rows)
+  }, [data.rows])
 
   // Cargar médicos una sola vez cuando se monta el componente
   useEffect(() => {
