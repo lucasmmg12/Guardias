@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { ChevronDown, ChevronUp, Trash2, Search, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ExcelRow, ExcelData } from '@/lib/excel-reader'
 import { InlineEditCell } from './InlineEditCell'
@@ -63,6 +63,9 @@ export function ExpandableSection({
     rowIndex?: number
     count?: number
   } | null>(null)
+  
+  // Estado para filtros por columna
+  const [filters, setFilters] = useState<Map<string, string>>(new Map())
 
   // Cargar estado guardado al montar
   useEffect(() => {
@@ -92,6 +95,46 @@ export function ExpandableSection({
     return headerLower.includes('cliente') || headerLower.includes('obra')
   }
 
+  // Filtrar filas basándose en los filtros activos
+  const filteredRows = useMemo(() => {
+    if (filters.size === 0) return rows
+
+    return rows.filter(row => {
+      return data.headers.every((header) => {
+        const filterValue = filters.get(header)
+        if (!filterValue || filterValue.trim() === '') return true
+
+        const cellValue = row[header]
+        if (cellValue === null || cellValue === undefined) return false
+
+        // Búsqueda case-insensitive
+        const cellStr = String(cellValue).toLowerCase()
+        const filterStr = filterValue.toLowerCase().trim()
+        
+        return cellStr.includes(filterStr)
+      })
+    })
+  }, [rows, filters, data.headers])
+
+  // Actualizar count basado en filas filtradas
+  const displayCount = filteredRows.length
+
+  // Función para actualizar filtro de una columna
+  const handleFilterChange = (header: string, value: string) => {
+    const newFilters = new Map(filters)
+    if (value.trim() === '') {
+      newFilters.delete(header)
+    } else {
+      newFilters.set(header, value)
+    }
+    setFilters(newFilters)
+  }
+
+  // Limpiar todos los filtros
+  const clearAllFilters = () => {
+    setFilters(new Map())
+  }
+
   if (count === 0) return null
 
   return (
@@ -109,14 +152,14 @@ export function ExpandableSection({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3" style={{ color: textColor }}>
             {icon}
-            <div className="flex-1">
-              <div className="font-bold text-lg mb-1">
-                {title}
+              <div className="flex-1">
+                <div className="font-bold text-lg mb-1">
+                  {title} {displayCount !== count && `(${displayCount} de ${count})`}
+                </div>
+                <div className="text-sm" style={{ color: textColor, opacity: 0.8 }}>
+                  {description}
+                </div>
               </div>
-              <div className="text-sm" style={{ color: textColor, opacity: 0.8 }}>
-                {description}
-              </div>
-            </div>
           </div>
           <div className="flex items-center gap-2">
             {allowDelete && isExpanded && (
@@ -178,9 +221,29 @@ export function ExpandableSection({
             border: '1px solid rgba(255, 255, 255, 0.1)',
           }}
         >
+          {/* Indicador de filtros activos */}
+          {filters.size > 0 && (
+            <div className="px-4 py-2 bg-blue-500/20 border-b border-blue-500/30 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm text-blue-400">
+                <Search className="h-4 w-4" />
+                <span>{filters.size} filtro(s) activo(s) - Mostrando {displayCount} de {rows.length} registros</span>
+              </div>
+              <Button
+                onClick={clearAllFilters}
+                size="sm"
+                variant="ghost"
+                className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/20 h-7 px-2"
+              >
+                <X className="h-3 w-3 mr-1" />
+                Limpiar filtros
+              </Button>
+            </div>
+          )}
+
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-xs">
               <thead>
+                {/* Fila de headers */}
                 <tr className="border-b border-white/10">
                   {allowDelete && (
                     <th
@@ -196,11 +259,11 @@ export function ExpandableSection({
                     >
                       <input
                         type="checkbox"
-                        checked={selectedRows.size === rows.length && rows.length > 0}
+                        checked={selectedRows.size === filteredRows.length && filteredRows.length > 0}
                         onChange={(e) => {
                           if (e.target.checked) {
-                            const allIndices = rows.map((_, idx) => {
-                              const originalRowIndex = data.rows.findIndex(r => r === rows[idx])
+                            const allIndices = filteredRows.map((_, idx) => {
+                              const originalRowIndex = data.rows.findIndex(r => r === filteredRows[idx])
                               return originalRowIndex
                             }).filter(idx => idx !== -1)
                             setSelectedRows(new Set(allIndices))
@@ -236,9 +299,57 @@ export function ExpandableSection({
                     </th>
                   ))}
                 </tr>
+                
+                {/* Fila de filtros */}
+                <tr className="border-b border-white/5 bg-white/2">
+                  {allowDelete && (
+                    <td
+                      className="px-2 py-1 sticky left-0"
+                      style={{
+                        background: 'rgba(0, 0, 0, 0.8)',
+                        zIndex: 11,
+                        position: 'sticky',
+                        top: filters.size > 0 ? '80px' : '40px',
+                      }}
+                    ></td>
+                  )}
+                  {data.headers.map((header, index) => (
+                    <td
+                      key={index}
+                      className="px-1 py-1"
+                      style={{
+                        position: 'sticky',
+                        top: filters.size > 0 ? '80px' : '40px',
+                        zIndex: 9,
+                      }}
+                    >
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={filters.get(header) || ''}
+                          onChange={(e) => handleFilterChange(header, e.target.value)}
+                          placeholder="Filtrar..."
+                          className="w-full px-2 py-1 text-xs bg-gray-800/50 border border-gray-600 rounded text-white placeholder-gray-500 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        {filters.get(header) && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleFilterChange(header, '')
+                            }}
+                            className="absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  ))}
+                </tr>
               </thead>
               <tbody>
-                {rows.map((row, rowIndex) => {
+                {filteredRows.map((row, rowIndex) => {
                   const originalRowIndex = data.rows.findIndex(r => r === row)
                   const isSelected = selectedRows.has(originalRowIndex)
                   
