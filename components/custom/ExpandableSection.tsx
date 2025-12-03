@@ -346,7 +346,35 @@ export function ExpandableSection({
   const handleExportExcel = (e: React.MouseEvent) => {
     e.stopPropagation()
     try {
-      const nombreArchivo = `${title.toLowerCase().replace(/\s+/g, '_')}_filtrado`
+      // Generar nombre base del archivo más corto
+      let nombreArchivo = `${title.toLowerCase().replace(/\s+/g, '_').substring(0, 15)}`
+      
+      // Agregar mes y año en formato corto (MM_YYYY)
+      if (mes && anio) {
+        nombreArchivo += `_${String(mes).padStart(2, '0')}_${anio}`
+      }
+      
+      // Agregar filtros activos de forma compacta
+      if (filters.size > 0) {
+        const filtrosInfo: string[] = []
+        filters.forEach((filterValue, header) => {
+          if (filterValue && filterValue.trim() !== '') {
+            // Abreviar nombre de columna (primeras 3 letras)
+            const columnaAbrev = header.substring(0, 3).toLowerCase().replace(/[^a-z0-9]/g, '')
+            // Valor del filtro (primeras 10 caracteres)
+            const valorCorto = filterValue
+              .replace(/[^a-zA-Z0-9]/g, '')
+              .toLowerCase()
+              .substring(0, 10)
+            filtrosInfo.push(`${columnaAbrev}_${valorCorto}`)
+          }
+        })
+        
+        if (filtrosInfo.length > 0) {
+          nombreArchivo += `_${filtrosInfo.join('_')}`
+        }
+      }
+      
       exportFilteredDataToExcel({
         rows: filteredRows,
         headers: data.headers,
