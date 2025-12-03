@@ -199,3 +199,156 @@ export async function readExcelFile(file: File): Promise<ExcelData> {
   }
 }
 
+/**
+ * Lee un archivo Excel de Ginecología con el formato específico:
+ * - Fila 10: Headers (índice 9)
+ * - Desde fila 11: Datos (índice 10)
+ */
+export async function readExcelFileGinecologia(file: File): Promise<ExcelData> {
+  try {
+    const arrayBuffer = await file.arrayBuffer()
+    const workbook = XLSX.read(arrayBuffer, { type: 'array' })
+    
+    // Obtener la primera hoja
+    const sheetName = workbook.SheetNames[0]
+    if (!sheetName) {
+      throw new Error('El archivo Excel no contiene hojas')
+    }
+
+    const worksheet = workbook.Sheets[sheetName]
+    const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1')
+    
+    // Intentar leer el período de la fila 2 (índice 1) si existe (igual que Pediatría)
+    const row2: any[] = []
+    for (let col = 0; col <= Math.min(range.e.c, 50); col++) {
+      const cellAddress = XLSX.utils.encode_cell({ r: 1, c: col })
+      const cell = worksheet[cellAddress]
+      row2.push(cell ? cell.v : null)
+    }
+    const periodo = extractPeriodo(row2)
+
+    // Leer la fila 10 (índice 9) para los headers
+    const headers: Array<{ name: string; colIndex: number }> = []
+    const maxCols = Math.min(range.e.c + 1, 50)
+    
+    // Primero, encontrar la última columna con un header válido en la fila 10
+    let lastHeaderCol = -1
+    for (let col = 0; col < maxCols; col++) {
+      const cellAddress = XLSX.utils.encode_cell({ r: 9, c: col }) // Fila 10 = índice 9
+      const cell = worksheet[cellAddress]
+      if (cell && cell.v !== null && cell.v !== undefined) {
+        const headerValue = String(cell.v).trim()
+        if (headerValue !== '') {
+          lastHeaderCol = col
+        }
+      }
+    }
+    
+    // Si no encontramos headers, lanzar error
+    if (lastHeaderCol === -1) {
+      throw new Error('No se encontraron headers en la fila 10')
+    }
+    
+    // Leer todos los headers desde la columna 0 hasta la última con header válido
+    for (let col = 0; col <= lastHeaderCol; col++) {
+      const cellAddress = XLSX.utils.encode_cell({ r: 9, c: col }) // Fila 10 = índice 9
+      const cell = worksheet[cellAddress]
+      
+      if (cell && cell.v !== null && cell.v !== undefined) {
+        const headerValue = String(cell.v).trim()
+        headers.push({
+          name: headerValue || `Columna ${col + 1}`,
+          colIndex: col
+        })
+      } else {
+        headers.push({
+          name: `Columna ${col + 1}`,
+          colIndex: col
+        })
+      }
+    }
+
+    // Filtrar headers vacíos solo para la visualización
+    const headerNames = headers.map(h => h.name).filter(name => !name.startsWith('Columna'))
+
+    // Leer datos manualmente desde la fila 11 (índice 10) en adelante
+    const rows: ExcelRow[] = []
+    
+    for (let rowIndex = 10; rowIndex <= range.e.r; rowIndex++) { // Desde fila 11 (índice 10)
+      const row: ExcelRow = {}
+      let hasData = false
+      
+      // Leer usando el índice de columna real del Excel
+      headers.forEach((headerInfo) => {
+        const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: headerInfo.colIndex })
+        const cell = worksheet[cellAddress]
+        
+        if (cell && cell.v !== null && cell.v !== undefined) {
+          let value: any = cell.v
+          
+          // Detectar si es la columna "Duración"
+          const isDuracion = headerInfo.name.toLowerCase().includes('duración') || 
+                            headerInfo.name.toLowerCase().includes('duracion')
+          
+          if (isDuracion) {
+            // Para la columna Duración, mantener como número (minutos)
+            if (typeof value === 'number') {
+              value = Math.round(value)
+            } else if (typeof value === 'string') {
+              const numValue = parseFloat(value.replace(',', '.'))
+              value = isNaN(numValue) ? value : Math.round(numValue)
+            }
+          } else {
+            // Para otras columnas, aplicar la lógica de conversión de fechas
+            if (cell.t === 'd' && value instanceof Date) {
+              const day = value.getDate()
+              const month = value.getMonth() + 1
+              const year = value.getFullYear()
+              value = `${day}/${month}/${year}`
+            } else if (cell.t === 'n' && typeof value === 'number') {
+              // Si es un número que parece una fecha serial de Excel
+              if (value > 1 && value < 100000) {
+                try {
+                  const excelDate = XLSX.SSF.parse_date_code(value)
+                  if (excelDate) {
+                    value = `${excelDate.d}/${excelDate.m}/${excelDate.y}`
+                  }
+                } catch {
+                  // Si no se puede parsear como fecha, mantener el número
+                }
+              }
+            }
+          }
+          
+          // Solo agregar al row si el header tiene un nombre válido
+          if (!headerInfo.name.startsWith('Columna')) {
+            row[headerInfo.name] = value
+            hasData = true
+          }
+        } else {
+          // Solo agregar null si el header tiene un nombre válido
+          if (!headerInfo.name.startsWith('Columna')) {
+            row[headerInfo.name] = null
+          }
+        }
+      })
+      
+      // Solo agregar la fila si tiene al menos un dato
+      if (hasData) {
+        rows.push(row)
+      }
+    }
+
+    return {
+      periodo,
+      headers: headerNames,
+      rows
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error
+    }
+    throw new Error('Error al leer el archivo Excel de Ginecología: ' + String(error))
+  }
+}
+

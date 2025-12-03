@@ -283,23 +283,54 @@ export default function ResumenesGinecologiaPage() {
   async function cargarResumenes() {
     setLoading(true)
     try {
-      // Calcular resumen por prestador (incluye todos los médicos)
-      const resumenPrestadores = await calcularResumenPorPrestador(mes, anio)
+      console.log(`[Ginecología Resúmenes] Cargando resúmenes para ${mes}/${anio}`)
+      
+      // Obtener liquidación específica de Ginecología para trabajar solo con ese archivo
+      const { data: liquidacion } = await supabase
+        .from('liquidaciones_guardia')
+        .select('id')
+        .eq('especialidad', 'Ginecología')
+        .eq('mes', mes)
+        .eq('anio', anio)
+        .maybeSingle()
+
+      if (!liquidacion || !(liquidacion as any).id) {
+        console.warn(`[Ginecología Resúmenes] No se encontró liquidación de Ginecología para ${mes}/${anio}`)
+        setResumenesPorPrestador([])
+        setResumenesPorMedico(new Map())
+        return
+      }
+
+      const liquidacionId = (liquidacion as any).id
+      console.log(`[Ginecología Resúmenes] Liquidación ID: ${liquidacionId}`)
+      
+      // Calcular resumen por prestador pasando liquidacionId específico
+      const resumenPrestadores = await calcularResumenPorPrestador(mes, anio, liquidacionId)
+      console.log(`[Ginecología Resúmenes] Resúmenes por prestador: ${resumenPrestadores.length}`)
+      const totalConsultasPrestadores = resumenPrestadores.reduce((sum, r) => sum + r.cantidad, 0)
+      console.log(`[Ginecología Resúmenes] Total de consultas en prestadores: ${totalConsultasPrestadores}`)
       setResumenesPorPrestador(resumenPrestadores)
 
-      // Calcular resumen por médico (agrupar por médico)
-      const resumenMedicos = await calcularResumenPorMedico(mes, anio)
+      // Calcular resumen por médico pasando liquidacionId específico
+      const resumenMedicos = await calcularResumenPorMedico(mes, anio, liquidacionId)
+      console.log(`[Ginecología Resúmenes] Resúmenes por médico: ${resumenMedicos.length}`)
+      const totalConsultasMedicos = resumenMedicos.reduce((sum, r) => sum + r.cantidad, 0)
+      console.log(`[Ginecología Resúmenes] Total de consultas en médicos: ${totalConsultasMedicos}`)
       
-      // Agrupar por médico
+      // Agrupar por médico - usar nombre normalizado si no hay ID para evitar agrupar médicos diferentes
       const resumenesPorMedicoMap = new Map<string, ResumenPorMedico[]>()
       resumenMedicos.forEach(resumen => {
-        const medicoId = resumen.medico_id || 'sin-id'
-        if (!resumenesPorMedicoMap.has(medicoId)) {
-          resumenesPorMedicoMap.set(medicoId, [])
+        // Usar ID si existe, sino usar nombre normalizado como clave única
+        const nombreNormalizado = resumen.medico_nombre.toLowerCase().trim().replace(/\s+/g, ' ')
+        const clave = resumen.medico_id || `nombre-${nombreNormalizado}`
+        
+        if (!resumenesPorMedicoMap.has(clave)) {
+          resumenesPorMedicoMap.set(clave, [])
         }
-        resumenesPorMedicoMap.get(medicoId)!.push(resumen)
+        resumenesPorMedicoMap.get(clave)!.push(resumen)
       })
       
+      console.log(`[Ginecología Resúmenes] Médicos únicos: ${resumenesPorMedicoMap.size}`)
       setResumenesPorMedico(resumenesPorMedicoMap)
     } catch (error) {
       console.error('Error cargando resúmenes:', error)
@@ -331,7 +362,26 @@ export default function ResumenesGinecologiaPage() {
   async function cargarResidentesFormativos() {
     setLoadingResidentes(true)
     try {
-      const residentes = await obtenerResidentesFormativos(mes, anio)
+      // Obtener liquidación específica
+      const { data: liquidacion } = await supabase
+        .from('liquidaciones_guardia')
+        .select('id')
+        .eq('especialidad', 'Ginecología')
+        .eq('mes', mes)
+        .eq('anio', anio)
+        .maybeSingle()
+
+      if (!liquidacion || !(liquidacion as any).id) {
+        setResidentesFormativos({
+          resumenes: [],
+          totalConsultas: 0,
+          totalValor: 0
+        })
+        return
+      }
+
+      const liquidacionId = (liquidacion as any).id
+      const residentes = await obtenerResidentesFormativos(mes, anio, liquidacionId)
       setResidentesFormativos(residentes)
     } catch (error) {
       console.error('Error cargando residentes formativos:', error)

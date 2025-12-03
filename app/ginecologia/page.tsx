@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { UploadExcel } from '@/components/custom/UploadExcel'
 import { MesSelectorModal } from '@/components/custom/MesSelectorModal'
 import { NotificationModal, NotificationType } from '@/components/custom/NotificationModal'
-import { readExcelFile, ExcelData } from '@/lib/excel-reader'
+import { readExcelFileGinecologia, ExcelData } from '@/lib/excel-reader'
 import { procesarExcelGinecologia } from '@/lib/ginecologia-processor'
 import { ExpandableSection } from '@/components/custom/ExpandableSection'
 import { AlertTriangle, XCircle, AlertCircle, Sparkles, ArrowLeft, X, Activity, Upload, FileText, CheckCircle2, User } from 'lucide-react'
@@ -117,7 +117,7 @@ export default function GinecologiaPage() {
         setArchivoActual(file)
 
         try {
-            const data = await readExcelFile(file)
+            const data = await readExcelFileGinecologia(file)
             setExcelData(data)
             
             // Detectar mes y año automáticamente

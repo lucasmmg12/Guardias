@@ -23,37 +23,82 @@ export interface ResumenPorPrestador {
 /**
  * Calcula el resumen por médico y obra social (PRE-RETENCIÓN)
  * Aplica la regla de residentes: si es residente en horario formativo (lunes-sábado 07:00-15:00), no se cuenta
+ * Busca la liquidación por mes y año o usa liquidacionId si se proporciona
  */
 export async function calcularResumenPorMedico(
   mes: number,
-  anio: number
+  anio: number,
+  liquidacionId?: string  // NUEVO: aceptar liquidacionId opcional para trabajar con liquidación específica
 ): Promise<ResumenPorMedico[]> {
-  // Obtener liquidación de ginecología para el mes/año
-  const { data: liquidacion } = await supabase
-    .from('liquidaciones_guardia')
-    .select('id')
-    .eq('especialidad', 'Ginecología')
-    .eq('mes', mes)
-    .eq('anio', anio)
-    .single()
+  let liquidacionIdFinal: string
 
-  if (!liquidacion || !(liquidacion as any).id) {
+  if (liquidacionId) {
+    // Si se proporciona liquidacionId, usarlo directamente (trabajar solo con ese archivo)
+    liquidacionIdFinal = liquidacionId
+    console.log(`[Ginecología Resúmenes] Usando liquidación específica: ${liquidacionIdFinal}`)
+  } else {
+    // Si no se proporciona, buscar la liquidación de Ginecología para el mes/año
+    const { data: liquidacion } = await supabase
+      .from('liquidaciones_guardia')
+      .select('id')
+      .eq('especialidad', 'Ginecología')
+      .eq('mes', mes)
+      .eq('anio', anio)
+      .maybeSingle()
+
+    if (!liquidacion || !(liquidacion as any).id) {
+      console.warn(`[Ginecología Resúmenes] No se encontró liquidación de Ginecología para ${mes}/${anio}`)
+      return []
+    }
+
+    liquidacionIdFinal = (liquidacion as any).id
+    console.log(`[Ginecología Resúmenes] Liquidación encontrada: ${liquidacionIdFinal}`)
+  }
+
+  // Obtener todos los detalles de guardia de esta liquidación usando paginación
+  // IMPORTANTE: Usar paginación para obtener TODOS los registros (más de 1000)
+  let todosLosDetalles: DetalleGuardia[] = []
+  const pageSize = 1000
+  let from = 0
+  let hasMore = true
+  let paginaNum = 1
+
+  while (hasMore) {
+    const { data: detallesPagina, error } = await supabase
+      .from('detalle_guardia')
+      .select('*')
+      .eq('liquidacion_id', liquidacionIdFinal)
+      .order('id', { ascending: true })  // IMPORTANTE: Ordenar para paginación consistente
+      .range(from, from + pageSize - 1)
+
+    if (error) {
+      console.error('[Ginecología Resúmenes] Error obteniendo detalles:', error)
+      break
+    }
+
+    if (!detallesPagina || detallesPagina.length === 0) {
+      hasMore = false
+      break
+    }
+
+    todosLosDetalles = [...todosLosDetalles, ...detallesPagina]
+    console.log(`[Ginecología Resúmenes] Página ${paginaNum}: ${detallesPagina.length} registros (total acumulado: ${todosLosDetalles.length})`)
+
+    if (detallesPagina.length < pageSize) {
+      hasMore = false
+    } else {
+      from += pageSize
+      paginaNum++
+    }
+  }
+
+  console.log(`[Ginecología Resúmenes] Total de detalles obtenidos: ${todosLosDetalles.length} para liquidación ${liquidacionIdFinal}`)
+
+  if (todosLosDetalles.length === 0) {
     return []
   }
 
-  const liquidacionId = (liquidacion as any).id
-
-  // Obtener todos los detalles de guardia de esta liquidación
-  // IMPORTANTE: Remover límite por defecto de Supabase (1000 registros)
-  const { data: detalles } = await supabase
-    .from('detalle_guardia')
-    .select('*')
-    .eq('liquidacion_id', liquidacionId)
-    .limit(Number.MAX_SAFE_INTEGER) as { data: DetalleGuardia[] | null }
-
-  if (!detalles || detalles.length === 0) {
-    return []
-  }
+  const detalles = todosLosDetalles
 
   // Obtener valores de consultas ginecológicas
   const { data: valoresConsultas } = await supabase
@@ -127,7 +172,23 @@ export async function calcularResumenPorMedico(
   // Agrupar por médico y obra social, aplicando regla de residentes
   const resumenMap = new Map<string, ResumenPorMedico>()
 
+  // Contadores para diagnóstico
+  let registrosExcluidosSinMedico = 0
+  let registrosExcluidosHorarioFormativo = 0
+  let registrosExcluidosSinValor = 0
+  let registrosIncluidos = 0
+
   detalles.forEach(detalle => {
+    // MODIFICADO: Ser más permisivo - incluir si tiene médico_nombre o medico_id
+    const tieneMedicoNombre = detalle.medico_nombre && detalle.medico_nombre.trim() !== '' && detalle.medico_nombre !== 'Desconocido'
+    const tieneMedicoId = detalle.medico_id && detalle.medico_id.trim() !== ''
+    const tieneMedico = tieneMedicoNombre || tieneMedicoId
+    
+    if (!tieneMedico) {
+      registrosExcluidosSinMedico++
+      return
+    }
+
     // Excluir consultas de residentes en horario formativo del resumen por médico
     // Estas NO se deben mostrar al médico, pero SÍ se contabilizan para administración
     
@@ -157,6 +218,7 @@ export async function calcularResumenPorMedico(
     // Si es horario formativo o residente con valor cero, NO debe contarse en el resumen por médico
     // (pero SÍ se contabilizan en "Residentes Formativos" para administración)
     if (esHorarioFormativo || esResidenteConValorCero) {
+      registrosExcluidosHorarioFormativo++
       return
     }
 
@@ -164,12 +226,15 @@ export async function calcularResumenPorMedico(
     // Estas pueden ser consultas sin valor configurado o que no deben pagarse
     const tieneValor = (detalle.importe_calculado ?? 0) > 0 || (detalle.monto_facturado ?? 0) > 0
     if (!tieneValor) {
+      registrosExcluidosSinValor++
       return
     }
 
     const obraSocial = detalle.obra_social || 'PARTICULARES'
     const medicoNombre = detalle.medico_nombre || 'Desconocido'
     const medicoId = detalle.medico_id
+
+    registrosIncluidos++
 
     // Clave única: usar medico_id si existe, sino usar nombre normalizado
     // Esto evita que médicos diferentes se agrupen incorrectamente cuando no tienen ID
@@ -205,6 +270,15 @@ export async function calcularResumenPorMedico(
     }
   })
 
+  // Logs de diagnóstico
+  const totalConsultas = Array.from(resumenMap.values()).reduce((sum, r) => sum + r.cantidad, 0)
+  console.log(`[Ginecología Resúmenes] Registros incluidos en resúmenes: ${registrosIncluidos}`)
+  console.log(`[Ginecología Resúmenes] Registros excluidos sin médico: ${registrosExcluidosSinMedico}`)
+  console.log(`[Ginecología Resúmenes] Registros excluidos horario formativo: ${registrosExcluidosHorarioFormativo}`)
+  console.log(`[Ginecología Resúmenes] Registros excluidos sin valor: ${registrosExcluidosSinValor}`)
+  console.log(`[Ginecología Resúmenes] Total de consultas en resúmenes: ${totalConsultas}`)
+  console.log(`[Ginecología Resúmenes] Diferencia: ${detalles.length - totalConsultas} registros no incluidos`)
+
   // Convertir a array y ordenar por médico y obra social
   return Array.from(resumenMap.values()).sort((a, b) => {
     if (a.medico_nombre !== b.medico_nombre) {
@@ -220,10 +294,11 @@ export async function calcularResumenPorMedico(
  */
 export async function calcularResumenPorPrestador(
   mes: number,
-  anio: number
+  anio: number,
+  liquidacionId?: string  // NUEVO: aceptar liquidacionId opcional
 ): Promise<ResumenPorPrestador[]> {
-  // Obtener resumen por médico (ya aplica regla de residentes)
-  const resumenPorMedico = await calcularResumenPorMedico(mes, anio)
+  // Obtener resumen por médico pasando liquidacionId
+  const resumenPorMedico = await calcularResumenPorMedico(mes, anio, liquidacionId)
 
   // Agrupar por médico - USAR CLAVE ÚNICA (ID o nombre normalizado)
   // Esto evita que médicos diferentes sin ID se agrupen incorrectamente
@@ -285,18 +360,74 @@ export interface TotalesResidentesFormativos {
  */
 export async function obtenerResidentesFormativos(
   mes: number,
-  anio: number
+  anio: number,
+  liquidacionId?: string  // NUEVO: aceptar liquidacionId opcional
 ): Promise<TotalesResidentesFormativos> {
-  // Obtener liquidación de ginecología para el mes/año
-  const { data: liquidacion } = await supabase
-    .from('liquidaciones_guardia')
-    .select('id')
-    .eq('especialidad', 'Ginecología')
-    .eq('mes', mes)
-    .eq('anio', anio)
-    .single()
+  let liquidacionIdFinal: string
 
-  if (!liquidacion || !(liquidacion as any).id) {
+  if (liquidacionId) {
+    liquidacionIdFinal = liquidacionId
+  } else {
+    // Obtener liquidación de ginecología para el mes/año
+    const { data: liquidacion } = await supabase
+      .from('liquidaciones_guardia')
+      .select('id')
+      .eq('especialidad', 'Ginecología')
+      .eq('mes', mes)
+      .eq('anio', anio)
+      .maybeSingle()
+
+    if (!liquidacion || !(liquidacion as any).id) {
+      return {
+        resumenes: [],
+        totalConsultas: 0,
+        totalValor: 0
+      }
+    }
+
+    liquidacionIdFinal = (liquidacion as any).id
+  }
+
+  // Obtener todos los detalles de guardia de esta liquidación usando paginación
+  // IMPORTANTE: Usar paginación para obtener TODOS los registros (más de 1000)
+  let todosLosDetalles: DetalleGuardia[] = []
+  const pageSize = 1000
+  let from = 0
+  let hasMore = true
+  let paginaNum = 1
+
+  while (hasMore) {
+    const { data: detallesPagina, error } = await supabase
+      .from('detalle_guardia')
+      .select('*')
+      .eq('liquidacion_id', liquidacionIdFinal)
+      .order('id', { ascending: true })  // IMPORTANTE: Ordenar para paginación consistente
+      .range(from, from + pageSize - 1)
+
+    if (error) {
+      console.error('[Ginecología Resúmenes] Error obteniendo detalles residentes:', error)
+      break
+    }
+
+    if (!detallesPagina || detallesPagina.length === 0) {
+      hasMore = false
+      break
+    }
+
+    todosLosDetalles = [...todosLosDetalles, ...detallesPagina]
+    console.log(`[Ginecología Resúmenes] Página ${paginaNum} residentes: ${detallesPagina.length} registros (total acumulado: ${todosLosDetalles.length})`)
+
+    if (detallesPagina.length < pageSize) {
+      hasMore = false
+    } else {
+      from += pageSize
+      paginaNum++
+    }
+  }
+
+  console.log(`[Ginecología Resúmenes] Total de detalles residentes obtenidos: ${todosLosDetalles.length} para liquidación ${liquidacionIdFinal}`)
+
+  if (todosLosDetalles.length === 0) {
     return {
       resumenes: [],
       totalConsultas: 0,
@@ -304,23 +435,7 @@ export async function obtenerResidentesFormativos(
     }
   }
 
-  const liquidacionId = (liquidacion as any).id
-
-  // Obtener todos los detalles de guardia de esta liquidación
-  // IMPORTANTE: Remover límite por defecto de Supabase (1000 registros)
-  const { data: detalles } = await supabase
-    .from('detalle_guardia')
-    .select('*')
-    .eq('liquidacion_id', liquidacionId)
-    .limit(Number.MAX_SAFE_INTEGER) as { data: DetalleGuardia[] | null }
-
-  if (!detalles || detalles.length === 0) {
-    return {
-      resumenes: [],
-      totalConsultas: 0,
-      totalValor: 0
-    }
-  }
+  const detalles = todosLosDetalles
 
   // Obtener valores de consultas ginecológicas
   const { data: valoresConsultas } = await supabase
