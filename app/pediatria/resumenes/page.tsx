@@ -829,7 +829,7 @@ export default function ResumenesPediatriaPage() {
               </>
             )}
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   )
