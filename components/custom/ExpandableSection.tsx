@@ -228,11 +228,16 @@ export function ExpandableSection({
         const cellValue = row[header]
         if (cellValue === null || cellValue === undefined) return false
 
-        // Búsqueda case-insensitive
-        const cellStr = String(cellValue).toLowerCase()
+        // Búsqueda case-insensitive mejorada con word boundaries
+        // Esto evita que "hernandez" coincida con "heredia"
+        const cellStr = String(cellValue).toLowerCase().trim()
         const filterStr = filterValue.toLowerCase().trim()
         
-        return cellStr.includes(filterStr)
+        // Escapar caracteres especiales de regex
+        const escapedFilter = filterStr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        // Buscar como palabra completa (word boundary) o al inicio de una palabra
+        const wordBoundaryRegex = new RegExp(`(^|\\s)${escapedFilter}`, 'i')
+        return wordBoundaryRegex.test(cellStr)
       })
 
       if (!headersMatch) return false
