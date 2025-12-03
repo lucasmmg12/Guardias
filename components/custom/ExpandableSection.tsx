@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback, memo } from 'react'
 import { ChevronDown, ChevronUp, Trash2, Search, X, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ExcelRow, ExcelData } from '@/lib/excel-reader'
