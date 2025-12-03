@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, Stethoscope, Baby, Upload, User, DollarSign, Hospital, BarChart3, Plus } from 'lucide-react'
 
 export default function HomePage() {
     return (
@@ -56,7 +56,9 @@ export default function HomePage() {
                                 }}
                             ></div>
                             <div className="relative">
-                                <div className="text-4xl mb-4">🩺</div>
+                                <div className="mb-4 flex justify-center">
+                                    <Stethoscope className="h-12 w-12 text-green-400" />
+                                </div>
                                 <h2 className="text-2xl font-bold text-green-400 mb-2">Pediatría</h2>
                                 <p className="text-gray-300 mb-4">
                                     Pago por producción con retención del 30%
@@ -94,7 +96,9 @@ export default function HomePage() {
                                 }}
                             ></div>
                             <div className="relative">
-                                <div className="text-4xl mb-4">🤰</div>
+                                <div className="mb-4 flex justify-center">
+                                    <Baby className="h-12 w-12 text-blue-400" />
+                                </div>
                                 <h2 className="text-2xl font-bold text-blue-400 mb-2">Ginecología</h2>
                                 <p className="text-gray-300 mb-4">
                                     Pago por hora con reglas de residentes
@@ -133,7 +137,9 @@ export default function HomePage() {
                                 border: '1px solid rgba(34, 197, 94, 0.2)',
                             }}
                         >
-                            <div className="text-2xl mb-2">👨‍⚕️</div>
+                            <div className="mb-2 flex justify-center">
+                                <User className="h-8 w-8 text-green-400" />
+                            </div>
                             <div className="text-sm text-gray-300">Médicos</div>
                         </Link>
                         <Link 
@@ -144,7 +150,9 @@ export default function HomePage() {
                                 border: '1px solid rgba(34, 197, 94, 0.2)',
                             }}
                         >
-                            <div className="text-2xl mb-2">💰</div>
+                            <div className="mb-2 flex justify-center">
+                                <DollarSign className="h-8 w-8 text-green-400" />
+                            </div>
                             <div className="text-sm text-gray-300">Tarifas</div>
                         </Link>
                         <Link 
@@ -155,7 +163,9 @@ export default function HomePage() {
                                 border: '1px solid rgba(34, 197, 94, 0.2)',
                             }}
                         >
-                            <div className="text-2xl mb-2">➕</div>
+                            <div className="mb-2 flex justify-center">
+                                <Plus className="h-8 w-8 text-green-400" />
+                            </div>
                             <div className="text-sm text-gray-300">Adicionales</div>
                         </Link>
                         <Link 
@@ -166,7 +176,9 @@ export default function HomePage() {
                                 border: '1px solid rgba(34, 197, 94, 0.2)',
                             }}
                         >
-                            <div className="text-2xl mb-2">🏥</div>
+                            <div className="mb-2 flex justify-center">
+                                <Hospital className="h-8 w-8 text-green-400" />
+                            </div>
                             <div className="text-sm text-gray-300">Valores Consultas</div>
                         </Link>
                         <Link 
@@ -177,7 +189,9 @@ export default function HomePage() {
                                 border: '1px solid rgba(34, 197, 94, 0.2)',
                             }}
                         >
-                            <div className="text-2xl mb-2">📊</div>
+                            <div className="mb-2 flex justify-center">
+                                <BarChart3 className="h-8 w-8 text-green-400" />
+                            </div>
                             <div className="text-sm text-gray-300">Historial</div>
                         </Link>
                     </div>

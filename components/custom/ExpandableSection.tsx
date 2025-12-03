@@ -9,7 +9,7 @@ import { ConfirmModal } from './ConfirmModal'
 import { exportFilteredDataToExcel } from '@/lib/excel-exporter'
 
 interface ExpandableSectionProps {
-  title: string
+  title: string | React.ReactNode
   count: number
   description: string
   icon: React.ReactNode
@@ -417,8 +417,21 @@ export function ExpandableSection({
           <div className="flex items-center gap-3" style={{ color: textColor }}>
             {icon}
               <div className="flex-1">
-                <div className="font-bold text-lg mb-1">
-                  {title} {displayCount !== count && `(${displayCount} de ${count})`}
+                <div className="font-bold text-lg mb-1 flex items-center gap-2 flex-wrap">
+                  {typeof title === 'string' ? (
+                    <>
+                      {title} {displayCount !== count && `(${displayCount} de ${count})`}
+                    </>
+                  ) : (
+                    <>
+                      {title}
+                      {displayCount !== count && (
+                        <span className="text-sm font-normal opacity-75">
+                          ({displayCount} de {count})
+                        </span>
+                      )}
+                    </>
+                  )}
                 </div>
                 <div className="text-sm" style={{ color: textColor, opacity: 0.8 }}>
                   {description}

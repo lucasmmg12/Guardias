@@ -7,7 +7,7 @@ import { MesSelectorModal } from '@/components/custom/MesSelectorModal'
 import { NotificationModal, NotificationType } from '@/components/custom/NotificationModal'
 import { readExcelFile, ExcelData } from '@/lib/excel-reader'
 import { procesarExcelPediatria } from '@/lib/pediatria-processor'
-import { AlertCircle, Sparkles, ArrowLeft, XCircle } from 'lucide-react'
+import { AlertCircle, Sparkles, ArrowLeft, XCircle, X, AlertTriangle, Upload, FileText } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 
@@ -270,8 +270,9 @@ export default function PediatriaPage() {
                     ></div>
                     <div className="relative">
                         <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-2xl font-bold text-green-400">
-                                📤 Cargar Liquidación
+                            <h2 className="text-2xl font-bold text-green-400 flex items-center gap-2">
+                                <Upload className="h-6 w-6" />
+                                Cargar Liquidación
                             </h2>
                             <Button
                                 onClick={() => router.push('/pediatria/resumenes')}
@@ -308,8 +309,9 @@ export default function PediatriaPage() {
                         boxShadow: '0 8px 32px 0 rgba(34, 197, 94, 0.2)',
                     }}
                 >
-                        <h3 className="text-xl font-semibold text-gray-200 mb-4">
-                            📋 Reglas Vigentes
+                        <h3 className="text-xl font-semibold text-gray-200 mb-4 flex items-center gap-2">
+                            <FileText className="h-5 w-5" />
+                            Reglas Vigentes
                         </h3>
                         <div className="space-y-4 text-sm text-gray-300">
                             <div className="p-3 bg-white/5 rounded-lg border border-white/5">
@@ -417,10 +419,30 @@ export default function PediatriaPage() {
                                                 {filaExcluida.numeroFila}
                                             </td>
                                             <td className="px-3 py-2 text-xs text-red-400">
-                                                {filaExcluida.razon === 'sin_fecha' && '❌ Sin fecha válida'}
-                                                {filaExcluida.razon === 'fecha_invalida' && '⚠️ Fecha fuera de rango'}
-                                                {filaExcluida.razon === 'no_pediatria' && '❌ No es pediatría'}
-                                                {filaExcluida.razon === 'duplicado' && '⚠️ Duplicado'}
+                                                {filaExcluida.razon === 'sin_fecha' && (
+                                                    <span className="flex items-center gap-1">
+                                                        <X className="h-3 w-3" />
+                                                        Sin fecha válida
+                                                    </span>
+                                                )}
+                                                {filaExcluida.razon === 'fecha_invalida' && (
+                                                    <span className="flex items-center gap-1">
+                                                        <AlertTriangle className="h-3 w-3" />
+                                                        Fecha fuera de rango
+                                                    </span>
+                                                )}
+                                                {filaExcluida.razon === 'no_pediatria' && (
+                                                    <span className="flex items-center gap-1">
+                                                        <X className="h-3 w-3" />
+                                                        No es pediatría
+                                                    </span>
+                                                )}
+                                                {filaExcluida.razon === 'duplicado' && (
+                                                    <span className="flex items-center gap-1">
+                                                        <AlertCircle className="h-3 w-3" />
+                                                        Duplicado
+                                                    </span>
+                                                )}
                                             </td>
                                             {excelData.headers.map((header, colIdx) => (
                                                 <td key={colIdx} className="px-3 py-2 text-xs text-gray-300">

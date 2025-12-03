@@ -8,9 +8,8 @@ import { NotificationModal, NotificationType } from '@/components/custom/Notific
 import { readExcelFile, ExcelData } from '@/lib/excel-reader'
 import { procesarExcelGinecologia } from '@/lib/ginecologia-processor'
 import { ExpandableSection } from '@/components/custom/ExpandableSection'
-import { AlertTriangle, XCircle } from 'lucide-react'
+import { AlertTriangle, XCircle, AlertCircle, Sparkles, ArrowLeft, X, Activity, Upload, FileText, CheckCircle2, User } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
-import { AlertCircle, Sparkles, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 
@@ -280,8 +279,9 @@ export default function GinecologiaPage() {
                     ></div>
                     <div className="relative">
                         <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-2xl font-bold text-blue-400">
-                            📤 Cargar Liquidación
+                            <h2 className="text-2xl font-bold text-blue-400 flex items-center gap-2">
+                            <Upload className="h-6 w-6" />
+                            Cargar Liquidación
                         </h2>
                             <Button
                                 onClick={() => router.push('/ginecologia/resumenes')}
@@ -318,8 +318,9 @@ export default function GinecologiaPage() {
                         boxShadow: '0 8px 32px 0 rgba(59, 130, 246, 0.2)',
                     }}
                 >
-                        <h3 className="text-xl font-semibold text-gray-200 mb-4">
-                            📋 Reglas Vigentes
+                        <h3 className="text-xl font-semibold text-gray-200 mb-4 flex items-center gap-2">
+                            <FileText className="h-5 w-5" />
+                            Reglas Vigentes
                         </h3>
                         <div className="space-y-4 text-sm text-gray-300">
                             <div className="p-3 bg-white/5 rounded-lg border border-white/5">
@@ -329,7 +330,10 @@ export default function GinecologiaPage() {
                             </div>
 
                             <div className="p-3 bg-white/5 rounded-lg border border-white/5">
-                                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">👨‍⚕️ Regla de Residentes en Horario Formativo</div>
+                                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">
+                                    <User className="h-3 w-3" />
+                                    Regla de Residentes en Horario Formativo
+                                </div>
                                 <div className="text-sm mt-2 space-y-2">
                                     <div className="flex items-center gap-2">
                                         <span className="text-red-400 font-semibold">NO SE PAGA</span>
@@ -356,7 +360,10 @@ export default function GinecologiaPage() {
                                 </div>
 
                             <div className="p-3 bg-white/5 rounded-lg border border-white/5">
-                                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">✅ Casos que SÍ se Pagan</div>
+                                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">
+                                    <CheckCircle2 className="h-3 w-3" />
+                                    Casos que SÍ se Pagan
+                                </div>
                                 <ul className="text-xs space-y-1 mt-2 text-gray-300">
                                     <li className="flex items-start gap-2">
                                         <span className="text-green-400">✓</span>
@@ -374,7 +381,10 @@ export default function GinecologiaPage() {
                             </div>
 
                             <div className="p-3 bg-white/5 rounded-lg border border-white/5">
-                                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">📊 Ejemplos de Horarios</div>
+                                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">
+                                    <Activity className="h-3 w-3" />
+                                    Ejemplos de Horarios
+                                </div>
                                 <div className="text-xs space-y-1 mt-2">
                                     <div className="flex justify-between">
                                         <span className="text-gray-300">07:00 (Residente, L-S)</span>
@@ -478,7 +488,17 @@ export default function GinecologiaPage() {
                                                 {filaExcluida.numeroFila}
                                             </td>
                                             <td className="px-3 py-2 text-xs text-red-400">
-                                                {filaExcluida.razon === 'sin_fecha' ? '❌ Sin fecha válida' : '⚠️ Fecha fuera de rango'}
+                                                {filaExcluida.razon === 'sin_fecha' ? (
+                                                    <span className="flex items-center gap-1">
+                                                        <X className="h-3 w-3" />
+                                                        Sin fecha válida
+                                                    </span>
+                                                ) : (
+                                                    <span className="flex items-center gap-1">
+                                                        <AlertTriangle className="h-3 w-3" />
+                                                        Fecha fuera de rango
+                                                    </span>
+                                                )}
                                             </td>
                                             {excelData.headers.map((header, colIdx) => (
                                                 <td key={colIdx} className="px-3 py-2 text-xs text-gray-300">

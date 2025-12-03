@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { ExcelRow, ExcelData } from '@/lib/excel-reader'
 import { InlineEditCell } from './InlineEditCell'
 import { ExpandableSection } from './ExpandableSection'
-import { CheckCircle2, AlertCircle, Trash2, Clock, UserX, Database } from 'lucide-react'
+import { CheckCircle2, AlertCircle, Trash2, Clock, UserX, FileText, AlertTriangle } from 'lucide-react'
 import { esParticular, tieneHorario, obtenerIndicesDuplicados, esResidenteHorarioFormativo } from '@/lib/utils'
 import { supabase } from '@/lib/supabase/client'
 import { Medico, ValorConsultaObraSocial, ConfiguracionAdicional } from '@/lib/types'
@@ -469,10 +469,19 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
 
       {/* Sección expandible: Registros sin obra social */}
       <ExpandableSection
-        title={`⚠️ ${cantidadParticulares} registro${cantidadParticulares > 1 ? 's' : ''} sin obra social detectado${cantidadParticulares > 1 ? 's' : ''}`}
+        title={
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-1 bg-yellow-500/20 text-yellow-400 rounded-md text-xs font-semibold uppercase tracking-wide border border-yellow-500/30">
+              Advertencia
+            </span>
+            <span className="font-semibold">
+              {cantidadParticulares} {cantidadParticulares > 1 ? 'registros' : 'registro'} sin obra social detectado{cantidadParticulares > 1 ? 's' : ''}
+            </span>
+          </div>
+        }
         count={cantidadParticulares}
         description='Estos registros deben ser revisados. Si son pacientes particulares, edite la columna "Cliente" y agregue: "042 - PARTICULARES"'
-        icon={<AlertCircle className="h-6 w-6 flex-shrink-0" />}
+        icon={<AlertTriangle className="h-6 w-6 flex-shrink-0" />}
         bgColor="rgba(251, 191, 36, 0.15)"
         borderColor="rgba(251, 191, 36, 0.5)"
         textColor="#fbbf24"
@@ -490,7 +499,16 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
 
       {/* Sección expandible: Registros sin horario */}
       <ExpandableSection
-        title={`⚠️ ${cantidadSinHorario} registro${cantidadSinHorario > 1 ? 's' : ''} sin horario de inicio detectado${cantidadSinHorario > 1 ? 's' : ''}`}
+        title={
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-1 bg-red-500/20 text-red-400 rounded-md text-xs font-semibold uppercase tracking-wide border border-red-500/30">
+              Crítico
+            </span>
+            <span className="font-semibold">
+              {cantidadSinHorario} {cantidadSinHorario > 1 ? 'registros' : 'registro'} sin horario de inicio detectado{cantidadSinHorario > 1 ? 's' : ''}
+            </span>
+          </div>
+        }
         count={cantidadSinHorario}
         description="Estos registros indican que el paciente no se atendió. Deben ser eliminados."
         icon={<Clock className="h-6 w-6 flex-shrink-0" />}
@@ -511,7 +529,16 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
 
       {/* Sección expandible: Registros duplicados */}
       <ExpandableSection
-        title={`⚠️ ${cantidadDuplicados} registro${cantidadDuplicados > 1 ? 's' : ''} duplicado${cantidadDuplicados > 1 ? 's' : ''} detectado${cantidadDuplicados > 1 ? 's' : ''}`}
+        title={
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-1 bg-purple-500/20 text-purple-400 rounded-md text-xs font-semibold uppercase tracking-wide border border-purple-500/30">
+              Duplicado
+            </span>
+            <span className="font-semibold">
+              {cantidadDuplicados} {cantidadDuplicados > 1 ? 'registros' : 'registro'} duplicado{cantidadDuplicados > 1 ? 's' : ''} detectado{cantidadDuplicados > 1 ? 's' : ''}
+            </span>
+          </div>
+        }
         count={cantidadDuplicados}
         description="Se detectaron filas completamente iguales (misma fecha, misma hora, mismo todo). Revise y elimine los duplicados si es necesario."
         icon={<AlertCircle className="h-6 w-6 flex-shrink-0" />}
@@ -532,7 +559,16 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
 
       {/* Sección expandible: Residentes en horario formativo */}
       <ExpandableSection
-        title={`ℹ️ ${cantidadResidenteHorarioFormativo} consulta${cantidadResidenteHorarioFormativo > 1 ? 's' : ''} de residente${cantidadResidenteHorarioFormativo > 1 ? 's' : ''} en horario formativo detectada${cantidadResidenteHorarioFormativo > 1 ? 's' : ''}`}
+        title={
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-1 bg-blue-500/20 text-blue-400 rounded-md text-xs font-semibold uppercase tracking-wide border border-blue-500/30">
+              Informativo
+            </span>
+            <span className="font-semibold">
+              {cantidadResidenteHorarioFormativo} {cantidadResidenteHorarioFormativo > 1 ? 'consultas' : 'consulta'} de {cantidadResidenteHorarioFormativo > 1 ? 'residentes' : 'residente'} en horario formativo detectada{cantidadResidenteHorarioFormativo > 1 ? 's' : ''}
+            </span>
+          </div>
+        }
         count={cantidadResidenteHorarioFormativo}
         description="Estas consultas son de residentes realizadas entre lunes a sábado de 07:00 a 15:00. NO se deben pagar según las reglas del sistema."
         icon={<UserX className="h-6 w-6 flex-shrink-0" />}
@@ -553,10 +589,19 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
 
       {/* 5to recuadro: Detalle completo */}
       <ExpandableSection
-        title={`📊 Ver detalle completo (${rows.length} registros)`}
+        title={
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-1 bg-green-500/20 text-green-400 rounded-md text-xs font-semibold uppercase tracking-wide border border-green-500/30">
+              Completo
+            </span>
+            <span className="font-semibold">
+              Ver detalle completo ({rows.length} {rows.length > 1 ? 'registros' : 'registro'})
+            </span>
+          </div>
+        }
         count={rows.length}
         description="Muestra todos los registros del Excel para revisión completa con colores según reglas."
-        icon={<Database className="h-6 w-6 flex-shrink-0" />}
+        icon={<FileText className="h-6 w-6 flex-shrink-0" />}
         bgColor="rgba(34, 197, 94, 0.15)"
         borderColor="rgba(34, 197, 94, 0.5)"
         textColor="#22c55e"
