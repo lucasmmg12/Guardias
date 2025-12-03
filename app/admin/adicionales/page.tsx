@@ -143,6 +143,8 @@ export default function AdicionalesPage() {
       setShowFormModal(false)
     } catch (error) {
       console.error('Error agregando adicional:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
+      showNotification('error', `Error al agregar adicional: ${errorMessage}`, 'Error')
       showNotification('error', 'Error al agregar adicional: ' + (error instanceof Error ? error.message : 'Error desconocido'), 'Error')
     } finally {
       setLoading(false)

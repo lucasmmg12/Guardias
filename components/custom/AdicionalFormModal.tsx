@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { X } from 'lucide-react'
+import { supabase } from '@/lib/supabase/client'
 
 const ESPECIALIDADES = [
   'Pediatría',
@@ -31,6 +32,42 @@ export function AdicionalFormModal({ isOpen, onClose, onSave }: AdicionalFormMod
   const [porcentaje, setPorcentaje] = useState('')
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [obrasSociales, setObrasSociales] = useState<string[]>([])
+  const [loadingObras, setLoadingObras] = useState(false)
+
+  // Cargar obras sociales disponibles desde la base de datos
+  useEffect(() => {
+    const cargarObrasSociales = async () => {
+      try {
+        setLoadingObras(true)
+        const { data, error } = await supabase
+          .from('valores_consultas_obra_social')
+          .select('obra_social')
+          .order('obra_social', { ascending: true })
+
+        if (error) throw error
+
+        // Obtener obras sociales únicas y ordenadas
+        const obrasUnicas = Array.from(
+          new Set((data || []).map((v: any) => v.obra_social).filter(Boolean))
+        ).sort() as string[]
+        
+        setObrasSociales(obrasUnicas)
+      } catch (error) {
+        console.error('Error cargando obras sociales:', error)
+        setErrors(prev => ({
+          ...prev,
+          obraSocial: 'Error al cargar obras sociales'
+        }))
+      } finally {
+        setLoadingObras(false)
+      }
+    }
+
+    if (isOpen) {
+      cargarObrasSociales()
+    }
+  }, [isOpen])
 
   useEffect(() => {
     if (isOpen) {
@@ -76,6 +113,7 @@ export function AdicionalFormModal({ isOpen, onClose, onSave }: AdicionalFormMod
     }
 
     setLoading(true)
+    setErrors({}) // Limpiar errores previos
     try {
       await onSave({
         obra_social: obraSocial.trim(),
@@ -86,6 +124,10 @@ export function AdicionalFormModal({ isOpen, onClose, onSave }: AdicionalFormMod
       onClose()
     } catch (error) {
       console.error('Error guardando adicional:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
+      setErrors({
+        general: `Error al guardar: ${errorMessage}`
+      })
     } finally {
       setLoading(false)
     }
@@ -121,18 +163,34 @@ export function AdicionalFormModal({ isOpen, onClose, onSave }: AdicionalFormMod
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {errors.general && (
+            <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-3">
+              <p className="text-red-400 text-sm">{errors.general}</p>
+            </div>
+          )}
           <div>
             <label className="block text-sm text-gray-400 mb-2">
               Obra Social <span className="text-red-400">*</span>
             </label>
-            <Input
-              type="text"
-              value={obraSocial}
-              onChange={(e) => setObraSocial(e.target.value)}
-              placeholder="Ej: OSDE"
-              className="bg-gray-800/50 border-gray-600 text-white"
-              disabled={loading}
-            />
+            {loadingObras ? (
+              <div className="bg-gray-800/50 border border-gray-600 rounded-lg px-4 py-2 text-gray-500">
+                Cargando obras sociales...
+              </div>
+            ) : (
+              <select
+                value={obraSocial}
+                onChange={(e) => setObraSocial(e.target.value)}
+                className="w-full bg-gray-800/50 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={loading || loadingObras}
+              >
+                <option value="">Seleccione una obra social</option>
+                {obrasSociales.map((obra) => (
+                  <option key={obra} value={obra} className="bg-gray-800">
+                    {obra}
+                  </option>
+                ))}
+              </select>
+            )}
             {errors.obraSocial && (
               <p className="text-red-400 text-xs mt-1">{errors.obraSocial}</p>
             )}

@@ -182,95 +182,108 @@ export function ExpandableSection({
     return valor
   }, [data.headers, valoresConsultas])
 
-  // Memoizar cálculos de importe y adicional para todas las filas
-  // Optimizado: usar hash de las filas para evitar recálculos innecesarios
-  const filasHash = useMemo(() => {
-    // Crear un hash simple basado en la longitud y algunos campos clave
-    return rows.length > 0 
-      ? `${rows.length}-${rows[0]?.[data.headers[0]] || ''}-${rows[rows.length - 1]?.[data.headers[0]] || ''}`
-      : '0'
-  }, [rows.length, data.headers])
-
+  // Memoizar cálculos de importe y adicional solo para filas visibles (optimización crítica)
+  // Solo calcular cuando realmente se necesita, no para todas las filas
   const valoresCalculados = useMemo(() => {
     const mapa = new Map<number, { adicional: number; importe: number }>()
     
     // Si no hay filas, retornar mapa vacío
     if (rows.length === 0) return mapa
     
-    // Calcular valores solo cuando cambian las dependencias críticas
-    rows.forEach((row, index) => {
+    // Solo calcular para las primeras 200 filas (las que se mostrarán)
+    // Esto reduce significativamente el tiempo de cálculo
+    const filasACalcular = rows.slice(0, 200)
+    filasACalcular.forEach((row, index) => {
       const adicional = obtenerAdicional(row)
       const importe = obtenerImporte(row)
       mapa.set(index, { adicional, importe })
     })
     return mapa
   }, [
-    filasHash,
+    rows.length,
     // Usar tamaño de los mapas como dependencia en lugar de los mapas completos
     valoresConsultas.size, 
     adicionales.size,
     // Incluir una referencia estable a las funciones
     obtenerAdicional,
-    obtenerImporte,
-    data.headers
+    obtenerImporte
   ])
 
-  // Filtrar filas basándose en los filtros activos
+  // Pre-compilar regex para filtros (optimización crítica)
+  const compiledFilters = useMemo(() => {
+    const compiled = new Map<string, RegExp>()
+    filters.forEach((filterValue, header) => {
+      if (filterValue && filterValue.trim() !== '') {
+        const filterStr = filterValue.toLowerCase().trim()
+        const escapedFilter = filterStr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        compiled.set(header, new RegExp(`(^|\\s)${escapedFilter}`, 'i'))
+      }
+    })
+    return compiled
+  }, [filters])
+
+  // Crear mapa de índices una sola vez para evitar múltiples findIndex
+  const rowIndexMap = useMemo(() => {
+    const map = new Map<any, number>()
+    data.rows.forEach((row, index) => {
+      const filaExcel = (row as any).__fila_excel
+      if (filaExcel !== undefined && filaExcel !== null) {
+        map.set(filaExcel, index)
+      }
+      // También mapear por referencia del objeto
+      map.set(row, index)
+    })
+    return map
+  }, [data.rows])
+
+  // Filtrar filas basándose en los filtros activos (optimizado)
   const filteredRows = useMemo(() => {
     if (filters.size === 0) return rows
 
     return rows.filter((row, index) => {
-      // Filtrar por headers normales
+      // Filtrar por headers normales usando regex pre-compilado
       const headersMatch = data.headers.every((header) => {
-        const filterValue = filters.get(header)
-        if (!filterValue || filterValue.trim() === '') return true
+        const regex = compiledFilters.get(header)
+        if (!regex) return true // No hay filtro para esta columna
 
         const cellValue = row[header]
         if (cellValue === null || cellValue === undefined) return false
 
-        // Búsqueda case-insensitive mejorada con word boundaries
-        // Esto evita que "hernandez" coincida con "heredia"
         const cellStr = String(cellValue).toLowerCase().trim()
-        const filterStr = filterValue.toLowerCase().trim()
-        
-        // Escapar caracteres especiales de regex
-        const escapedFilter = filterStr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-        // Buscar como palabra completa (word boundary) o al inicio de una palabra
-        const wordBoundaryRegex = new RegExp(`(^|\\s)${escapedFilter}`, 'i')
-        return wordBoundaryRegex.test(cellStr)
+        return regex.test(cellStr)
       })
 
       if (!headersMatch) return false
 
-      // Filtrar por columna Adicional si hay filtro (usar valores calculados)
+      // Filtrar por columna Adicional si hay filtro
       const adicionalFilter = filters.get('Adicional')
       if (adicionalFilter && adicionalFilter.trim() !== '') {
         const valores = valoresCalculados.get(index)
         const adicional = valores?.adicional ?? obtenerAdicional(row)
-        const adicionalStr = adicional.toString()
+        const adicionalStr = adicional.toString().toLowerCase()
         const filterStr = adicionalFilter.toLowerCase().trim()
         
-        if (!adicionalStr.toLowerCase().includes(filterStr)) {
+        if (!adicionalStr.includes(filterStr)) {
           return false
         }
       }
 
-      // Filtrar por columna Importe si hay filtro (usar valores calculados)
+      // Filtrar por columna Importe si hay filtro
       const importeFilter = filters.get('Importe')
       if (importeFilter && importeFilter.trim() !== '') {
         const valores = valoresCalculados.get(index)
         const importe = valores?.importe ?? obtenerImporte(row)
-        const importeStr = importe.toString()
+        const importeStr = importe.toString().toLowerCase()
         const filterStr = importeFilter.toLowerCase().trim()
         
-        if (!importeStr.toLowerCase().includes(filterStr)) {
+        if (!importeStr.includes(filterStr)) {
           return false
         }
       }
 
       return true
     })
-  }, [rows.length, filters.size, data.headers.length, valoresCalculados.size, obtenerAdicional, obtenerImporte])
+  }, [rows, filters, compiledFilters, data.headers, valoresCalculados, obtenerAdicional, obtenerImporte])
 
   // Actualizar count basado en filas filtradas
   const displayCount = filteredRows.length
@@ -294,7 +307,7 @@ export function ExpandableSection({
       clearTimeout(existingTimer)
     }
 
-    // Crear nuevo timer con debounce de 500ms (aumentado para mejor rendimiento)
+    // Crear nuevo timer con debounce de 800ms (aumentado para reducir re-renders)
     const timer = setTimeout(() => {
       setFilters(prev => {
         const newMap = new Map(prev)
@@ -672,40 +685,24 @@ export function ExpandableSection({
                 </tr>
               </thead>
               <tbody style={{ paddingTop: tbodyPaddingTop }}>
-                {/* Limitar renderizado a 500 filas para mejorar rendimiento */}
-                {filteredRows.slice(0, 500).map((row, filteredIndex) => {
-                  // Intentar obtener fila_excel primero para búsqueda más confiable
+                {/* Limitar renderizado a 200 filas para mejorar rendimiento */}
+                {filteredRows.slice(0, 200).map((row, filteredIndex) => {
+                  // Usar mapa de índices para búsqueda O(1) en lugar de O(n)
                   const filaExcel = (row as any).__fila_excel
                   let originalRowIndex = -1
                   
                   if (filaExcel !== undefined && filaExcel !== null) {
-                    // Buscar por fila_excel que es más confiable
-                    originalRowIndex = data.rows.findIndex(r => (r as any).__fila_excel === filaExcel)
+                    originalRowIndex = rowIndexMap.get(filaExcel) ?? -1
                   }
                   
-                  // Si no se encontró por fila_excel, usar comparación de referencia
+                  // Si no se encontró por fila_excel, usar referencia del objeto
                   if (originalRowIndex === -1) {
-                    originalRowIndex = data.rows.findIndex(r => r === row)
+                    originalRowIndex = rowIndexMap.get(row) ?? -1
                   }
                   
-                  // Si aún no se encontró, usar comparación por contenido (fallback)
+                  // Fallback: usar el índice del filteredRows si no se encuentra
                   if (originalRowIndex === -1) {
-                    // Comparar por múltiples campos clave para encontrar la fila correcta
-                    const keyFields = data.headers.filter(h => {
-                      const hLower = h.toLowerCase()
-                      return hLower.includes('fecha') || hLower.includes('hora') || 
-                             hLower.includes('paciente') || hLower.includes('responsable')
-                    })
-                    
-                    if (keyFields.length > 0) {
-                      originalRowIndex = data.rows.findIndex(r => {
-                        return keyFields.every(field => {
-                          const rVal = r[field]
-                          const rowVal = row[field]
-                          return rVal === rowVal || (rVal == null && rowVal == null)
-                        })
-                      })
-                    }
+                    originalRowIndex = filteredIndex
                   }
                   
                   // Usar un key más estable para evitar problemas de renderizado
