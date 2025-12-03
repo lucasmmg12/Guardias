@@ -513,49 +513,57 @@ export async function procesarExcelPediatria(
       const row = excelData.rows[i]
       
       try {
-        // Extraer datos de la fila
+        // Extraer datos de la fila - Priorizar nombres exactos de las columnas
         const fechaStr = buscarValor(row, [
+          'Fecha Visita', // Nombre exacto de la columna (prioridad máxima)
+          'Fecha visita', 'fecha visita', 'FECHA VISITA',
           'Fecha', 'fecha', 'FECHA', 
-          'Fecha visita', 'Fecha Visita', 'Fecha de visita',
-          'Fecha de Visita', 'Fecha De Visita',
-          'Fecha Visit', 'Fecha visit', 'Fecha Visit', 'fecha visit',
+          'Fecha de visita', 'Fecha de Visita',
+          'Fecha Visit', 'Fecha visit', 'fecha visit',
           'Fecha de atención', 'Fecha Atención', 'Fecha de Atención',
           'Fecha de la consulta', 'Fecha Consulta', 'Fecha de Consulta',
-          'FECHA VISITA', 'FECHA DE VISITA', 'FECHA VISIT'
+          'FECHA DE VISITA', 'FECHA VISIT'
         ])
         const hora = buscarValor(row, [
+          'Hora inicio visita', // Nombre exacto de la columna (prioridad máxima)
+          'Hora inicio', 'Hora Inicio', 'hora inicio', 'HORA INICIO',
+          'Hora de inicio', 'Hora de Inicio',
           'Hora', 'hora', 'HORA', 
           'Horario', 'horario', 'HORARIO',
-          'Hora inicio', 'Hora Inicio', 'Hora de inicio',
-          'Hora de Inicio', 'HORA INICIO',
-          'ora inicio', 'ora Inicio'
+          'ora inicio', 'ora Inicio', 'ora inicio visita'
         ])
         const paciente = buscarValor(row, [
-          'Paciente', 'paciente', 'PACIENTE', 
+          'Paciente', // Nombre exacto de la columna (prioridad máxima)
+          'paciente', 'PACIENTE', 
           'Nombre paciente', 'Nombre Paciente', 'Nombre del paciente',
           'NOMBRE PACIENTE'
         ])
         const obraSocial = buscarValor(row, [
+          'Cliente', // Nombre exacto de la columna (prioridad máxima)
+          'cliente', 'CLIENTE',
           'Obra Social', 'obra social', 'Obra social', 
-          'ObraSocial', 'Cliente', 'Obra', 
+          'ObraSocial', 'Obra', 
           'Obra Social / Cliente', 'Obra Social/Cliente',
-          'OBRA SOCIAL', 'CLIENTE'
+          'OBRA SOCIAL'
         ])
         const medicoNombre = buscarValor(row, [
-          'Responsable', 'responsable', 'RESPONSABLE',
+          'Responsable', // Nombre exacto de la columna (prioridad máxima)
+          'responsable', 'RESPONSABLE',
           'Médico', 'medico', 'MEDICO', 'Medico',
           'Profesional', 'profesional', 'PROFESIONAL',
           'Médico responsable', 'Médico Responsable', 'Medico Responsable',
           'MÉDICO RESPONSABLE'
         ])
         const grupoAgenda = buscarValor(row, [
-          'Grupo agenda', 'Grupo Agenda', 'grupo agenda',
-          'GRUPO AGENDA', 'Grupo', 'grupo'
+          'Grupo agenda', // Nombre exacto de la columna (prioridad máxima)
+          'Grupo Agenda', 'grupo agenda', 'GRUPO AGENDA',
+          'Grupo', 'grupo'
         ])
         const tipoConsulta = buscarValor(row, [
-          'Tipo visita', 'Tipo Visita', 'tipo visita',
-          'Tipo de Consulta', 'Tipo consulta', 'TIPO VISITA',
-          'Tipo visita', 'Tipo de visita'
+          'Tipo visita', // Nombre exacto de la columna (prioridad máxima)
+          'Tipo Visita', 'tipo visita', 'TIPO VISITA',
+          'Tipo de Consulta', 'Tipo consulta',
+          'Tipo de visita'
         ])
         
         // FILTRO 1: Verificar que sea PEDIATRÍA (solo si el campo existe)
