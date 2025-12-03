@@ -159,6 +159,8 @@ export interface ConfiguracionAdicional {
   anio: number
   aplica_adicional: boolean
   monto_adicional: number | null
+  monto_base_adicional: number | null
+  porcentaje_pago_medico: number | null
   created_at: string
   updated_at: string
 }
@@ -171,6 +173,8 @@ export interface ConfiguracionAdicionalInsert {
   anio: number
   aplica_adicional?: boolean
   monto_adicional?: number | null
+  monto_base_adicional?: number | null
+  porcentaje_pago_medico?: number | null
   created_at?: string
   updated_at?: string
 }
@@ -183,6 +187,8 @@ export interface ConfiguracionAdicionalUpdate {
   anio?: number
   aplica_adicional?: boolean
   monto_adicional?: number | null
+  monto_base_adicional?: number | null
+  porcentaje_pago_medico?: number | null
   created_at?: string
   updated_at?: string
 }
