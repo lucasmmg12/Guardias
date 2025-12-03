@@ -477,28 +477,40 @@ export default function AdicionalesPage() {
                           <td className="px-4 py-2">
                             <InlineEditCell
                               value={adicional.monto_base_adicional || 0}
-                              onSave={(newValue) => handleCellUpdate(adicional.id, 'monto_base_adicional', newValue)}
+                              onSave={async (newValue) => {
+                                const numValue = typeof newValue === 'string' ? parseFloat(newValue) : newValue
+                                await handleCellUpdate(adicional.id, 'monto_base_adicional', numValue)
+                              }}
                               type="number"
-                              format="currency"
                             />
                           </td>
                           <td className="px-4 py-2">
                             <InlineEditCell
                               value={adicional.porcentaje_pago_medico || 0}
-                              onSave={(newValue) => handleCellUpdate(adicional.id, 'porcentaje_pago_medico', newValue)}
+                              onSave={async (newValue) => {
+                                const numValue = typeof newValue === 'string' ? parseFloat(newValue) : newValue
+                                await handleCellUpdate(adicional.id, 'porcentaje_pago_medico', numValue)
+                              }}
                               type="number"
-                              suffix="%"
                             />
                           </td>
                           <td className="px-4 py-2 text-green-400 font-semibold">
                             ${montoMedico.toFixed(2)}
                           </td>
                           <td className="px-4 py-2">
-                            <InlineEditCell
-                              value={adicional.aplica_adicional}
-                              onSave={(newValue) => handleCellUpdate(adicional.id, 'aplica_adicional', newValue)}
-                              type="boolean"
-                            />
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={adicional.aplica_adicional}
+                                onChange={async (e) => {
+                                  await handleCellUpdate(adicional.id, 'aplica_adicional', e.target.checked)
+                                }}
+                                className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-green-500 focus:ring-green-500"
+                              />
+                              <span className="text-sm text-gray-300">
+                                {adicional.aplica_adicional ? 'Sí' : 'No'}
+                              </span>
+                            </label>
                           </td>
                           <td className="px-4 py-2">
                             <Button
