@@ -174,6 +174,10 @@ export default function ResumenesPediatriaPage() {
           filaCambios.set('medico_nombre', cambio.valor)
         } else if (cambio.columna.toLowerCase().includes('paciente')) {
           filaCambios.set('paciente', cambio.valor)
+        } else if (cambio.columna.toLowerCase() === 'importe') {
+          // Guardar el importe en monto_facturado
+          const numValue = typeof cambio.valor === 'string' ? parseFloat(cambio.valor) || 0 : cambio.valor
+          filaCambios.set('monto_facturado', numValue)
         }
       })
 

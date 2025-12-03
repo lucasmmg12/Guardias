@@ -31,6 +31,8 @@ interface ExpandableSectionProps {
   esSinHorarioRow?: (rowIndex: number) => boolean
   esDuplicadoRow?: (rowIndex: number) => boolean
   esResidenteFormativoRow?: (rowIndex: number) => boolean
+  // Valores de consultas para calcular importe
+  valoresConsultas?: Map<string, number>
 }
 
 export function ExpandableSection({
@@ -54,7 +56,8 @@ export function ExpandableSection({
   esParticularRow,
   esSinHorarioRow,
   esDuplicadoRow,
-  esResidenteFormativoRow
+  esResidenteFormativoRow,
+  valoresConsultas = new Map()
 }: ExpandableSectionProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set())
@@ -98,8 +101,50 @@ export function ExpandableSection({
 
   const isEditable = (header: string) => {
     const headerLower = header.toLowerCase().trim()
-    return headerLower.includes('cliente') || headerLower.includes('obra')
+    return headerLower.includes('cliente') || headerLower.includes('obra') || headerLower === 'importe'
   }
+
+  // Función para obtener el valor de importe basado en la obra social
+  const obtenerImporte = useCallback((row: ExcelRow): number => {
+    // Si el importe ya está guardado en el row (desde BD), usarlo
+    if (row['Importe'] !== null && row['Importe'] !== undefined) {
+      const importeValue = row['Importe']
+      if (typeof importeValue === 'number') {
+        return importeValue
+      }
+      if (typeof importeValue === 'string') {
+        const parsed = parseFloat(importeValue)
+        if (!isNaN(parsed)) {
+          return parsed
+        }
+      }
+    }
+    
+    // Si no está guardado, calcular desde la obra social
+    const clienteHeader = data.headers.find(h => {
+      const hLower = h.toLowerCase().trim()
+      return hLower === 'cliente' || hLower.includes('obra social') || hLower.includes('obra')
+    })
+    
+    if (!clienteHeader) return 0
+    
+    const obraSocial = row[clienteHeader]
+    if (!obraSocial || typeof obraSocial !== 'string') return 0
+    
+    const obraSocialTrimmed = obraSocial.trim()
+    
+    // Buscar en el mapa de valores
+    let valor = valoresConsultas.get(obraSocialTrimmed) || 0
+    
+    // Si no se encontró, intentar con variaciones
+    if (valor === 0) {
+      if (obraSocialTrimmed === 'PARTICULARES' || obraSocialTrimmed === '042 - PARTICULARES') {
+        valor = valoresConsultas.get('PARTICULARES') || valoresConsultas.get('042 - PARTICULARES') || 0
+      }
+    }
+    
+    return valor
+  }, [data.headers, valoresConsultas])
 
   // Filtrar filas basándose en los filtros activos
   const filteredRows = useMemo(() => {
@@ -398,6 +443,26 @@ export function ExpandableSection({
                       </div>
                     </th>
                   ))}
+                  {/* Columna Importe */}
+                  <th
+                    className="px-2 py-2 text-left text-xs font-semibold text-gray-300 bg-white/5 whitespace-nowrap"
+                    style={{
+                      position: 'sticky',
+                      top: 0,
+                      zIndex: 10,
+                      minWidth: '120px',
+                      maxWidth: '200px',
+                    }}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span className="truncate">Importe</span>
+                      {allowEdit && (
+                        <span className="text-[10px] text-green-400 bg-green-400/20 px-1.5 py-0.5 rounded flex-shrink-0">
+                          Editable
+                        </span>
+                      )}
+                    </div>
+                  </th>
                 </tr>
                 
                 {/* Fila de filtros */}
@@ -447,6 +512,38 @@ export function ExpandableSection({
                       </div>
                     </td>
                   ))}
+                  {/* Filtro para columna Importe */}
+                  <td
+                    className="px-1 py-2"
+                    style={{
+                      position: 'sticky',
+                      top: filterTop,
+                      zIndex: 9,
+                      background: 'rgba(0, 0, 0, 0.9)',
+                    }}
+                  >
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={filterInputs.get('Importe') || ''}
+                        onChange={(e) => handleFilterChange('Importe', e.target.value)}
+                        placeholder="Filtrar..."
+                        className="w-full px-2 py-1.5 text-xs bg-gray-800/70 border border-gray-600 rounded text-white placeholder-gray-500 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      {filterInputs.get('Importe') && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleFilterChange('Importe', '')
+                          }}
+                          className="absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white z-10"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               </thead>
               <tbody style={{ paddingTop: tbodyPaddingTop }}>
@@ -585,9 +682,92 @@ export function ExpandableSection({
                           </td>
                         )
                       })}
+                      {/* Columna Importe */}
+                      <td
+                        className="px-2 py-1.5 text-xs text-gray-300 text-right"
+                        style={{
+                          minWidth: '120px',
+                          maxWidth: '200px',
+                          position: 'relative',
+                          zIndex: 1,
+                        }}
+                      >
+                        {allowEdit && onCellUpdate ? (
+                          <InlineEditCell
+                            value={row['Importe'] ?? obtenerImporte(row)}
+                            type="number"
+                            onSave={async (newValue) => {
+                              const numValue = typeof newValue === 'string' ? parseFloat(newValue) || 0 : newValue
+                              await onCellUpdate(originalRowIndex, 'Importe', numValue)
+                            }}
+                            columnName="Importe"
+                          />
+                        ) : (
+                          <span className="truncate block text-right">
+                            {new Intl.NumberFormat('es-AR', {
+                              style: 'currency',
+                              currency: 'ARS',
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2
+                            }).format(row['Importe'] ?? obtenerImporte(row))}
+                          </span>
+                        )}
+                      </td>
                     </tr>
                   )
                 })}
+                {/* Fila de totales */}
+                {filteredRows.length > 0 && (
+                  <tr className="bg-gray-800/70 font-bold border-t-2 border-gray-600">
+                    {allowDelete && (
+                      <td
+                        className="px-2 py-2 text-center sticky left-0"
+                        style={{
+                          minWidth: '50px',
+                          maxWidth: '50px',
+                          background: 'rgba(0, 0, 0, 0.8)',
+                          zIndex: 8,
+                        }}
+                      ></td>
+                    )}
+                    {data.headers.map((header, colIndex) => {
+                      // Si es la última columna antes de Importe, mostrar "TOTAL"
+                      const isLastColumn = colIndex === data.headers.length - 1
+                      return (
+                        <td
+                          key={colIndex}
+                          className="px-2 py-2 text-xs text-green-400 font-semibold"
+                          style={{
+                            minWidth: '120px',
+                            maxWidth: '200px',
+                          }}
+                        >
+                          {isLastColumn ? 'TOTAL' : ''}
+                        </td>
+                      )
+                    })}
+                    {/* Total de Importe */}
+                    <td
+                      className="px-2 py-2 text-xs text-green-400 font-semibold text-right"
+                      style={{
+                        minWidth: '120px',
+                        maxWidth: '200px',
+                      }}
+                    >
+                      {new Intl.NumberFormat('es-AR', {
+                        style: 'currency',
+                        currency: 'ARS',
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                      }).format(
+                        filteredRows.reduce((sum, row) => {
+                          const importe = row['Importe'] ?? obtenerImporte(row)
+                          return sum + (typeof importe === 'number' ? importe : parseFloat(String(importe)) || 0)
+                        }, 0)
+                      )}
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

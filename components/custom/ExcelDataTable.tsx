@@ -7,7 +7,7 @@ import { ExpandableSection } from './ExpandableSection'
 import { CheckCircle2, AlertCircle, Trash2, Clock, UserX, Database } from 'lucide-react'
 import { esParticular, tieneHorario, obtenerIndicesDuplicados, esResidenteHorarioFormativo } from '@/lib/utils'
 import { supabase } from '@/lib/supabase/client'
-import { Medico } from '@/lib/types'
+import { Medico, ValorConsultaObraSocial } from '@/lib/types'
 
 interface ExcelDataTableProps {
   data: ExcelData
@@ -24,6 +24,8 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
   const [saving, setSaving] = useState<{ [key: string]: boolean }>({})
   const [medicos, setMedicos] = useState<Medico[]>([])
   const [medicosLoading, setMedicosLoading] = useState(false)
+  const [valoresConsultas, setValoresConsultas] = useState<Map<string, number>>(new Map())
+  const [valoresLoading, setValoresLoading] = useState(false)
 
   // Sincronizar rows cuando data cambia - MEJORADO para detectar cambios en el contenido
   useEffect(() => {
@@ -64,6 +66,59 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
 
     loadMedicos()
   }, [especialidad])
+
+  // Cargar valores de consultas cuando cambia mes, año o especialidad
+  useEffect(() => {
+    if (!mes || !anio || !especialidad) {
+      setValoresConsultas(new Map())
+      setValoresLoading(false)
+      return
+    }
+
+    async function loadValoresConsultas() {
+      try {
+        setValoresLoading(true)
+        const tipoConsulta = especialidad === 'Pediatría' 
+          ? 'CONSULTA PEDIATRICA Y NEONATAL' 
+          : 'CONSULTA GINECOLOGICA'
+
+        const { data: valoresData, error } = await supabase
+          .from('valores_consultas_obra_social')
+          .select('*')
+          .eq('tipo_consulta', tipoConsulta)
+          .eq('mes', mes)
+          .eq('anio', anio) as { data: ValorConsultaObraSocial[] | null; error: any }
+
+        if (error) throw error
+
+        const valoresMap = new Map<string, number>()
+        if (valoresData) {
+          valoresData.forEach(v => {
+            valoresMap.set(v.obra_social, v.valor)
+          })
+
+          // Manejar PARTICULARES y 042 - PARTICULARES
+          const valorParticular = valoresMap.get('PARTICULARES')
+          const valorParticular042 = valoresMap.get('042 - PARTICULARES')
+          
+          if (valorParticular && !valoresMap.has('042 - PARTICULARES')) {
+            valoresMap.set('042 - PARTICULARES', valorParticular)
+          }
+          if (valorParticular042 && !valoresMap.has('PARTICULARES')) {
+            valoresMap.set('PARTICULARES', valorParticular042)
+          }
+        }
+
+        setValoresConsultas(valoresMap)
+      } catch (error) {
+        console.error('Error loading valores consultas:', error)
+      } finally {
+        setValoresLoading(false)
+      }
+    }
+
+    loadValoresConsultas()
+  }, [mes, anio, especialidad])
 
   // Crear mapa optimizado de médicos por nombre (búsqueda rápida)
   const mapaMedicos = useMemo(() => {
@@ -397,6 +452,7 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
         mes={mes}
         anio={anio}
         sectionKey="sin_horario"
+        valoresConsultas={valoresConsultas}
       />
 
       {/* Sección expandible: Registros duplicados */}
@@ -416,6 +472,7 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
         mes={mes}
         anio={anio}
         sectionKey="duplicados"
+        valoresConsultas={valoresConsultas}
       />
 
       {/* Sección expandible: Residentes en horario formativo */}
@@ -435,6 +492,7 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
         mes={mes}
         anio={anio}
         sectionKey="residente_formativo"
+        valoresConsultas={valoresConsultas}
       />
 
       {/* 5to recuadro: Detalle completo */}
@@ -459,6 +517,7 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
         esSinHorarioRow={(rowIndex) => filasSinHorario.has(rowIndex)}
         esDuplicadoRow={(rowIndex) => filasDuplicadas.has(rowIndex)}
         esResidenteFormativoRow={(rowIndex) => filasResidenteHorarioFormativo.has(rowIndex)}
+        valoresConsultas={valoresConsultas}
       />
       <div className="text-sm text-gray-400">
         Total de filas: <span className="text-green-400 font-semibold">{rows.length}</span>

@@ -34,6 +34,11 @@ export function reconstruirExcelDataDesdeDetalles(
     'Cliente', // Usar "Cliente" como default para que funcione la detección en pediatría
     'Responsable'
   ]
+  
+  // Agregar "Importe" a los headers si no está presente
+  if (!headers.includes('Importe')) {
+    headers.push('Importe')
+  }
 
   // Reconstruir filas desde los detalles
   const rows: ExcelRow[] = detallesOrdenados.map(detalle => {
@@ -72,6 +77,9 @@ export function reconstruirExcelDataDesdeDetalles(
         row[header] = detalle.obra_social || null
       } else if (headerLower.includes('responsable') || headerLower.includes('medico')) {
         row[header] = detalle.medico_nombre || null
+      } else if (headerLower === 'importe') {
+        // Usar monto_facturado si existe, sino null (se calculará desde la obra social)
+        row[header] = detalle.monto_facturado ?? null
       } else {
         // Para otros headers, intentar mapear si existe
         row[header] = null
@@ -134,7 +142,7 @@ export async function cargarExcelDataDesdeBD(
     while (hasMore) {
       const { data: detalles, error } = await supabase
         .from('detalle_guardia')
-        .select('id, fecha, hora, paciente, obra_social, medico_nombre, fila_excel')
+        .select('id, fecha, hora, paciente, obra_social, medico_nombre, monto_facturado, fila_excel')
         .eq('liquidacion_id', liquidacionId)
         .order('fila_excel', { ascending: true, nullsFirst: false })
         .range(from, from + pageSize - 1)
