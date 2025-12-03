@@ -10,6 +10,7 @@ import { ArrowLeft, FileDown, Download, History, Eye, FileSpreadsheet } from 'lu
 import { ExcelDataTable } from '@/components/custom/ExcelDataTable'
 import { cargarExcelDataDesdeBD } from '@/lib/excel-reconstructor'
 import { ExcelData } from '@/lib/excel-reader'
+import { exportResumenPrestadorToExcel } from '@/lib/excel-exporter'
 
 const MESES = [
   { value: 1, label: 'Enero' },
@@ -331,6 +332,20 @@ export default function ResumenesPediatriaPage() {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     }).format(valor)
+  }
+
+  function handleExportarExcelPrestadores() {
+    try {
+      exportResumenPrestadorToExcel({
+        resumenes: resumenesPorPrestador,
+        mes,
+        anio,
+        especialidad: 'Pediatría'
+      })
+    } catch (error) {
+      console.error('Error exportando Excel:', error)
+      alert('Error al exportar el Excel. Por favor, intente nuevamente.')
+    }
   }
 
   // Obtener lista de médicos únicos
@@ -774,7 +789,16 @@ export default function ResumenesPediatriaPage() {
                     border: '1px solid rgba(34, 197, 94, 0.3)',
                   }}
                 >
-                  <h2 className="text-2xl font-bold text-green-400 mb-4">Resumen por Prestador</h2>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-2xl font-bold text-green-400">Resumen por Prestador</h2>
+                    <Button
+                      onClick={handleExportarExcelPrestadores}
+                      className="bg-green-600 hover:bg-green-500 text-white"
+                    >
+                      <FileDown className="h-4 w-4 mr-2" />
+                      Descargar Excel
+                    </Button>
+                  </div>
 
                   <div className="overflow-x-auto">
                     <table className="w-full">

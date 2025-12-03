@@ -321,6 +321,10 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
   }, [rows, filasResidenteHorarioFormativo])
 
   // Funciones para eliminar todos de cada sección
+  const handleDeleteAllParticulares = useCallback(async () => {
+    await handleDeleteRows(filasParticulares)
+  }, [filasParticulares, handleDeleteRows])
+
   const handleDeleteAllSinHorario = useCallback(async () => {
     await handleDeleteRows(filasSinHorario)
   }, [filasSinHorario, handleDeleteRows])
@@ -367,7 +371,10 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
         rows={filasParticularesList}
         data={data}
         onCellUpdate={onCellUpdate}
+        onDeleteRow={handleDeleteRowLocal}
+        onDeleteAll={handleDeleteAllParticulares}
         allowEdit={true}
+        allowDelete={true}
         mes={mes}
         anio={anio}
         sectionKey="sin_obra_social"
