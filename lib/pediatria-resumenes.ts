@@ -49,10 +49,12 @@ export async function calcularResumenPorMedico(
   const liquidacionId = (liquidacion as any).id
 
   // Obtener todos los detalles de guardia de esta liquidación
+  // IMPORTANTE: Remover límite por defecto de Supabase (1000 registros)
   const { data: detalles } = await supabase
     .from('detalle_guardia')
     .select('*')
-    .eq('liquidacion_id', liquidacionId) as { data: DetalleGuardia[] | null }
+    .eq('liquidacion_id', liquidacionId)
+    .limit(Number.MAX_SAFE_INTEGER) as { data: DetalleGuardia[] | null }
 
   if (!detalles || detalles.length === 0) {
     return []
