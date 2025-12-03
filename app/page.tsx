@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Sparkles, Stethoscope, Baby, Upload, User, DollarSign, Hospital, BarChart3, Plus } from 'lucide-react'
+import { Sparkles, Stethoscope, Baby, Upload, User, DollarSign, Hospital, BarChart3, Plus, BookOpen } from 'lucide-react'
 
 export default function HomePage() {
     return (
@@ -115,6 +115,37 @@ export default function HomePage() {
                             </div>
                         </div>
                     </Link>
+                </div>
+
+                {/* Manual de Usuario */}
+                <div 
+                    className="relative rounded-2xl shadow-2xl overflow-hidden p-6 mt-8"
+                    style={{
+                        background: 'rgba(34, 197, 94, 0.15)',
+                        backdropFilter: 'blur(20px)',
+                        border: '2px solid rgba(34, 197, 94, 0.5)',
+                        boxShadow: '0 8px 32px 0 rgba(34, 197, 94, 0.3)',
+                    }}
+                >
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-full bg-green-500/30 flex items-center justify-center">
+                                <BookOpen className="h-6 w-6 text-green-400" />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-semibold text-green-400">Manual de Usuario</h3>
+                                <p className="text-sm text-gray-400">Aprende a usar el sistema paso a paso</p>
+                            </div>
+                        </div>
+                        <Link href="/manual">
+                            <button 
+                                className="px-6 py-3 bg-green-600 hover:bg-green-500 text-white rounded-lg font-semibold transition-all duration-300 hover:scale-105 flex items-center gap-2"
+                            >
+                                Abrir Manual
+                                <span>→</span>
+                            </button>
+                        </Link>
+                    </div>
                 </div>
 
                 {/* Acceso Rápido */}
