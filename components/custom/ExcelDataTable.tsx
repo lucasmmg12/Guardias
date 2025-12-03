@@ -139,11 +139,12 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
         setAdicionalesLoading(true)
         const mesValue = mes as number
         const anioValue = anio as number
+        const especialidadValue = especialidad as string
 
         const { data: adicionalesData, error } = await supabase
           .from('configuracion_adicionales')
           .select('*')
-          .eq('especialidad', especialidad)
+          .eq('especialidad', especialidadValue)
           .eq('mes', mesValue)
           .eq('anio', anioValue)
           .eq('aplica_adicional', true) as { data: ConfiguracionAdicional[] | null; error: any }
