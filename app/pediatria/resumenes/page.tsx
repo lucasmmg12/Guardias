@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { calcularResumenPorMedico, calcularResumenPorPrestador, ResumenPorMedico, ResumenPorPrestador } from '@/lib/pediatria-resumenes'
@@ -271,23 +271,31 @@ export default function ResumenesPediatriaPage() {
   async function cargarResumenes() {
     setLoading(true)
     try {
+      console.log(`[Pediatría Resúmenes] Cargando resúmenes para ${mes}/${anio}`)
+      
       // Calcular resumen por prestador (incluye todos los médicos)
       const resumenPrestadores = await calcularResumenPorPrestador(mes, anio)
+      console.log(`[Pediatría Resúmenes] Resúmenes por prestador: ${resumenPrestadores.length}`)
       setResumenesPorPrestador(resumenPrestadores)
 
       // Calcular resumen por médico (agrupar por médico)
       const resumenMedicos = await calcularResumenPorMedico(mes, anio)
+      console.log(`[Pediatría Resúmenes] Resúmenes por médico: ${resumenMedicos.length}`)
       
-      // Agrupar por médico
+      // Agrupar por médico - usar nombre normalizado si no hay ID para evitar agrupar médicos diferentes
       const resumenesPorMedicoMap = new Map<string, ResumenPorMedico[]>()
       resumenMedicos.forEach(resumen => {
-        const medicoId = resumen.medico_id || 'sin-id'
-        if (!resumenesPorMedicoMap.has(medicoId)) {
-          resumenesPorMedicoMap.set(medicoId, [])
+        // Usar ID si existe, sino usar nombre normalizado como clave única
+        const nombreNormalizado = resumen.medico_nombre.toLowerCase().trim().replace(/\s+/g, ' ')
+        const clave = resumen.medico_id || `nombre-${nombreNormalizado}`
+        
+        if (!resumenesPorMedicoMap.has(clave)) {
+          resumenesPorMedicoMap.set(clave, [])
         }
-        resumenesPorMedicoMap.get(medicoId)!.push(resumen)
+        resumenesPorMedicoMap.get(clave)!.push(resumen)
       })
       
+      console.log(`[Pediatría Resúmenes] Médicos únicos: ${resumenesPorMedicoMap.size}`)
       setResumenesPorMedico(resumenesPorMedicoMap)
     } catch (error) {
       console.error('Error cargando resúmenes:', error)
@@ -326,10 +334,14 @@ export default function ResumenesPediatriaPage() {
   }
 
   // Obtener lista de médicos únicos
-  const medicos = Array.from(resumenesPorMedico.keys()).map(medicoId => {
-    const resumenes = resumenesPorMedico.get(medicoId) || []
-    return resumenes[0]?.medico_nombre || 'Desconocido'
-  }).sort()
+  const medicos = useMemo(() => {
+    const medicosList = Array.from(resumenesPorMedico.keys()).map(medicoId => {
+      const resumenes = resumenesPorMedico.get(medicoId) || []
+      return resumenes[0]?.medico_nombre || 'Desconocido'
+    }).sort()
+    console.log(`[Pediatría Resúmenes] Lista de médicos para mostrar: ${medicosList.length}`, medicosList)
+    return medicosList
+  }, [resumenesPorMedico])
 
   return (
     <div className="min-h-screen relative p-8 pb-20 overflow-hidden">
@@ -746,71 +758,6 @@ export default function ResumenesPediatriaPage() {
             )}
           </div>
         ) : tabActiva === 'prestadores' ? (
-          <div 
-            className="p-6 rounded-xl overflow-x-auto"
-            style={{
-              background: 'rgba(255, 255, 255, 0.1)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(34, 197, 94, 0.3)',
-            }}
-          >
-            {resumenesPorPrestador.length === 0 ? (
-              <div className="text-center py-12 text-gray-400">
-                No hay resúmenes para {MESES[mes - 1].label} {anio}
-              </div>
-            ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-white/10">
-                    <th className="px-4 py-2 text-left text-gray-400">Médico</th>
-                    <th className="px-4 py-2 text-right text-gray-400">Cantidad</th>
-                    <th className="px-4 py-2 text-right text-gray-400">Total Bruto</th>
-                    <th className="px-4 py-2 text-right text-gray-400">Retención (-30%)</th>
-                    <th className="px-4 py-2 text-right text-gray-400">Subtotal</th>
-                    <th className="px-4 py-2 text-right text-gray-400">Adicionales</th>
-                    <th className="px-4 py-2 text-right text-gray-400">Total Final</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {resumenesPorPrestador.map((resumen, idx) => (
-                    <tr key={idx} className="border-b border-white/5 hover:bg-white/5">
-                      <td className="px-4 py-2 text-white font-semibold">{resumen.medico_nombre}</td>
-                      <td className="px-4 py-2 text-right text-gray-300">{resumen.cantidad}</td>
-                      <td className="px-4 py-2 text-right text-gray-300">{formatearMoneda(resumen.total_bruto)}</td>
-                      <td className="px-4 py-2 text-right text-red-400">{formatearMoneda(resumen.retencion_30)}</td>
-                      <td className="px-4 py-2 text-right text-gray-300">{formatearMoneda(resumen.total_neto)}</td>
-                      <td className="px-4 py-2 text-right text-green-400">{formatearMoneda(resumen.adicionales)}</td>
-                      <td className="px-4 py-2 text-right text-green-400 font-semibold">{formatearMoneda(resumen.total_final)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr className="border-t-2 border-green-500/50 font-semibold">
-                    <td className="px-4 py-2 text-right text-gray-300">TOTALES</td>
-                    <td className="px-4 py-2 text-right text-gray-300">
-                      {resumenesPorPrestador.reduce((sum, r) => sum + r.cantidad, 0)}
-                    </td>
-                    <td className="px-4 py-2 text-right text-gray-300">
-                      {formatearMoneda(resumenesPorPrestador.reduce((sum, r) => sum + r.total_bruto, 0))}
-                    </td>
-                    <td className="px-4 py-2 text-right text-red-400">
-                      {formatearMoneda(resumenesPorPrestador.reduce((sum, r) => sum + r.retencion_30, 0))}
-                    </td>
-                    <td className="px-4 py-2 text-right text-gray-300">
-                      {formatearMoneda(resumenesPorPrestador.reduce((sum, r) => sum + r.total_neto, 0))}
-                    </td>
-                    <td className="px-4 py-2 text-right text-green-400">
-                      {formatearMoneda(resumenesPorPrestador.reduce((sum, r) => sum + r.adicionales, 0))}
-                    </td>
-                    <td className="px-4 py-2 text-right text-green-400">
-                      {formatearMoneda(resumenesPorPrestador.reduce((sum, r) => sum + r.total_final, 0))}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            )}
-          </div>
-        ) : (
           /* Tab: Resumen por Prestador */
           <div className="space-y-6">
             {resumenesPorPrestador.length === 0 ? (
