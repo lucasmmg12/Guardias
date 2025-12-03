@@ -151,6 +151,8 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
   }
 
   // Detectar filas con PARTICULARES (sin obra social) - búsqueda flexible
+  // Incluye: nombres de personas, valores vacíos, y "042 - PARTICULARES" / "PARTICULARES"
+  // (estos últimos porque pueden haber sido convertidos desde nombres de pacientes)
   const filasParticulares = useMemo(() => {
     const indices: Set<number> = new Set()
     
@@ -173,7 +175,18 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
     
     rows.forEach((row, index) => {
       const cliente = row[headerCliente]
-      if (esParticular(cliente)) {
+      const clienteStr = cliente ? String(cliente).trim() : ''
+      const clienteLower = clienteStr.toLowerCase()
+      
+      // Detectar si es particular:
+      // 1. Si es un nombre de persona (usando esParticular)
+      // 2. Si está vacío
+      // 3. Si es "042 - PARTICULARES" o "PARTICULARES" (pueden haber sido convertidos desde nombres)
+      if (esParticular(cliente) || 
+          clienteStr === '' || 
+          clienteLower === '042 - particulares' || 
+          clienteLower === 'particulares' ||
+          clienteLower.includes('042') && clienteLower.includes('particulares')) {
         indices.add(index)
       }
     })

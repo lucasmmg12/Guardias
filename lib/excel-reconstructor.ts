@@ -25,12 +25,13 @@ export function reconstruirExcelDataDesdeDetalles(
   })
 
   // Determinar headers si no se proporcionan
-  // Usar headers comunes de ginecología
+  // Usar headers comunes (compatibles con ginecología y pediatría)
+  // En pediatría la columna se llama "Cliente", en ginecología puede ser "Obra Social"
   const headers = headersOriginales || [
     'Fecha',
     'Hora',
     'Paciente',
-    'Obra Social',
+    'Cliente', // Usar "Cliente" como default para que funcione la detección en pediatría
     'Responsable'
   ]
 
