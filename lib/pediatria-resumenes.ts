@@ -66,12 +66,14 @@ export async function calcularResumenPorMedico(
   const pageSize = 1000
   let from = 0
   let hasMore = true
+  let paginaNum = 1
 
   while (hasMore) {
     const { data: detallesPagina, error } = await supabase
       .from('detalle_guardia')
       .select('*')
       .eq('liquidacion_id', liquidacionIdFinal)
+      .order('id', { ascending: true })  // IMPORTANTE: Ordenar para paginación consistente
       .range(from, from + pageSize - 1)
 
     if (error) {
@@ -85,11 +87,13 @@ export async function calcularResumenPorMedico(
     }
 
     todosLosDetalles = [...todosLosDetalles, ...detallesPagina]
+    console.log(`[Pediatría Resúmenes] Página ${paginaNum}: ${detallesPagina.length} registros (total acumulado: ${todosLosDetalles.length})`)
 
     if (detallesPagina.length < pageSize) {
       hasMore = false
     } else {
       from += pageSize
+      paginaNum++
     }
   }
 
@@ -103,15 +107,35 @@ export async function calcularResumenPorMedico(
 
   // Agrupar por médico y obra social
   const resumenMap = new Map<string, ResumenPorMedico>()
+  
+  // Contadores para diagnóstico
+  let registrosExcluidosSinValor = 0
+  let registrosExcluidosSinMedico = 0
+  let registrosIncluidos = 0
 
   detalles.forEach(detalle => {
-    // MODIFICADO: Incluir consultas con importe_calculado > 0 aunque monto_facturado = 0
-    // Esto evita excluir consultas válidas que aún no tienen monto_facturado asignado
-    // pero sí tienen importe_calculado (valor calculado desde valores_consultas_obra_social)
-    const tieneValor = (detalle.monto_facturado ?? 0) > 0 || (detalle.importe_calculado ?? 0) > 0
-    if (!tieneValor) {
+    // Verificar si tiene médico (registro válido)
+    // MODIFICADO: Ser más permisivo - incluir si tiene médico_nombre o medico_id
+    const tieneMedicoNombre = detalle.medico_nombre && detalle.medico_nombre.trim() !== '' && detalle.medico_nombre !== 'Desconocido'
+    const tieneMedicoId = detalle.medico_id && detalle.medico_id.trim() !== ''
+    const tieneMedico = tieneMedicoNombre || tieneMedicoId
+    
+    if (!tieneMedico) {
+      registrosExcluidosSinMedico++
       return
     }
+
+    // MODIFICADO: Incluir TODOS los registros que tengan médico, independientemente del valor
+    // Esto asegura que se incluyan todas las consultas, incluso si aún no tienen valores asignados
+    const tieneValor = (detalle.monto_facturado ?? 0) > 0 || (detalle.importe_calculado ?? 0) > 0
+    
+    // Contar registros sin valor para diagnóstico, pero incluirlos igual
+    if (!tieneValor) {
+      registrosExcluidosSinValor++
+    }
+    
+    // IMPORTANTE: Incluir TODOS los registros con médico, incluso sin valor
+    // Esto asegura que todas las consultas se cuenten en los resúmenes
 
     const obraSocial = detalle.obra_social || 'PARTICULARES'
     const medicoNombre = detalle.medico_nombre || 'Desconocido'
@@ -123,11 +147,14 @@ export async function calcularResumenPorMedico(
       ? `${medicoId}|${obraSocial}` 
       : `${nombreNormalizado}|${obraSocial}`
 
-    const montoFacturado = detalle.monto_facturado || 0
-    const montoRetencion = detalle.monto_retencion || 0
-    const montoNeto = detalle.importe_calculado || 0
-    const montoAdicional = detalle.monto_adicional || 0
+    // Usar valores del detalle, o 0 si no están asignados
+    const montoFacturado = detalle.monto_facturado ?? 0
+    const montoRetencion = detalle.monto_retencion ?? 0
+    const montoNeto = detalle.importe_calculado ?? 0
+    const montoAdicional = detalle.monto_adicional ?? 0
     const totalFinal = montoNeto + montoAdicional
+    
+    registrosIncluidos++
 
     // Actualizar o crear resumen
     if (resumenMap.has(clave)) {
@@ -155,6 +182,14 @@ export async function calcularResumenPorMedico(
       })
     }
   })
+
+  // Logs de diagnóstico
+  const totalConsultas = Array.from(resumenMap.values()).reduce((sum, r) => sum + r.cantidad, 0)
+  console.log(`[Pediatría Resúmenes] Registros incluidos en resúmenes: ${registrosIncluidos}`)
+  console.log(`[Pediatría Resúmenes] Registros excluidos sin médico: ${registrosExcluidosSinMedico}`)
+  console.log(`[Pediatría Resúmenes] Registros excluidos sin valor: ${registrosExcluidosSinValor}`)
+  console.log(`[Pediatría Resúmenes] Total de consultas en resúmenes: ${totalConsultas}`)
+  console.log(`[Pediatría Resúmenes] Diferencia: ${detalles.length - totalConsultas} registros no incluidos`)
 
   // Convertir a array y ordenar por médico y obra social
   return Array.from(resumenMap.values()).sort((a, b) => {
