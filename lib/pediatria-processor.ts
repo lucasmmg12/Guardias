@@ -224,9 +224,27 @@ function buscarMedico(nombre: string | null, medicos: Medico[]): Medico | null {
 
 /**
  * Convierte una fecha en múltiples formatos a ISO (YYYY-MM-DD)
+ * También maneja números seriales de Excel
  */
-function convertirFechaISO(fecha: string | null | undefined): string | null {
-  if (!fecha) return null
+function convertirFechaISO(fecha: string | number | null | undefined): string | null {
+  if (fecha === null || fecha === undefined) return null
+  
+  // Si es un número, puede ser un serial de Excel
+  if (typeof fecha === 'number') {
+    // Excel cuenta los días desde el 1 de enero de 1900
+    // Pero Excel tiene un bug: considera 1900 como año bisiesto
+    // La fecha base es 1899-12-30
+    const excelEpoch = new Date(1899, 11, 30) // 30 de diciembre de 1899
+    const dateObj = new Date(excelEpoch.getTime() + fecha * 24 * 60 * 60 * 1000)
+    
+    if (!isNaN(dateObj.getTime())) {
+      const year = dateObj.getFullYear()
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0')
+      const day = String(dateObj.getDate()).padStart(2, '0')
+      return `${year}-${month}-${day}`
+    }
+    return null
+  }
   
   const fechaStr = String(fecha).trim()
   if (fechaStr === '') return null
@@ -500,10 +518,10 @@ export async function procesarExcelPediatria(
           'Fecha', 'fecha', 'FECHA', 
           'Fecha visita', 'Fecha Visita', 'Fecha de visita',
           'Fecha de Visita', 'Fecha De Visita',
-          'Fecha Visit', 'Fecha visit',
+          'Fecha Visit', 'Fecha visit', 'Fecha Visit', 'fecha visit',
           'Fecha de atención', 'Fecha Atención', 'Fecha de Atención',
           'Fecha de la consulta', 'Fecha Consulta', 'Fecha de Consulta',
-          'FECHA VISITA', 'FECHA DE VISITA'
+          'FECHA VISITA', 'FECHA DE VISITA', 'FECHA VISIT'
         ])
         const hora = buscarValor(row, [
           'Hora', 'hora', 'HORA', 
@@ -574,6 +592,18 @@ export async function procesarExcelPediatria(
         
         if (fechaStr) {
           fecha = convertirFechaISO(fechaStr)
+          
+          // Debug: si no se pudo convertir, loguear el valor original
+          if (!fecha && i < 10) {
+            console.log(`[Debug Fila ${i + 1}] fechaStr original:`, fechaStr, 'tipo:', typeof fechaStr)
+            console.log(`[Debug Fila ${i + 1}] Headers disponibles:`, Object.keys(row))
+          }
+        } else {
+          // Debug: si no se encontró fechaStr, loguear los headers
+          if (i < 10) {
+            console.log(`[Debug Fila ${i + 1}] No se encontró campo de fecha. Headers:`, Object.keys(row))
+            console.log(`[Debug Fila ${i + 1}] Valores de la fila:`, row)
+          }
         }
         
         // Validar datos mínimos
