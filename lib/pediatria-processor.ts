@@ -633,7 +633,7 @@ export async function procesarExcelPediatria(
         if (!esPediatria) {
           filasNoPediatria++
           resultado.filasExcluidas.push({
-            numeroFila: i + 1,
+            numeroFila: 11 + i, // Los datos comienzan en la fila 11 del Excel
             razon: 'no_pediatria',
             datos: row
           })
@@ -675,7 +675,7 @@ export async function procesarExcelPediatria(
         if (!fecha) {
           filasSinFecha++
           resultado.filasExcluidas.push({
-            numeroFila: i + 1,
+            numeroFila: 11 + i, // Los datos comienzan en la fila 11 del Excel
             razon: 'sin_fecha',
             datos: row
           })
@@ -687,11 +687,11 @@ export async function procesarExcelPediatria(
         if (fechaAnio < 2020 || fechaAnio > 2100) {
           filasFechaInvalida++
           resultado.filasExcluidas.push({
-            numeroFila: i + 1,
+            numeroFila: 11 + i, // Los datos comienzan en la fila 11 del Excel
             razon: 'fecha_invalida',
             datos: row
           })
-          resultado.advertencias.push(`Fila ${i + 1}: Fecha fuera de rango (${fecha}), se omite`)
+          resultado.advertencias.push(`Fila ${11 + i}: Fecha fuera de rango (${fecha}), se omite`)
           continue
         }
 
@@ -701,7 +701,7 @@ export async function procesarExcelPediatria(
         if (duplicados.has(firmaDuplicado)) {
           filasDuplicadas++
           resultado.filasExcluidas.push({
-            numeroFila: i + 1,
+            numeroFila: 11 + i, // Los datos comienzan en la fila 11 del Excel
             razon: 'duplicado',
             datos: row
           })
