@@ -346,8 +346,13 @@ export function ExpandableSection({
   const handleExportExcel = (e: React.MouseEvent) => {
     e.stopPropagation()
     try {
+      // Extraer texto del título (si es string) o usar sectionKey como fallback
+      const titleText = typeof title === 'string' 
+        ? title 
+        : sectionKey.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+      
       // Generar nombre base del archivo más corto
-      let nombreArchivo = `${title.toLowerCase().replace(/\s+/g, '_').substring(0, 15)}`
+      let nombreArchivo = `${titleText.toLowerCase().replace(/\s+/g, '_').substring(0, 15)}`
       
       // Agregar mes y año en formato corto (MM_YYYY)
       if (mes && anio) {
@@ -379,7 +384,7 @@ export function ExpandableSection({
         rows: filteredRows,
         headers: data.headers,
         filename: nombreArchivo,
-        sheetName: title
+        sheetName: titleText
       })
     } catch (error: any) {
       console.error('Error exportando Excel:', error)
