@@ -182,12 +182,24 @@ export function ExpandableSection({
     return valor
   }, [data.headers, valoresConsultas])
 
+  // Memoizar cálculos de importe y adicional para todas las filas
+  const valoresCalculados = useMemo(() => {
+    const mapa = new Map<number, { adicional: number; importe: number }>()
+    rows.forEach((row, index) => {
+      const adicional = obtenerAdicional(row)
+      const importe = obtenerImporte(row)
+      mapa.set(index, { adicional, importe })
+    })
+    return mapa
+  }, [rows, obtenerAdicional, obtenerImporte])
+
   // Filtrar filas basándose en los filtros activos
   const filteredRows = useMemo(() => {
     if (filters.size === 0) return rows
 
-    return rows.filter(row => {
-      return data.headers.every((header) => {
+    return rows.filter((row, index) => {
+      // Filtrar por headers normales
+      const headersMatch = data.headers.every((header) => {
         const filterValue = filters.get(header)
         if (!filterValue || filterValue.trim() === '') return true
 
@@ -200,8 +212,38 @@ export function ExpandableSection({
         
         return cellStr.includes(filterStr)
       })
+
+      if (!headersMatch) return false
+
+      // Filtrar por columna Adicional si hay filtro (usar valores calculados)
+      const adicionalFilter = filters.get('Adicional')
+      if (adicionalFilter && adicionalFilter.trim() !== '') {
+        const valores = valoresCalculados.get(index)
+        const adicional = valores?.adicional ?? obtenerAdicional(row)
+        const adicionalStr = adicional.toString()
+        const filterStr = adicionalFilter.toLowerCase().trim()
+        
+        if (!adicionalStr.toLowerCase().includes(filterStr)) {
+          return false
+        }
+      }
+
+      // Filtrar por columna Importe si hay filtro (usar valores calculados)
+      const importeFilter = filters.get('Importe')
+      if (importeFilter && importeFilter.trim() !== '') {
+        const valores = valoresCalculados.get(index)
+        const importe = valores?.importe ?? obtenerImporte(row)
+        const importeStr = importe.toString()
+        const filterStr = importeFilter.toLowerCase().trim()
+        
+        if (!importeStr.toLowerCase().includes(filterStr)) {
+          return false
+        }
+      }
+
+      return true
     })
-  }, [rows, filters, data.headers])
+  }, [rows, filters, data.headers, valoresCalculados, obtenerAdicional, obtenerImporte])
 
   // Actualizar count basado en filas filtradas
   const displayCount = filteredRows.length
@@ -748,26 +790,34 @@ export function ExpandableSection({
                           zIndex: 1,
                         }}
                       >
-                        {allowEdit && onCellUpdate ? (
-                          <InlineEditCell
-                            value={row['Adicional'] ?? obtenerAdicional(row)}
-                            type="number"
-                            onSave={async (newValue) => {
-                              const numValue = typeof newValue === 'string' ? parseFloat(newValue) || 0 : newValue
-                              await onCellUpdate(originalRowIndex, 'Adicional', numValue)
-                            }}
-                            columnName="Adicional"
-                          />
-                        ) : (
-                          <span className="truncate block text-right">
-                            {new Intl.NumberFormat('es-AR', {
-                              style: 'currency',
-                              currency: 'ARS',
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2
-                            }).format(row['Adicional'] ?? obtenerAdicional(row))}
-                          </span>
-                        )}
+                        {(() => {
+                          // Usar valor calculado memoizado si está disponible
+                          const valores = valoresCalculados.get(originalRowIndex)
+                          const adicionalValue = row['Adicional'] !== null && row['Adicional'] !== undefined
+                            ? (typeof row['Adicional'] === 'number' ? row['Adicional'] : parseFloat(String(row['Adicional'])) || 0)
+                            : (valores?.adicional ?? obtenerAdicional(row))
+                          
+                          return allowEdit && onCellUpdate ? (
+                            <InlineEditCell
+                              value={adicionalValue}
+                              type="number"
+                              onSave={async (newValue) => {
+                                const numValue = typeof newValue === 'string' ? parseFloat(newValue) || 0 : newValue
+                                await onCellUpdate(originalRowIndex, 'Adicional', numValue)
+                              }}
+                              columnName="Adicional"
+                            />
+                          ) : (
+                            <span className="truncate block text-right">
+                              {new Intl.NumberFormat('es-AR', {
+                                style: 'currency',
+                                currency: 'ARS',
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
+                              }).format(adicionalValue)}
+                            </span>
+                          )
+                        })()}
                       </td>
                       {/* Columna Importe */}
                       <td
@@ -779,26 +829,34 @@ export function ExpandableSection({
                           zIndex: 1,
                         }}
                       >
-                        {allowEdit && onCellUpdate ? (
-                          <InlineEditCell
-                            value={row['Importe'] ?? obtenerImporte(row)}
-                            type="number"
-                            onSave={async (newValue) => {
-                              const numValue = typeof newValue === 'string' ? parseFloat(newValue) || 0 : newValue
-                              await onCellUpdate(originalRowIndex, 'Importe', numValue)
-                            }}
-                            columnName="Importe"
-                          />
-                        ) : (
-                          <span className="truncate block text-right">
-                            {new Intl.NumberFormat('es-AR', {
-                              style: 'currency',
-                              currency: 'ARS',
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2
-                            }).format(row['Importe'] ?? obtenerImporte(row))}
-                          </span>
-                        )}
+                        {(() => {
+                          // Usar valor calculado memoizado si está disponible
+                          const valores = valoresCalculados.get(originalRowIndex)
+                          const importeValue = row['Importe'] !== null && row['Importe'] !== undefined
+                            ? (typeof row['Importe'] === 'number' ? row['Importe'] : parseFloat(String(row['Importe'])) || 0)
+                            : (valores?.importe ?? obtenerImporte(row))
+                          
+                          return allowEdit && onCellUpdate ? (
+                            <InlineEditCell
+                              value={importeValue}
+                              type="number"
+                              onSave={async (newValue) => {
+                                const numValue = typeof newValue === 'string' ? parseFloat(newValue) || 0 : newValue
+                                await onCellUpdate(originalRowIndex, 'Importe', numValue)
+                              }}
+                              columnName="Importe"
+                            />
+                          ) : (
+                            <span className="truncate block text-right">
+                              {new Intl.NumberFormat('es-AR', {
+                                style: 'currency',
+                                currency: 'ARS',
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
+                              }).format(importeValue)}
+                            </span>
+                          )
+                        })()}
                       </td>
                     </tr>
                   )
@@ -847,9 +905,21 @@ export function ExpandableSection({
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2
                       }).format(
-                        filteredRows.reduce((sum, row) => {
-                          const adicional = row['Adicional'] ?? obtenerAdicional(row)
-                          return sum + (typeof adicional === 'number' ? adicional : parseFloat(String(adicional)) || 0)
+                        filteredRows.reduce((sum, row, filteredIdx) => {
+                          // Encontrar el índice original de la fila
+                          const originalIdx = rows.findIndex(r => {
+                            const filaExcel = (r as any).__fila_excel
+                            const rowFilaExcel = (row as any).__fila_excel
+                            if (filaExcel !== undefined && rowFilaExcel !== undefined) {
+                              return filaExcel === rowFilaExcel
+                            }
+                            return r === row
+                          })
+                          const valores = originalIdx >= 0 ? valoresCalculados.get(originalIdx) : null
+                          const adicional = row['Adicional'] !== null && row['Adicional'] !== undefined
+                            ? (typeof row['Adicional'] === 'number' ? row['Adicional'] : parseFloat(String(row['Adicional'])) || 0)
+                            : (valores?.adicional ?? obtenerAdicional(row))
+                          return sum + adicional
                         }, 0)
                       )}
                     </td>
@@ -867,9 +937,21 @@ export function ExpandableSection({
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2
                       }).format(
-                        filteredRows.reduce((sum, row) => {
-                          const importe = row['Importe'] ?? obtenerImporte(row)
-                          return sum + (typeof importe === 'number' ? importe : parseFloat(String(importe)) || 0)
+                        filteredRows.reduce((sum, row, filteredIdx) => {
+                          // Encontrar el índice original de la fila
+                          const originalIdx = rows.findIndex(r => {
+                            const filaExcel = (r as any).__fila_excel
+                            const rowFilaExcel = (row as any).__fila_excel
+                            if (filaExcel !== undefined && rowFilaExcel !== undefined) {
+                              return filaExcel === rowFilaExcel
+                            }
+                            return r === row
+                          })
+                          const valores = originalIdx >= 0 ? valoresCalculados.get(originalIdx) : null
+                          const importe = row['Importe'] !== null && row['Importe'] !== undefined
+                            ? (typeof row['Importe'] === 'number' ? row['Importe'] : parseFloat(String(row['Importe'])) || 0)
+                            : (valores?.importe ?? obtenerImporte(row))
+                          return sum + importe
                         }, 0)
                       )}
                     </td>
@@ -946,5 +1028,19 @@ export function ExpandableSection({
     </div>
   )
 }
+
+// Memoizar el componente para evitar re-renders innecesarios
+export const MemoizedExpandableSection = memo(ExpandableSection, (prevProps, nextProps) => {
+  // Comparación personalizada para evitar re-renders innecesarios
+  return (
+    prevProps.title === nextProps.title &&
+    prevProps.count === nextProps.count &&
+    prevProps.rows === nextProps.rows &&
+    prevProps.data === nextProps.data &&
+    prevProps.mes === nextProps.mes &&
+    prevProps.anio === nextProps.anio &&
+    prevProps.sectionKey === nextProps.sectionKey
+  )
+})
 
 

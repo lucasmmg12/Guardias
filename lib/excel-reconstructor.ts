@@ -81,11 +81,13 @@ export function reconstruirExcelDataDesdeDetalles(
       } else if (headerLower.includes('responsable') || headerLower.includes('medico')) {
         row[header] = detalle.medico_nombre || null
       } else if (headerLower === 'adicional') {
-        // Usar monto_adicional si existe, sino null (se calculará desde la obra social)
-        row[header] = detalle.monto_adicional ?? null
+        // Usar monto_adicional si existe, asegurando que sea número
+        const adicional = detalle.monto_adicional
+        row[header] = adicional !== null && adicional !== undefined ? Number(adicional) : null
       } else if (headerLower === 'importe') {
-        // Usar monto_facturado si existe, sino null (se calculará desde la obra social)
-        row[header] = detalle.monto_facturado ?? null
+        // Usar monto_facturado si existe, asegurando que sea número
+        const importe = detalle.monto_facturado
+        row[header] = importe !== null && importe !== undefined ? Number(importe) : null
       } else {
         // Para otros headers, intentar mapear si existe
         row[header] = null
