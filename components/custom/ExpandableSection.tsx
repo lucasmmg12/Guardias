@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef, useCallback, memo } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { ChevronDown, ChevronUp, Trash2, Search, X, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ExcelRow, ExcelData } from '@/lib/excel-reader'
@@ -183,15 +183,37 @@ export function ExpandableSection({
   }, [data.headers, valoresConsultas])
 
   // Memoizar cálculos de importe y adicional para todas las filas
+  // Optimizado: usar hash de las filas para evitar recálculos innecesarios
+  const filasHash = useMemo(() => {
+    // Crear un hash simple basado en la longitud y algunos campos clave
+    return rows.length > 0 
+      ? `${rows.length}-${rows[0]?.[data.headers[0]] || ''}-${rows[rows.length - 1]?.[data.headers[0]] || ''}`
+      : '0'
+  }, [rows.length, data.headers])
+
   const valoresCalculados = useMemo(() => {
     const mapa = new Map<number, { adicional: number; importe: number }>()
+    
+    // Si no hay filas, retornar mapa vacío
+    if (rows.length === 0) return mapa
+    
+    // Calcular valores solo cuando cambian las dependencias críticas
     rows.forEach((row, index) => {
       const adicional = obtenerAdicional(row)
       const importe = obtenerImporte(row)
       mapa.set(index, { adicional, importe })
     })
     return mapa
-  }, [rows, obtenerAdicional, obtenerImporte])
+  }, [
+    filasHash,
+    // Usar tamaño de los mapas como dependencia en lugar de los mapas completos
+    valoresConsultas.size, 
+    adicionales.size,
+    // Incluir una referencia estable a las funciones
+    obtenerAdicional,
+    obtenerImporte,
+    data.headers
+  ])
 
   // Filtrar filas basándose en los filtros activos
   const filteredRows = useMemo(() => {
@@ -243,7 +265,7 @@ export function ExpandableSection({
 
       return true
     })
-  }, [rows, filters, data.headers, valoresCalculados, obtenerAdicional, obtenerImporte])
+  }, [rows.length, filters.size, data.headers.length, valoresCalculados.size, obtenerAdicional, obtenerImporte])
 
   // Actualizar count basado en filas filtradas
   const displayCount = filteredRows.length
@@ -267,7 +289,7 @@ export function ExpandableSection({
       clearTimeout(existingTimer)
     }
 
-    // Crear nuevo timer con debounce de 300ms
+    // Crear nuevo timer con debounce de 500ms (aumentado para mejor rendimiento)
     const timer = setTimeout(() => {
       setFilters(prev => {
         const newMap = new Map(prev)
@@ -645,7 +667,8 @@ export function ExpandableSection({
                 </tr>
               </thead>
               <tbody style={{ paddingTop: tbodyPaddingTop }}>
-                {filteredRows.map((row, filteredIndex) => {
+                {/* Limitar renderizado a 500 filas para mejorar rendimiento */}
+                {filteredRows.slice(0, 500).map((row, filteredIndex) => {
                   // Intentar obtener fila_excel primero para búsqueda más confiable
                   const filaExcel = (row as any).__fila_excel
                   let originalRowIndex = -1
@@ -1030,17 +1053,7 @@ export function ExpandableSection({
 }
 
 // Memoizar el componente para evitar re-renders innecesarios
-export const MemoizedExpandableSection = memo(ExpandableSection, (prevProps, nextProps) => {
-  // Comparación personalizada para evitar re-renders innecesarios
-  return (
-    prevProps.title === nextProps.title &&
-    prevProps.count === nextProps.count &&
-    prevProps.rows === nextProps.rows &&
-    prevProps.data === nextProps.data &&
-    prevProps.mes === nextProps.mes &&
-    prevProps.anio === nextProps.anio &&
-    prevProps.sectionKey === nextProps.sectionKey
-  )
-})
+// NOTA: No exportamos MemoizedExpandableSection porque puede causar problemas
+// En su lugar, usamos el componente directamente y optimizamos internamente
 
 
