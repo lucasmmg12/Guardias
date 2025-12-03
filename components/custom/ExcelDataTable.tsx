@@ -82,12 +82,16 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
           ? 'CONSULTA PEDIATRICA Y NEONATAL' 
           : 'CONSULTA GINECOLOGICA'
 
+        // Validar que mes y anio estén definidos
+        const mesValue = mes as number
+        const anioValue = anio as number
+
         const { data: valoresData, error } = await supabase
           .from('valores_consultas_obra_social')
           .select('*')
           .eq('tipo_consulta', tipoConsulta)
-          .eq('mes', mes)
-          .eq('anio', anio) as { data: ValorConsultaObraSocial[] | null; error: any }
+          .eq('mes', mesValue)
+          .eq('anio', anioValue) as { data: ValorConsultaObraSocial[] | null; error: any }
 
         if (error) throw error
 
