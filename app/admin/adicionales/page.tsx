@@ -295,7 +295,7 @@ export default function AdicionalesPage() {
   }
 
   async function handleEliminar(id: string, obraSocial: string, especialidad: string) {
-    if (!confirm(`¿Está seguro de que desea eliminar el adicional de "${obraSocial}" para ${especialidad} en ${MESES[mes - 1]} ${anio}?`)) {
+    if (!confirm(`¿Está seguro de que desea eliminar el adicional de "${obraSocial}" para ${especialidad} en ${MESES[mes - 1].label} ${anio}?`)) {
       return
     }
 
@@ -442,7 +442,7 @@ export default function AdicionalesPage() {
               border: '1px solid rgba(34, 197, 94, 0.3)',
             }}
           >
-            <p className="text-gray-400">No hay adicionales configurados para {MESES[mes - 1]} {anio}</p>
+            <p className="text-gray-400">No hay adicionales configurados para {MESES[mes - 1].label} {anio}</p>
           </div>
         ) : (
           Object.entries(adicionalesPorEspecialidad).map(([especialidad, adicionalesEspecialidad]) => (
