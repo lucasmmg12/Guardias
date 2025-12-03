@@ -392,6 +392,42 @@ export async function procesarExcelPediatria(
     valoresConsultas.forEach(v => {
       valoresPorObraSocial.set(v.obra_social, v.valor)
     })
+    
+    // Cargar valores de PARTICULARES al inicio para evitar consultas dentro del loop
+    const { data: valorParticularData } = await supabase
+      .from('valores_consultas_obra_social')
+      .select('valor')
+      .eq('obra_social', 'PARTICULARES')
+      .eq('tipo_consulta', 'CONSULTA PEDIATRICA Y NEONATAL')
+      .eq('mes', mes)
+      .eq('anio', anio)
+      .single()
+    
+    const valorParticular = valorParticularData ? (valorParticularData as any).valor : null
+    
+    // Si no se encontró con 'PARTICULARES', intentar con '042 - PARTICULARES'
+    let valorParticular042 = null
+    if (!valorParticular) {
+      const { data: valorParticular042Data } = await supabase
+        .from('valores_consultas_obra_social')
+        .select('valor')
+        .eq('obra_social', '042 - PARTICULARES')
+        .eq('tipo_consulta', 'CONSULTA PEDIATRICA Y NEONATAL')
+        .eq('mes', mes)
+        .eq('anio', anio)
+        .single()
+      
+      valorParticular042 = valorParticular042Data ? (valorParticular042Data as any).valor : null
+    }
+    
+    // Agregar valores de PARTICULARES al mapa si se encontraron
+    if (valorParticular) {
+      valoresPorObraSocial.set('PARTICULARES', valorParticular)
+      valoresPorObraSocial.set('042 - PARTICULARES', valorParticular)
+    } else if (valorParticular042) {
+      valoresPorObraSocial.set('PARTICULARES', valorParticular042)
+      valoresPorObraSocial.set('042 - PARTICULARES', valorParticular042)
+    }
 
     // 3. Cargar configuraciones de adicionales para pediatría
     const { data: adicionalesData } = await supabase
@@ -730,43 +766,8 @@ export async function procesarExcelPediatria(
           obraSocialFinal = obraSocial.trim()
         }
         
-        // Buscar valor en el Map
+        // Buscar valor en el Map (ya incluye PARTICULARES cargados al inicio)
         let valorUnitario = valoresPorObraSocial.get(obraSocialFinal) || 0
-        
-        // Si es PARTICULARES (o 042 - PARTICULARES) y no se encontró valor, buscar en la BD
-        if (valorUnitario === 0 && (obraSocialFinal === 'PARTICULARES' || obraSocialFinal === '042 - PARTICULARES')) {
-          // Buscar valor para PARTICULARES en la BD
-          const { data: valorParticular } = await supabase
-            .from('valores_consultas_obra_social')
-            .select('valor')
-            .eq('obra_social', 'PARTICULARES')
-            .eq('tipo_consulta', 'CONSULTA PEDIATRICA Y NEONATAL')
-            .eq('mes', mes)
-            .eq('anio', anio)
-            .single()
-          
-          if (valorParticular && (valorParticular as any).valor) {
-            valorUnitario = (valorParticular as any).valor
-            valoresPorObraSocial.set('PARTICULARES', valorUnitario)
-            valoresPorObraSocial.set('042 - PARTICULARES', valorUnitario)
-          } else {
-            // Intentar también con "042 - PARTICULARES"
-            const { data: valorParticular042 } = await supabase
-              .from('valores_consultas_obra_social')
-              .select('valor')
-              .eq('obra_social', '042 - PARTICULARES')
-              .eq('tipo_consulta', 'CONSULTA PEDIATRICA Y NEONATAL')
-              .eq('mes', mes)
-              .eq('anio', anio)
-              .single()
-            
-            if (valorParticular042 && (valorParticular042 as any).valor) {
-              valorUnitario = (valorParticular042 as any).valor
-              valoresPorObraSocial.set('PARTICULARES', valorUnitario)
-              valoresPorObraSocial.set('042 - PARTICULARES', valorUnitario)
-            }
-          }
-        }
         
         // Solo registrar advertencia si NO es PARTICULARES y no tiene valor
         if (valorUnitario === 0 && obraSocialFinal !== 'PARTICULARES' && obraSocialFinal !== '042 - PARTICULARES') {
@@ -849,20 +850,31 @@ export async function procesarExcelPediatria(
     
     // Insertar en lotes de 100 para evitar problemas de tamaño
     const batchSize = 100
+    const totalBatches = Math.ceil(detalles.length / batchSize)
+    console.log(`Insertando en ${totalBatches} lotes de ${batchSize} registros cada uno`)
+    
     for (let i = 0; i < detalles.length; i += batchSize) {
       const batch = detalles.slice(i, i + batchSize)
+      const batchNumber = Math.floor(i / batchSize) + 1
+      
+      console.log(`Insertando lote ${batchNumber}/${totalBatches} (${batch.length} registros)...`)
+      
       const { error: errorDetalles } = await supabase
         .from('detalle_guardia')
         // @ts-ignore - La tabla no está en los tipos generados de Supabase aún
         .insert(batch)
 
       if (errorDetalles) {
-        resultado.errores.push(`Error guardando detalles (lote ${Math.floor(i / batchSize) + 1}): ${errorDetalles.message}. Detalles: ${JSON.stringify(errorDetalles)}`)
+        resultado.errores.push(`Error guardando detalles (lote ${batchNumber}): ${errorDetalles.message}. Detalles: ${JSON.stringify(errorDetalles)}`)
         console.error('Error guardando detalles:', errorDetalles)
         console.error('Primer detalle del lote:', batch[0])
         return resultado
       }
+      
+      console.log(`Lote ${batchNumber}/${totalBatches} insertado correctamente`)
     }
+    
+    console.log(`Todos los ${detalles.length} detalles guardados correctamente`)
 
     // 9. Actualizar totales de la liquidación
     const totalConsultas = detalles.length
