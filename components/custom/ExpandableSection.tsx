@@ -351,8 +351,19 @@ export function ExpandableSection({
                         checked={selectedRows.size === filteredRows.length && filteredRows.length > 0}
                         onChange={(e) => {
                           if (e.target.checked) {
-                            const allIndices = filteredRows.map((_, idx) => {
-                              const originalRowIndex = data.rows.findIndex(r => r === filteredRows[idx])
+                            const allIndices = filteredRows.map((row) => {
+                              // Usar la misma lógica mejorada para encontrar índices
+                              const filaExcel = (row as any).__fila_excel
+                              let originalRowIndex = -1
+                              
+                              if (filaExcel !== undefined && filaExcel !== null) {
+                                originalRowIndex = data.rows.findIndex(r => (r as any).__fila_excel === filaExcel)
+                              }
+                              
+                              if (originalRowIndex === -1) {
+                                originalRowIndex = data.rows.findIndex(r => r === row)
+                              }
+                              
                               return originalRowIndex
                             }).filter(idx => idx !== -1)
                             setSelectedRows(new Set(allIndices))
@@ -439,9 +450,49 @@ export function ExpandableSection({
                 </tr>
               </thead>
               <tbody style={{ paddingTop: tbodyPaddingTop }}>
-                {filteredRows.map((row, rowIndex) => {
-                  const originalRowIndex = data.rows.findIndex(r => r === row)
-                  const isSelected = selectedRows.has(originalRowIndex)
+                {filteredRows.map((row, filteredIndex) => {
+                  // Intentar obtener fila_excel primero para búsqueda más confiable
+                  const filaExcel = (row as any).__fila_excel
+                  let originalRowIndex = -1
+                  
+                  if (filaExcel !== undefined && filaExcel !== null) {
+                    // Buscar por fila_excel que es más confiable
+                    originalRowIndex = data.rows.findIndex(r => (r as any).__fila_excel === filaExcel)
+                  }
+                  
+                  // Si no se encontró por fila_excel, usar comparación de referencia
+                  if (originalRowIndex === -1) {
+                    originalRowIndex = data.rows.findIndex(r => r === row)
+                  }
+                  
+                  // Si aún no se encontró, usar comparación por contenido (fallback)
+                  if (originalRowIndex === -1) {
+                    // Comparar por múltiples campos clave para encontrar la fila correcta
+                    const keyFields = data.headers.filter(h => {
+                      const hLower = h.toLowerCase()
+                      return hLower.includes('fecha') || hLower.includes('hora') || 
+                             hLower.includes('paciente') || hLower.includes('responsable')
+                    })
+                    
+                    if (keyFields.length > 0) {
+                      originalRowIndex = data.rows.findIndex(r => {
+                        return keyFields.every(field => {
+                          const rVal = r[field]
+                          const rowVal = row[field]
+                          return rVal === rowVal || (rVal == null && rowVal == null)
+                        })
+                      })
+                    }
+                  }
+                  
+                  // Usar un key más estable para evitar problemas de renderizado
+                  const rowKey = filaExcel !== undefined && filaExcel !== null 
+                    ? `fila-${filaExcel}` 
+                    : originalRowIndex !== -1
+                    ? `row-${originalRowIndex}`
+                    : `filtered-${filteredIndex}`
+                  
+                  const isSelected = originalRowIndex !== -1 && selectedRows.has(originalRowIndex)
                   
                   // Determinar colores según reglas (solo si es detalle completo)
                   const esDetalleCompleto = sectionKey === 'detalle_completo'
@@ -471,7 +522,7 @@ export function ExpandableSection({
                   
                   return (
                     <tr
-                      key={originalRowIndex}
+                      key={rowKey}
                       className="border-b transition-colors border-white/5 hover:bg-white/5"
                       style={{
                         backgroundColor: rowBgColor,
