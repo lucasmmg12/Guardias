@@ -26,21 +26,21 @@ export interface ResumenPorPrestador {
 }
 
 /**
- * Calcula el resumen por médico y obra social para pediatría
+ * Calcula el resumen por médico y obra social
  * Incluye retención del 30% y adicionales
+ * Busca la liquidación por mes y año (sin filtrar por especialidad)
  */
 export async function calcularResumenPorMedico(
   mes: number,
   anio: number
 ): Promise<ResumenPorMedico[]> {
-  // Obtener liquidación de pediatría para el mes/año
+  // Obtener liquidación para el mes/año (sin filtrar por especialidad)
   const { data: liquidacion } = await supabase
     .from('liquidaciones_guardia')
     .select('id')
-    .eq('especialidad', 'Pediatría')
     .eq('mes', mes)
     .eq('anio', anio)
-    .single()
+    .maybeSingle()
 
   if (!liquidacion || !(liquidacion as any).id) {
     return []
