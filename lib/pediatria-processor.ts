@@ -32,11 +32,14 @@ function normalizarColumna(nombre: string): string {
 /**
  * Busca un valor en una fila por variaciones del nombre de columna
  */
-function buscarValor(row: ExcelRow, variaciones: string[]): any {
+function buscarValor(row: ExcelRow, variaciones: string[], debugKey?: string): any {
   const keys = Object.keys(row)
   
   // Si no hay keys, retornar null
   if (keys.length === 0) return null
+  
+  // Debug: solo para las primeras filas y campos importantes
+  const isDebug = debugKey && keys.length > 0 && keys.length < 20
   
   // Buscar coincidencia exacta (case-insensitive)
   for (const variacion of variaciones) {
@@ -44,8 +47,14 @@ function buscarValor(row: ExcelRow, variaciones: string[]): any {
       if (key.toLowerCase().trim() === variacion.toLowerCase().trim()) {
         const valor = row[key]
         if (valor !== undefined && valor !== null) {
-          if (typeof valor === 'string' && valor.trim() !== '') return valor.trim()
-          if (typeof valor !== 'string') return valor
+          if (typeof valor === 'string' && valor.trim() !== '') {
+            if (isDebug) console.log(`[buscarValor ${debugKey}] Encontrado "${key}" (coincidencia exacta):`, valor)
+            return valor.trim()
+          }
+          if (typeof valor !== 'string') {
+            if (isDebug) console.log(`[buscarValor ${debugKey}] Encontrado "${key}" (coincidencia exacta, no string):`, valor)
+            return valor
+          }
         }
       }
     }
@@ -58,8 +67,14 @@ function buscarValor(row: ExcelRow, variaciones: string[]): any {
     if (normalizadas.includes(keyNormalizada)) {
       const valor = row[key]
       if (valor !== undefined && valor !== null) {
-        if (typeof valor === 'string' && valor.trim() !== '') return valor.trim()
-        if (typeof valor !== 'string') return valor
+        if (typeof valor === 'string' && valor.trim() !== '') {
+          if (isDebug) console.log(`[buscarValor ${debugKey}] Encontrado "${key}" (coincidencia normalizada):`, valor)
+          return valor.trim()
+        }
+        if (typeof valor !== 'string') {
+          if (isDebug) console.log(`[buscarValor ${debugKey}] Encontrado "${key}" (coincidencia normalizada, no string):`, valor)
+          return valor
+        }
       }
     }
   }
@@ -74,6 +89,27 @@ function buscarValor(row: ExcelRow, variaciones: string[]): any {
       // Verificar que todas las palabras importantes estén presentes
       const todasPalabrasPresentes = palabras.every(p => keyNormalizada.includes(p))
       if (todasPalabrasPresentes) {
+        const valor = row[key]
+        if (valor !== undefined && valor !== null) {
+          if (typeof valor === 'string' && valor.trim() !== '') return valor.trim()
+          if (typeof valor !== 'string') return valor
+        }
+      }
+    }
+  }
+  
+  // Última estrategia: buscar cualquier columna que contenga palabras clave importantes
+  // Esto es útil cuando los headers tienen variaciones inesperadas
+  for (const variacion of variaciones) {
+    const palabrasClave = normalizarColumna(variacion).split(/\s+/).filter(p => p.length > 2)
+    if (palabrasClave.length === 0) continue
+    
+    // Buscar la primera columna que contenga al menos una palabra clave importante
+    for (const key of keys) {
+      const keyNormalizada = normalizarColumna(key)
+      // Si la columna contiene alguna palabra clave importante, considerarla
+      const tienePalabraClave = palabrasClave.some(p => keyNormalizada.includes(p))
+      if (tienePalabraClave) {
         const valor = row[key]
         if (valor !== undefined && valor !== null) {
           if (typeof valor === 'string' && valor.trim() !== '') return valor.trim()
@@ -498,6 +534,15 @@ export async function procesarExcelPediatria(
     }
 
     console.log(`Procesando ${excelData.rows.length} filas del Excel`)
+    console.log(`[Debug] Headers detectados en Excel (${excelData.headers.length}):`, excelData.headers)
+    
+    // Si hay filas, mostrar los headers de la primera fila
+    if (excelData.rows.length > 0) {
+      const primeraFila = excelData.rows[0]
+      const headersPrimeraFila = Object.keys(primeraFila)
+      console.log(`[Debug] Headers en primera fila de datos (${headersPrimeraFila.length}):`, headersPrimeraFila)
+      console.log(`[Debug] Valores de primera fila:`, JSON.stringify(primeraFila, null, 2))
+    }
 
     // Contadores para debugging
     let filasSinFecha = 0
@@ -523,7 +568,7 @@ export async function procesarExcelPediatria(
           'Fecha de atención', 'Fecha Atención', 'Fecha de Atención',
           'Fecha de la consulta', 'Fecha Consulta', 'Fecha de Consulta',
           'FECHA DE VISITA', 'FECHA VISIT'
-        ])
+        ], i < 3 ? 'fecha' : undefined)
         const hora = buscarValor(row, [
           'Hora inicio visita', // Nombre exacto de la columna (prioridad máxima)
           'Hora inicio', 'Hora Inicio', 'hora inicio', 'HORA INICIO',
@@ -531,7 +576,7 @@ export async function procesarExcelPediatria(
           'Hora', 'hora', 'HORA', 
           'Horario', 'horario', 'HORARIO',
           'ora inicio', 'ora Inicio', 'ora inicio visita'
-        ])
+        ], i < 3 ? 'hora' : undefined)
         const paciente = buscarValor(row, [
           'Paciente', // Nombre exacto de la columna (prioridad máxima)
           'paciente', 'PACIENTE', 
@@ -609,8 +654,20 @@ export async function procesarExcelPediatria(
         } else {
           // Debug: si no se encontró fechaStr, loguear los headers
           if (i < 10) {
-            console.log(`[Debug Fila ${i + 1}] No se encontró campo de fecha. Headers:`, Object.keys(row))
-            console.log(`[Debug Fila ${i + 1}] Valores de la fila:`, row)
+            const headersDisponibles = Object.keys(row)
+            console.log(`[Debug Fila ${i + 1}] No se encontró campo de fecha.`)
+            console.log(`[Debug Fila ${i + 1}] Headers disponibles (${headersDisponibles.length}):`, headersDisponibles)
+            console.log(`[Debug Fila ${i + 1}] Valores de la fila:`, JSON.stringify(row, null, 2))
+            // Intentar buscar cualquier columna que contenga "fecha" o "visit"
+            const posiblesFechas = headersDisponibles.filter(h => 
+              h.toLowerCase().includes('fecha') || h.toLowerCase().includes('visit')
+            )
+            if (posiblesFechas.length > 0) {
+              console.log(`[Debug Fila ${i + 1}] Posibles columnas de fecha encontradas:`, posiblesFechas)
+              posiblesFechas.forEach(col => {
+                console.log(`[Debug Fila ${i + 1}] Valor de "${col}":`, row[col], 'tipo:', typeof row[col])
+              })
+            }
           }
         }
         
