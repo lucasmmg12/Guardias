@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase/client'
 import { ConfiguracionAdicional, ConfiguracionAdicionalInsert } from '@/lib/types'
 import { NotificationModal, NotificationType } from '@/components/custom/NotificationModal'
 import { InlineEditCell } from '@/components/custom/InlineEditCell'
+import { AdicionalFormModal } from '@/components/custom/AdicionalFormModal'
 import { Button } from '@/components/ui/button'
 import { Plus, Trash2, ArrowLeft, Copy, CopyCheck } from 'lucide-react'
 
@@ -38,7 +39,7 @@ export default function AdicionalesPage() {
   const [anio, setAnio] = useState(new Date().getFullYear())
   const [adicionales, setAdicionales] = useState<ConfiguracionAdicional[]>([])
   const [loading, setLoading] = useState(false)
-  const [showForm, setShowForm] = useState(false)
+  const [showFormModal, setShowFormModal] = useState(false)
   const [copiarConAumento, setCopiarConAumento] = useState(false)
   const [porcentajeAumento, setPorcentajeAumento] = useState(0)
   const [notification, setNotification] = useState<{
@@ -92,55 +93,24 @@ export default function AdicionalesPage() {
     }
   }
 
-  async function handleAgregar() {
+  async function handleAgregar(data: {
+    obra_social: string
+    especialidad: string
+    monto_base_adicional: number
+    porcentaje_pago_medico: number
+  }) {
     try {
       setLoading(true)
-      
-      const obraSocial = prompt('Ingrese el nombre de la obra social:')
-      if (!obraSocial || obraSocial.trim() === '') {
-        return
-      }
-
-      const especialidad = prompt(`Seleccione la especialidad:\n${ESPECIALIDADES.map((e, i) => `${i + 1}. ${e}`).join('\n')}\n\nIngrese el número:`)
-      if (!especialidad) {
-        return
-      }
-      const especialidadIndex = parseInt(especialidad) - 1
-      if (especialidadIndex < 0 || especialidadIndex >= ESPECIALIDADES.length) {
-        showNotification('error', 'Número de especialidad inválido', 'Error')
-        return
-      }
-      const especialidadSeleccionada = ESPECIALIDADES[especialidadIndex]
-
-      const montoBaseStr = prompt('Ingrese el monto base del adicional (ej: 10000):')
-      if (!montoBaseStr) {
-        return
-      }
-      const montoBase = parseFloat(montoBaseStr)
-      if (isNaN(montoBase) || montoBase <= 0) {
-        showNotification('error', 'Monto base inválido', 'Error')
-        return
-      }
-
-      const porcentajeStr = prompt('Ingrese el porcentaje que se paga al médico (ej: 50 para 50%):')
-      if (!porcentajeStr) {
-        return
-      }
-      const porcentaje = parseFloat(porcentajeStr)
-      if (isNaN(porcentaje) || porcentaje < 0 || porcentaje > 100) {
-        showNotification('error', 'Porcentaje inválido (debe estar entre 0 y 100)', 'Error')
-        return
-      }
 
       // Calcular monto adicional
-      const montoAdicional = montoBase * (porcentaje / 100)
+      const montoAdicional = data.monto_base_adicional * (data.porcentaje_pago_medico / 100)
 
       // Verificar si ya existe
       const { data: existente } = await supabase
         .from('configuracion_adicionales')
         .select('id')
-        .eq('obra_social', obraSocial.trim())
-        .eq('especialidad', especialidadSeleccionada)
+        .eq('obra_social', data.obra_social.trim())
+        .eq('especialidad', data.especialidad)
         .eq('mes', mes)
         .eq('anio', anio)
         .single()
@@ -151,13 +121,13 @@ export default function AdicionalesPage() {
       }
 
       const nuevoAdicional: ConfiguracionAdicionalInsert = {
-        obra_social: obraSocial.trim(),
-        especialidad: especialidadSeleccionada,
+        obra_social: data.obra_social.trim(),
+        especialidad: data.especialidad,
         mes,
         anio,
         aplica_adicional: true,
-        monto_base_adicional: montoBase,
-        porcentaje_pago_medico: porcentaje,
+        monto_base_adicional: data.monto_base_adicional,
+        porcentaje_pago_medico: data.porcentaje_pago_medico,
         monto_adicional: montoAdicional
       }
 
@@ -170,6 +140,7 @@ export default function AdicionalesPage() {
 
       await cargarAdicionales()
       showNotification('success', `Adicional agregado correctamente. Monto que recibe el médico: $${montoAdicional.toFixed(2)}`, 'Éxito')
+      setShowFormModal(false)
     } catch (error) {
       console.error('Error agregando adicional:', error)
       showNotification('error', 'Error al agregar adicional: ' + (error instanceof Error ? error.message : 'Error desconocido'), 'Error')
@@ -389,7 +360,7 @@ export default function AdicionalesPage() {
             </div>
             <div className="flex-1"></div>
             <Button
-              onClick={handleAgregar}
+              onClick={() => setShowFormModal(true)}
               disabled={loading}
               className="bg-green-600 hover:bg-green-700 text-white"
             >
@@ -540,6 +511,13 @@ export default function AdicionalesPage() {
         type={notification.type}
         title={notification.title}
         message={notification.message}
+      />
+
+      {/* Modal de Formulario */}
+      <AdicionalFormModal
+        isOpen={showFormModal}
+        onClose={() => setShowFormModal(false)}
+        onSave={handleAgregar}
       />
     </div>
   )

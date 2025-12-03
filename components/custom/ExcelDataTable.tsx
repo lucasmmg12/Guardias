@@ -7,7 +7,7 @@ import { ExpandableSection } from './ExpandableSection'
 import { CheckCircle2, AlertCircle, Trash2, Clock, UserX, Database } from 'lucide-react'
 import { esParticular, tieneHorario, obtenerIndicesDuplicados, esResidenteHorarioFormativo } from '@/lib/utils'
 import { supabase } from '@/lib/supabase/client'
-import { Medico, ValorConsultaObraSocial } from '@/lib/types'
+import { Medico, ValorConsultaObraSocial, ConfiguracionAdicional } from '@/lib/types'
 
 interface ExcelDataTableProps {
   data: ExcelData
@@ -26,6 +26,8 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
   const [medicosLoading, setMedicosLoading] = useState(false)
   const [valoresConsultas, setValoresConsultas] = useState<Map<string, number>>(new Map())
   const [valoresLoading, setValoresLoading] = useState(false)
+  const [adicionales, setAdicionales] = useState<Map<string, number>>(new Map())
+  const [adicionalesLoading, setAdicionalesLoading] = useState(false)
 
   // Sincronizar rows cuando data cambia - MEJORADO para detectar cambios en el contenido
   useEffect(() => {
@@ -79,7 +81,7 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
       try {
         setValoresLoading(true)
         const tipoConsulta = especialidad === 'Pediatría' 
-          ? 'CONSULTA PEDIATRICA Y NEONATAL' 
+          ? 'CONSULTA DE GUARDIA PEDIATRICA' 
           : 'CONSULTA GINECOLOGICA'
 
         // Validar que mes y anio estén definidos
@@ -122,6 +124,52 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
     }
 
     loadValoresConsultas()
+  }, [mes, anio, especialidad])
+
+  // Cargar adicionales cuando cambia mes, año o especialidad
+  useEffect(() => {
+    if (!mes || !anio || !especialidad) {
+      setAdicionales(new Map())
+      setAdicionalesLoading(false)
+      return
+    }
+
+    async function loadAdicionales() {
+      try {
+        setAdicionalesLoading(true)
+        const mesValue = mes as number
+        const anioValue = anio as number
+
+        const { data: adicionalesData, error } = await supabase
+          .from('configuracion_adicionales')
+          .select('*')
+          .eq('especialidad', especialidad)
+          .eq('mes', mesValue)
+          .eq('anio', anioValue)
+          .eq('aplica_adicional', true) as { data: ConfiguracionAdicional[] | null; error: any }
+
+        if (error) throw error
+
+        const adicionalesMap = new Map<string, number>()
+        if (adicionalesData) {
+          adicionalesData.forEach(a => {
+            if (a.monto_base_adicional && a.porcentaje_pago_medico) {
+              // Calcular el monto que recibe el médico
+              const montoCalculado = a.monto_base_adicional * (a.porcentaje_pago_medico / 100)
+              adicionalesMap.set(a.obra_social, montoCalculado)
+            }
+          })
+        }
+
+        setAdicionales(adicionalesMap)
+      } catch (error) {
+        console.error('Error loading adicionales:', error)
+      } finally {
+        setAdicionalesLoading(false)
+      }
+    }
+
+    loadAdicionales()
   }, [mes, anio, especialidad])
 
   // Crear mapa optimizado de médicos por nombre (búsqueda rápida)
@@ -457,6 +505,7 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
         anio={anio}
         sectionKey="sin_horario"
         valoresConsultas={valoresConsultas}
+        adicionales={adicionales}
       />
 
       {/* Sección expandible: Registros duplicados */}
@@ -477,6 +526,7 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
         anio={anio}
         sectionKey="duplicados"
         valoresConsultas={valoresConsultas}
+        adicionales={adicionales}
       />
 
       {/* Sección expandible: Residentes en horario formativo */}
@@ -497,6 +547,7 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
         anio={anio}
         sectionKey="residente_formativo"
         valoresConsultas={valoresConsultas}
+        adicionales={adicionales}
       />
 
       {/* 5to recuadro: Detalle completo */}
@@ -522,6 +573,7 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
         esDuplicadoRow={(rowIndex) => filasDuplicadas.has(rowIndex)}
         esResidenteFormativoRow={(rowIndex) => filasResidenteHorarioFormativo.has(rowIndex)}
         valoresConsultas={valoresConsultas}
+        adicionales={adicionales}
       />
       <div className="text-sm text-gray-400">
         Total de filas: <span className="text-green-400 font-semibold">{rows.length}</span>

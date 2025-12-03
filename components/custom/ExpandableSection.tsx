@@ -33,6 +33,8 @@ interface ExpandableSectionProps {
   esResidenteFormativoRow?: (rowIndex: number) => boolean
   // Valores de consultas para calcular importe
   valoresConsultas?: Map<string, number>
+  // Adicionales para calcular adicional
+  adicionales?: Map<string, number>
 }
 
 export function ExpandableSection({
@@ -57,7 +59,8 @@ export function ExpandableSection({
   esSinHorarioRow,
   esDuplicadoRow,
   esResidenteFormativoRow,
-  valoresConsultas = new Map()
+  valoresConsultas = new Map(),
+  adicionales = new Map()
 }: ExpandableSectionProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set())
@@ -101,8 +104,41 @@ export function ExpandableSection({
 
   const isEditable = (header: string) => {
     const headerLower = header.toLowerCase().trim()
-    return headerLower.includes('cliente') || headerLower.includes('obra') || headerLower === 'importe'
+    return headerLower.includes('cliente') || headerLower.includes('obra') || headerLower === 'importe' || headerLower === 'adicional'
   }
+
+  // Función para obtener el valor de adicional basado en la obra social
+  const obtenerAdicional = useCallback((row: ExcelRow): number => {
+    // Si el adicional ya está guardado en el row (desde BD), usarlo
+    if (row['Adicional'] !== null && row['Adicional'] !== undefined) {
+      const adicionalValue = row['Adicional']
+      if (typeof adicionalValue === 'number') {
+        return adicionalValue
+      }
+      if (typeof adicionalValue === 'string') {
+        const parsed = parseFloat(adicionalValue)
+        if (!isNaN(parsed)) {
+          return parsed
+        }
+      }
+    }
+    
+    // Si no está guardado, calcular desde la obra social
+    const clienteHeader = data.headers.find(h => {
+      const hLower = h.toLowerCase().trim()
+      return hLower === 'cliente' || hLower.includes('obra social') || hLower.includes('obra')
+    })
+    
+    if (!clienteHeader) return 0
+    
+    const obraSocial = row[clienteHeader]
+    if (!obraSocial || typeof obraSocial !== 'string') return 0
+    
+    const obraSocialTrimmed = obraSocial.trim()
+    
+    // Buscar en el mapa de adicionales
+    return adicionales.get(obraSocialTrimmed) || 0
+  }, [data.headers, adicionales])
 
   // Función para obtener el valor de importe basado en la obra social
   const obtenerImporte = useCallback((row: ExcelRow): number => {
@@ -443,6 +479,26 @@ export function ExpandableSection({
                       </div>
                     </th>
                   ))}
+                  {/* Columna Adicional */}
+                  <th
+                    className="px-2 py-2 text-left text-xs font-semibold text-gray-300 bg-white/5 whitespace-nowrap"
+                    style={{
+                      position: 'sticky',
+                      top: 0,
+                      zIndex: 10,
+                      minWidth: '120px',
+                      maxWidth: '200px',
+                    }}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span className="truncate">Adicional</span>
+                      {allowEdit && (
+                        <span className="text-[10px] text-green-400 bg-green-400/20 px-1.5 py-0.5 rounded flex-shrink-0">
+                          Editable
+                        </span>
+                      )}
+                    </div>
+                  </th>
                   {/* Columna Importe */}
                   <th
                     className="px-2 py-2 text-left text-xs font-semibold text-gray-300 bg-white/5 whitespace-nowrap"
@@ -682,6 +738,37 @@ export function ExpandableSection({
                           </td>
                         )
                       })}
+                      {/* Columna Adicional */}
+                      <td
+                        className="px-2 py-1.5 text-xs text-gray-300 text-right"
+                        style={{
+                          minWidth: '120px',
+                          maxWidth: '200px',
+                          position: 'relative',
+                          zIndex: 1,
+                        }}
+                      >
+                        {allowEdit && onCellUpdate ? (
+                          <InlineEditCell
+                            value={row['Adicional'] ?? obtenerAdicional(row)}
+                            type="number"
+                            onSave={async (newValue) => {
+                              const numValue = typeof newValue === 'string' ? parseFloat(newValue) || 0 : newValue
+                              await onCellUpdate(originalRowIndex, 'Adicional', numValue)
+                            }}
+                            columnName="Adicional"
+                          />
+                        ) : (
+                          <span className="truncate block text-right">
+                            {new Intl.NumberFormat('es-AR', {
+                              style: 'currency',
+                              currency: 'ARS',
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2
+                            }).format(row['Adicional'] ?? obtenerAdicional(row))}
+                          </span>
+                        )}
+                      </td>
                       {/* Columna Importe */}
                       <td
                         className="px-2 py-1.5 text-xs text-gray-300 text-right"
@@ -731,7 +818,7 @@ export function ExpandableSection({
                       ></td>
                     )}
                     {data.headers.map((header, colIndex) => {
-                      // Si es la última columna antes de Importe, mostrar "TOTAL"
+                      // Si es la última columna antes de Adicional e Importe, mostrar "TOTAL"
                       const isLastColumn = colIndex === data.headers.length - 1
                       return (
                         <td
@@ -746,6 +833,26 @@ export function ExpandableSection({
                         </td>
                       )
                     })}
+                    {/* Total de Adicional */}
+                    <td
+                      className="px-2 py-2 text-xs text-green-400 font-semibold text-right"
+                      style={{
+                        minWidth: '120px',
+                        maxWidth: '200px',
+                      }}
+                    >
+                      {new Intl.NumberFormat('es-AR', {
+                        style: 'currency',
+                        currency: 'ARS',
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                      }).format(
+                        filteredRows.reduce((sum, row) => {
+                          const adicional = row['Adicional'] ?? obtenerAdicional(row)
+                          return sum + (typeof adicional === 'number' ? adicional : parseFloat(String(adicional)) || 0)
+                        }, 0)
+                      )}
+                    </td>
                     {/* Total de Importe */}
                     <td
                       className="px-2 py-2 text-xs text-green-400 font-semibold text-right"

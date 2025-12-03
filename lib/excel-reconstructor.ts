@@ -35,7 +35,10 @@ export function reconstruirExcelDataDesdeDetalles(
     'Responsable'
   ]
   
-  // Agregar "Importe" a los headers si no está presente
+  // Agregar "Adicional" e "Importe" a los headers si no están presentes
+  if (!headers.includes('Adicional')) {
+    headers.push('Adicional')
+  }
   if (!headers.includes('Importe')) {
     headers.push('Importe')
   }
@@ -77,6 +80,9 @@ export function reconstruirExcelDataDesdeDetalles(
         row[header] = detalle.obra_social || null
       } else if (headerLower.includes('responsable') || headerLower.includes('medico')) {
         row[header] = detalle.medico_nombre || null
+      } else if (headerLower === 'adicional') {
+        // Usar monto_adicional si existe, sino null (se calculará desde la obra social)
+        row[header] = detalle.monto_adicional ?? null
       } else if (headerLower === 'importe') {
         // Usar monto_facturado si existe, sino null (se calculará desde la obra social)
         row[header] = detalle.monto_facturado ?? null
@@ -142,7 +148,7 @@ export async function cargarExcelDataDesdeBD(
     while (hasMore) {
       const { data: detalles, error } = await supabase
         .from('detalle_guardia')
-        .select('id, fecha, hora, paciente, obra_social, medico_nombre, monto_facturado, fila_excel')
+        .select('id, fecha, hora, paciente, obra_social, medico_nombre, monto_facturado, monto_adicional, fila_excel')
         .eq('liquidacion_id', liquidacionId)
         .order('fila_excel', { ascending: true, nullsFirst: false })
         .range(from, from + pageSize - 1)

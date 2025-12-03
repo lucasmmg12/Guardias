@@ -383,7 +383,7 @@ export async function procesarExcelPediatria(
     const { data: valoresData } = await supabase
       .from('valores_consultas_obra_social')
       .select('*')
-      .eq('tipo_consulta', 'CONSULTA PEDIATRICA Y NEONATAL')
+      .eq('tipo_consulta', 'CONSULTA DE GUARDIA PEDIATRICA')
       .eq('mes', mes)
       .eq('anio', anio) as { data: ValorConsultaObraSocial[] | null }
 
@@ -398,7 +398,7 @@ export async function procesarExcelPediatria(
       .from('valores_consultas_obra_social')
       .select('valor')
       .eq('obra_social', 'PARTICULARES')
-      .eq('tipo_consulta', 'CONSULTA PEDIATRICA Y NEONATAL')
+      .eq('tipo_consulta', 'CONSULTA DE GUARDIA PEDIATRICA')
       .eq('mes', mes)
       .eq('anio', anio)
       .single()
@@ -412,7 +412,7 @@ export async function procesarExcelPediatria(
         .from('valores_consultas_obra_social')
         .select('valor')
         .eq('obra_social', '042 - PARTICULARES')
-        .eq('tipo_consulta', 'CONSULTA PEDIATRICA Y NEONATAL')
+        .eq('tipo_consulta', 'CONSULTA DE GUARDIA PEDIATRICA')
         .eq('mes', mes)
         .eq('anio', anio)
         .single()
