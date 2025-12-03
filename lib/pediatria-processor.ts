@@ -536,14 +536,37 @@ export async function procesarExcelPediatria(
           'Grupo agenda', 'Grupo Agenda', 'grupo agenda',
           'GRUPO AGENDA', 'Grupo', 'grupo'
         ])
+        const tipoConsulta = buscarValor(row, [
+          'Tipo visita', 'Tipo Visita', 'tipo visita',
+          'Tipo de Consulta', 'Tipo consulta', 'TIPO VISITA',
+          'Tipo visita', 'Tipo de visita'
+        ])
         const duracion = buscarValor(row, [
           'Duración', 'duración', 'DURACIÓN',
           'Duracion', 'duracion', 'DURACION',
           'Duración visita', 'Duración Visita'
         ])
         
-        // FILTRO 1: Verificar que sea PEDIATRÍA
-        if (!grupoAgenda || typeof grupoAgenda !== 'string' || !grupoAgenda.toLowerCase().includes('pediatría') && !grupoAgenda.toLowerCase().includes('pediatria')) {
+        // FILTRO 1: Verificar que sea PEDIATRÍA (solo si el campo existe)
+        // Si el archivo ya viene filtrado, este filtro es opcional
+        // Solo excluir si el campo existe Y tiene un valor que NO es pediatría
+        let esPediatria = true // Por defecto, asumir que es pediatría (archivo ya filtrado)
+        
+        if (grupoAgenda && typeof grupoAgenda === 'string' && grupoAgenda.trim() !== '') {
+          const grupoAgendaLower = grupoAgenda.toLowerCase()
+          if (!grupoAgendaLower.includes('pediatría') && !grupoAgendaLower.includes('pediatria') && !grupoAgendaLower.includes('pediatric')) {
+            esPediatria = false
+          }
+        } else if (tipoConsulta && typeof tipoConsulta === 'string' && tipoConsulta.trim() !== '') {
+          // Si no hay Grupo agenda, verificar Tipo de Consulta como respaldo
+          const tipoConsultaLower = tipoConsulta.toLowerCase()
+          if (!tipoConsultaLower.includes('pediatr') && !tipoConsultaLower.includes('pediatric')) {
+            esPediatria = false
+          }
+        }
+        // Si no hay ninguno de los dos campos, asumir que es pediatría (archivo ya filtrado)
+        
+        if (!esPediatria) {
           filasNoPediatria++
           resultado.filasExcluidas.push({
             numeroFila: i + 1,
