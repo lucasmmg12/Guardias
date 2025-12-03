@@ -977,16 +977,38 @@ function DetalleLiquidacion({ liquidacionId }: { liquidacionId: string }) {
   async function cargarDetalles() {
     setLoading(true)
     try {
-      const { data, error } = await supabase
-        .from('detalle_guardia')
-        .select('*')
-        .eq('liquidacion_id', liquidacionId)
-        .order('fecha', { ascending: true })
-        .order('hora', { ascending: true })
-        .limit(100) // Limitar a 100 para no sobrecargar
+      // Cargar todos los registros usando paginación
+      const todosLosDetalles: any[] = []
+      const pageSize = 1000
+      let from = 0
+      let hasMore = true
 
-      if (error) throw error
-      setDetalles(data || [])
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('detalle_guardia')
+          .select('*')
+          .eq('liquidacion_id', liquidacionId)
+          .order('fecha', { ascending: true })
+          .order('hora', { ascending: true })
+          .range(from, from + pageSize - 1)
+
+        if (error) throw error
+
+        if (!data || data.length === 0) {
+          hasMore = false
+          break
+        }
+
+        todosLosDetalles.push(...data)
+
+        if (data.length < pageSize) {
+          hasMore = false
+        } else {
+          from += pageSize
+        }
+      }
+
+      setDetalles(todosLosDetalles)
     } catch (error) {
       console.error('Error cargando detalles:', error)
     } finally {
@@ -1058,11 +1080,6 @@ function DetalleLiquidacion({ liquidacionId }: { liquidacionId: string }) {
           </tbody>
         </table>
       </div>
-      {detalles.length >= 100 && (
-        <div className="mt-2 text-xs text-gray-400 text-center">
-          Mostrando los primeros 100 registros
-        </div>
-      )}
     </div>
   )
 }

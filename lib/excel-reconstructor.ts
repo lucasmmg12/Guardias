@@ -116,6 +116,7 @@ export function reconstruirExcelDataDesdeDetalles(
 /**
  * Reconstruye ExcelData desde BD de forma optimizada
  * Usa índices de BD para consultas rápidas
+ * Carga TODOS los registros sin límite usando paginación
  */
 export async function cargarExcelDataDesdeBD(
   liquidacionId: string,
@@ -123,23 +124,45 @@ export async function cargarExcelDataDesdeBD(
   headersOriginales?: string[]
 ): Promise<ExcelData | null> {
   try {
-    // Consulta optimizada: solo campos necesarios, ordenada por índice
-    const { data: detalles, error } = await supabase
-      .from('detalle_guardia')
-      .select('id, fecha, hora, paciente, obra_social, medico_nombre, fila_excel')
-      .eq('liquidacion_id', liquidacionId)
-      .order('fila_excel', { ascending: true, nullsFirst: false })
+    const todosLosDetalles: DetalleGuardia[] = []
+    const pageSize = 1000 // Tamaño de página para Supabase
+    let from = 0
+    let hasMore = true
 
-    if (error) {
-      console.error('Error cargando detalles:', error)
+    // Cargar todos los registros usando paginación
+    while (hasMore) {
+      const { data: detalles, error } = await supabase
+        .from('detalle_guardia')
+        .select('id, fecha, hora, paciente, obra_social, medico_nombre, fila_excel')
+        .eq('liquidacion_id', liquidacionId)
+        .order('fila_excel', { ascending: true, nullsFirst: false })
+        .range(from, from + pageSize - 1)
+
+      if (error) {
+        console.error('Error cargando detalles:', error)
+        return null
+      }
+
+      if (!detalles || detalles.length === 0) {
+        hasMore = false
+        break
+      }
+
+      todosLosDetalles.push(...(detalles as DetalleGuardia[]))
+
+      // Si obtuvimos menos registros que el tamaño de página, no hay más
+      if (detalles.length < pageSize) {
+        hasMore = false
+      } else {
+        from += pageSize
+      }
+    }
+
+    if (todosLosDetalles.length === 0) {
       return null
     }
 
-    if (!detalles || detalles.length === 0) {
-      return null
-    }
-
-    return reconstruirExcelDataDesdeDetalles(detalles as DetalleGuardia[], headersOriginales)
+    return reconstruirExcelDataDesdeDetalles(todosLosDetalles, headersOriginales)
   } catch (error) {
     console.error('Error en cargarExcelDataDesdeBD:', error)
     return null
