@@ -387,7 +387,7 @@ export default function PediatriaPage() {
                                         {resultadoProcesamiento.filasExcluidas.length} fila{resultadoProcesamiento.filasExcluidas.length > 1 ? 's' : ''} excluida{resultadoProcesamiento.filasExcluidas.length > 1 ? 's' : ''} del procesamiento
                                     </h3>
                                     <p className="text-sm text-gray-400 mt-1">
-                                        Estas filas fueron excluidas por: sin fecha, fecha inválida, sin duración, duración cero, no pediatría o duplicados.
+                                        Estas filas fueron excluidas por: sin fecha, fecha inválida, no pediatría o duplicados.
                                     </p>
                                 </div>
                             </div>
@@ -419,8 +419,6 @@ export default function PediatriaPage() {
                                             <td className="px-3 py-2 text-xs text-red-400">
                                                 {filaExcluida.razon === 'sin_fecha' && '❌ Sin fecha válida'}
                                                 {filaExcluida.razon === 'fecha_invalida' && '⚠️ Fecha fuera de rango'}
-                                                {filaExcluida.razon === 'sin_duracion' && '❌ Sin duración'}
-                                                {filaExcluida.razon === 'duracion_cero' && '❌ Duración = 0'}
                                                 {filaExcluida.razon === 'no_pediatria' && '❌ No es pediatría'}
                                                 {filaExcluida.razon === 'duplicado' && '⚠️ Duplicado'}
                                             </td>

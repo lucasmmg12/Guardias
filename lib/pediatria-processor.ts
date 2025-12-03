@@ -5,7 +5,7 @@ import { calcularNumeroLiquidacion, esParticular } from './utils'
 
 interface FilaExcluida {
   numeroFila: number
-  razon: 'sin_fecha' | 'fecha_invalida' | 'sin_duracion' | 'duracion_cero' | 'no_pediatria' | 'duplicado'
+  razon: 'sin_fecha' | 'fecha_invalida' | 'no_pediatria' | 'duplicado'
   datos: ExcelRow
 }
 
@@ -484,8 +484,6 @@ export async function procesarExcelPediatria(
     // Contadores para debugging
     let filasSinFecha = 0
     let filasFechaInvalida = 0
-    let filasSinDuracion = 0
-    let filasDuracionCero = 0
     let filasNoPediatria = 0
     let filasDuplicadas = 0
     let filasProcesadas = 0
@@ -541,11 +539,6 @@ export async function procesarExcelPediatria(
           'Tipo de Consulta', 'Tipo consulta', 'TIPO VISITA',
           'Tipo visita', 'Tipo de visita'
         ])
-        const duracion = buscarValor(row, [
-          'Duración', 'duración', 'DURACIÓN',
-          'Duracion', 'duracion', 'DURACION',
-          'Duración visita', 'Duración Visita'
-        ])
         
         // FILTRO 1: Verificar que sea PEDIATRÍA (solo si el campo existe)
         // Si el archivo ya viene filtrado, este filtro es opcional
@@ -571,44 +564,6 @@ export async function procesarExcelPediatria(
           resultado.filasExcluidas.push({
             numeroFila: i + 1,
             razon: 'no_pediatria',
-            datos: row
-          })
-          continue
-        }
-
-        // FILTRO 2: Verificar duración
-        let duracionNumero: number | null = null
-        if (duracion === null || duracion === undefined || duracion === '') {
-          filasSinDuracion++
-          resultado.filasExcluidas.push({
-            numeroFila: i + 1,
-            razon: 'sin_duracion',
-            datos: row
-          })
-          continue
-        }
-        
-        if (typeof duracion === 'number') {
-          duracionNumero = duracion
-        } else if (typeof duracion === 'string') {
-          const duracionParsed = parseFloat(duracion.trim())
-          if (isNaN(duracionParsed)) {
-            filasSinDuracion++
-            resultado.filasExcluidas.push({
-              numeroFila: i + 1,
-              razon: 'sin_duracion',
-              datos: row
-            })
-            continue
-          }
-          duracionNumero = duracionParsed
-        }
-        
-        if (duracionNumero === 0 || duracionNumero === null) {
-          filasDuracionCero++
-          resultado.filasExcluidas.push({
-            numeroFila: i + 1,
-            razon: 'duracion_cero',
             datos: row
           })
           continue
@@ -784,14 +739,14 @@ export async function procesarExcelPediatria(
     }
 
     // Agregar resumen de advertencias al final
-    console.log(`Resumen: ${filasProcesadas} procesadas, ${filasSinFecha} sin fecha, ${filasFechaInvalida} fecha inválida, ${filasSinDuracion} sin duración, ${filasDuracionCero} duración cero, ${filasNoPediatria} no pediatría, ${filasDuplicadas} duplicadas`)
-    if (filasSinFecha > 0 || filasFechaInvalida > 0 || filasSinDuracion > 0 || filasDuracionCero > 0 || filasNoPediatria > 0 || filasDuplicadas > 0) {
-      resultado.advertencias.push(`Total omitidas: ${filasSinFecha + filasFechaInvalida + filasSinDuracion + filasDuracionCero + filasNoPediatria + filasDuplicadas} (${filasSinFecha} sin fecha, ${filasFechaInvalida} fecha inválida, ${filasSinDuracion} sin duración, ${filasDuracionCero} duración cero, ${filasNoPediatria} no pediatría, ${filasDuplicadas} duplicadas)`)
+    console.log(`Resumen: ${filasProcesadas} procesadas, ${filasSinFecha} sin fecha, ${filasFechaInvalida} fecha inválida, ${filasNoPediatria} no pediatría, ${filasDuplicadas} duplicadas`)
+    if (filasSinFecha > 0 || filasFechaInvalida > 0 || filasNoPediatria > 0 || filasDuplicadas > 0) {
+      resultado.advertencias.push(`Total omitidas: ${filasSinFecha + filasFechaInvalida + filasNoPediatria + filasDuplicadas} (${filasSinFecha} sin fecha, ${filasFechaInvalida} fecha inválida, ${filasNoPediatria} no pediatría, ${filasDuplicadas} duplicadas)`)
     }
 
     // 8. Guardar detalles en la base de datos
     if (detalles.length === 0) {
-      resultado.errores.push('No se procesó ninguna fila válida. Verifique que el Excel tenga filas de pediatría con duración > 0.')
+      resultado.errores.push('No se procesó ninguna fila válida. Verifique que el Excel tenga filas de pediatría válidas.')
       return resultado
     }
 
