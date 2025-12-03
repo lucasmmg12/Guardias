@@ -28,44 +28,87 @@ export interface ResumenPorPrestador {
 /**
  * Calcula el resumen por médico y obra social
  * Incluye retención del 30% y adicionales
- * Busca la liquidación por mes y año (sin filtrar por especialidad)
+ * Busca la liquidación por mes y año o usa liquidacionId si se proporciona
  */
 export async function calcularResumenPorMedico(
   mes: number,
-  anio: number
+  anio: number,
+  liquidacionId?: string  // NUEVO: aceptar liquidacionId opcional para trabajar con liquidación específica
 ): Promise<ResumenPorMedico[]> {
-  // Obtener liquidación para el mes/año (sin filtrar por especialidad)
-  const { data: liquidacion } = await supabase
-    .from('liquidaciones_guardia')
-    .select('id')
-    .eq('mes', mes)
-    .eq('anio', anio)
-    .maybeSingle()
+  let liquidacionIdFinal: string
 
-  if (!liquidacion || !(liquidacion as any).id) {
+  if (liquidacionId) {
+    // Si se proporciona liquidacionId, usarlo directamente (trabajar solo con ese archivo)
+    liquidacionIdFinal = liquidacionId
+    console.log(`[Pediatría Resúmenes] Usando liquidación específica: ${liquidacionIdFinal}`)
+  } else {
+    // Si no se proporciona, buscar la liquidación de Pediatría para el mes/año
+    const { data: liquidacion } = await supabase
+      .from('liquidaciones_guardia')
+      .select('id')
+      .eq('especialidad', 'Pediatría')  // IMPORTANTE: filtrar por especialidad
+      .eq('mes', mes)
+      .eq('anio', anio)
+      .maybeSingle()
+
+    if (!liquidacion || !(liquidacion as any).id) {
+      console.warn(`[Pediatría Resúmenes] No se encontró liquidación de Pediatría para ${mes}/${anio}`)
+      return []
+    }
+
+    liquidacionIdFinal = (liquidacion as any).id
+    console.log(`[Pediatría Resúmenes] Liquidación encontrada: ${liquidacionIdFinal}`)
+  }
+
+  // Obtener todos los detalles de guardia de esta liquidación usando paginación
+  // IMPORTANTE: Usar paginación para obtener TODOS los registros (más de 1000)
+  let todosLosDetalles: DetalleGuardia[] = []
+  const pageSize = 1000
+  let from = 0
+  let hasMore = true
+
+  while (hasMore) {
+    const { data: detallesPagina, error } = await supabase
+      .from('detalle_guardia')
+      .select('*')
+      .eq('liquidacion_id', liquidacionIdFinal)
+      .range(from, from + pageSize - 1)
+
+    if (error) {
+      console.error('[Pediatría Resúmenes] Error obteniendo detalles:', error)
+      break
+    }
+
+    if (!detallesPagina || detallesPagina.length === 0) {
+      hasMore = false
+      break
+    }
+
+    todosLosDetalles = [...todosLosDetalles, ...detallesPagina]
+
+    if (detallesPagina.length < pageSize) {
+      hasMore = false
+    } else {
+      from += pageSize
+    }
+  }
+
+  console.log(`[Pediatría Resúmenes] Total de detalles obtenidos: ${todosLosDetalles.length} para liquidación ${liquidacionIdFinal}`)
+
+  if (todosLosDetalles.length === 0) {
     return []
   }
 
-  const liquidacionId = (liquidacion as any).id
-
-  // Obtener todos los detalles de guardia de esta liquidación
-  // IMPORTANTE: Remover límite por defecto de Supabase (1000 registros)
-  const { data: detalles } = await supabase
-    .from('detalle_guardia')
-    .select('*')
-    .eq('liquidacion_id', liquidacionId)
-    .limit(Number.MAX_SAFE_INTEGER) as { data: DetalleGuardia[] | null }
-
-  if (!detalles || detalles.length === 0) {
-    return []
-  }
+  const detalles = todosLosDetalles
 
   // Agrupar por médico y obra social
   const resumenMap = new Map<string, ResumenPorMedico>()
 
   detalles.forEach(detalle => {
-    // Excluir consultas con valor cero
-    const tieneValor = (detalle.monto_facturado ?? 0) > 0
+    // MODIFICADO: Incluir consultas con importe_calculado > 0 aunque monto_facturado = 0
+    // Esto evita excluir consultas válidas que aún no tienen monto_facturado asignado
+    // pero sí tienen importe_calculado (valor calculado desde valores_consultas_obra_social)
+    const tieneValor = (detalle.monto_facturado ?? 0) > 0 || (detalle.importe_calculado ?? 0) > 0
     if (!tieneValor) {
       return
     }
@@ -128,10 +171,11 @@ export async function calcularResumenPorMedico(
  */
 export async function calcularResumenPorPrestador(
   mes: number,
-  anio: number
+  anio: number,
+  liquidacionId?: string  // NUEVO: aceptar liquidacionId opcional
 ): Promise<ResumenPorPrestador[]> {
-  // Obtener resumen por médico
-  const resumenPorMedico = await calcularResumenPorMedico(mes, anio)
+  // Obtener resumen por médico pasando liquidacionId
+  const resumenPorMedico = await calcularResumenPorMedico(mes, anio, liquidacionId)
 
   // Agrupar por médico
   const resumenMap = new Map<string, ResumenPorPrestador>()

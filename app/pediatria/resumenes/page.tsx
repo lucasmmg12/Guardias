@@ -282,14 +282,37 @@ export default function ResumenesPediatriaPage() {
     try {
       console.log(`[Pediatría Resúmenes] Cargando resúmenes para ${mes}/${anio}`)
       
-      // Calcular resumen por prestador (incluye todos los médicos)
-      const resumenPrestadores = await calcularResumenPorPrestador(mes, anio)
+      // Obtener liquidación específica de Pediatría para trabajar solo con ese archivo
+      const { data: liquidacion } = await supabase
+        .from('liquidaciones_guardia')
+        .select('id')
+        .eq('especialidad', 'Pediatría')
+        .eq('mes', mes)
+        .eq('anio', anio)
+        .maybeSingle()
+
+      if (!liquidacion || !(liquidacion as any).id) {
+        console.warn(`[Pediatría Resúmenes] No se encontró liquidación de Pediatría para ${mes}/${anio}`)
+        setResumenesPorPrestador([])
+        setResumenesPorMedico(new Map())
+        return
+      }
+
+      const liquidacionId = (liquidacion as any).id
+      console.log(`[Pediatría Resúmenes] Liquidación ID: ${liquidacionId}`)
+      
+      // Calcular resumen por prestador pasando liquidacionId específico
+      const resumenPrestadores = await calcularResumenPorPrestador(mes, anio, liquidacionId)
       console.log(`[Pediatría Resúmenes] Resúmenes por prestador: ${resumenPrestadores.length}`)
+      const totalConsultasPrestadores = resumenPrestadores.reduce((sum, r) => sum + r.cantidad, 0)
+      console.log(`[Pediatría Resúmenes] Total de consultas en prestadores: ${totalConsultasPrestadores}`)
       setResumenesPorPrestador(resumenPrestadores)
 
-      // Calcular resumen por médico (agrupar por médico)
-      const resumenMedicos = await calcularResumenPorMedico(mes, anio)
+      // Calcular resumen por médico pasando liquidacionId específico
+      const resumenMedicos = await calcularResumenPorMedico(mes, anio, liquidacionId)
       console.log(`[Pediatría Resúmenes] Resúmenes por médico: ${resumenMedicos.length}`)
+      const totalConsultasMedicos = resumenMedicos.reduce((sum, r) => sum + r.cantidad, 0)
+      console.log(`[Pediatría Resúmenes] Total de consultas en médicos: ${totalConsultasMedicos}`)
       
       // Agrupar por médico - usar nombre normalizado si no hay ID para evitar agrupar médicos diferentes
       const resumenesPorMedicoMap = new Map<string, ResumenPorMedico[]>()
