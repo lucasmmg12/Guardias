@@ -37,7 +37,7 @@ export async function guardarLogHistorial(
 
     const { error } = await supabase
       .from('logs_procesamiento')
-      .insert(log)
+      .insert([log])
 
     if (error) {
       console.error('Error guardando log en historial:', error)
