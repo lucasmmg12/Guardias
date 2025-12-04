@@ -162,6 +162,48 @@ export default function HomePage() {
                         </div>
                     </Link>
 
+                    {/* Módulo Guardias Clínicas */}
+                    <Link href="/guardias-clinicas">
+                        <div 
+                            className="relative rounded-2xl shadow-2xl overflow-hidden p-6 hover:scale-[1.02] transition-all duration-300 cursor-pointer group"
+                            style={{
+                                background: 'rgba(255, 255, 255, 0.1)',
+                                backdropFilter: 'blur(20px)',
+                                border: '1px solid rgba(236, 72, 153, 0.3)',
+                                boxShadow: '0 8px 32px 0 rgba(236, 72, 153, 0.3)',
+                            }}
+                        >
+                            {/* Borde brillante animado */}
+                            <div 
+                                className="absolute inset-0 rounded-2xl"
+                                style={{
+                                    background: 'linear-gradient(45deg, transparent, rgba(236, 72, 153, 0.3), transparent)',
+                                    animation: 'borderGlow 3s ease-in-out infinite',
+                                }}
+                            ></div>
+                            <div className="relative flex items-center gap-6">
+                                <div className="flex-shrink-0">
+                                    <Hospital className="h-16 w-16 text-pink-400" />
+                                </div>
+                                <div className="flex-1">
+                                    <h2 className="text-2xl font-bold text-pink-400 mb-2">Guardias Clínicas</h2>
+                                    <p className="text-gray-300 mb-3">
+                                        Liquidación por consultas y horas trabajadas
+                                    </p>
+                                    <ul className="text-sm text-gray-400 space-y-1 flex flex-wrap gap-x-4">
+                                        <li>✓ Grupos 70% y 40%</li>
+                                        <li>✓ Cálculo por horas y consultas</li>
+                                        <li>✓ Garantía mínima por hora</li>
+                                    </ul>
+                                </div>
+                                <div className="flex-shrink-0 text-pink-400 group-hover:translate-x-2 transition-transform flex items-center gap-2">
+                                    Procesar liquidación 
+                                    <span className="group-hover:translate-x-1 transition-transform">→</span>
+                                </div>
+                            </div>
+                        </div>
+                    </Link>
+
                     {/* Módulo Instrumentadores */}
                     <a 
                         href="https://liquidaciones-osde.vercel.app/" 

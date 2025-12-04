@@ -49,6 +49,16 @@ export interface Database {
         Insert: ValorConsultaObraSocialInsert
         Update: ValorConsultaObraSocialUpdate
       }
+      clinical_groups_config: {
+        Row: ClinicalGroupsConfig
+        Insert: ClinicalGroupsConfigInsert
+        Update: ClinicalGroupsConfigUpdate
+      }
+      clinical_values_config: {
+        Row: ClinicalValuesConfig
+        Insert: ClinicalValuesConfigInsert
+        Update: ClinicalValuesConfigUpdate
+      }
     }
     Views: {
       v_resumen_liquidaciones_guardia: {
@@ -64,7 +74,7 @@ export interface Database {
 // Enums
 export type EstadoLiquidacion = 'borrador' | 'procesando' | 'pendiente_revision' | 'revisado' | 'listo_para_liquidar' | 'finalizada' | 'error'
 export type EstadoRevision = 'pendiente' | 'aprobado' | 'observado' | 'rechazado'
-export type Especialidad = 'Pediatría' | 'Ginecología' | 'Obstetricia' | 'Cirugía' | 'Clínica' | 'Admisiones Clínicas'
+export type Especialidad = 'Pediatría' | 'Ginecología' | 'Obstetricia' | 'Cirugía' | 'Clínica' | 'Admisiones Clínicas' | 'Guardias Clínicas'
 
 // Interfaces de Tablas
 export interface Medico {
@@ -414,6 +424,76 @@ export interface ValorConsultaObraSocialUpdate {
   vigencia?: string | null
   mes?: number
   anio?: number
+  created_at?: string
+  updated_at?: string
+}
+
+// Interfaces para Guardias Clínicas
+export interface ClinicalGroupsConfig {
+  id: string
+  doctor_id: string
+  mes: number
+  anio: number
+  group_type: 'GRUPO_70' | 'GRUPO_40'
+  created_at: string
+  updated_at: string
+}
+
+export interface ClinicalGroupsConfigInsert {
+  id?: string
+  doctor_id: string
+  mes: number
+  anio: number
+  group_type: 'GRUPO_70' | 'GRUPO_40'
+  created_at?: string
+  updated_at?: string
+}
+
+export interface ClinicalGroupsConfigUpdate {
+  id?: string
+  doctor_id?: string
+  mes?: number
+  anio?: number
+  group_type?: 'GRUPO_70' | 'GRUPO_40'
+  created_at?: string
+  updated_at?: string
+}
+
+export interface ClinicalValuesConfig {
+  id: string
+  mes: number
+  anio: number
+  value_hour_weekly_8_16: number
+  value_hour_weekly_16_8: number
+  value_hour_weekend: number
+  value_hour_weekend_night: number
+  value_guaranteed_min: number
+  created_at: string
+  updated_at: string
+}
+
+export interface ClinicalValuesConfigInsert {
+  id?: string
+  mes: number
+  anio: number
+  value_hour_weekly_8_16: number
+  value_hour_weekly_16_8: number
+  value_hour_weekend: number
+  value_hour_weekend_night: number
+  value_guaranteed_min: number
+  created_at?: string
+  updated_at?: string
+}
+
+export interface ClinicalValuesConfigUpdate {
+  id?: string
+  mes?: number
+  anio?: number
+  value_hour_weekly_8_16?: number
+  value_hour_weekly_16_8?: number
+  value_hour_weekend?: number
+  value_hour_weekend_night?: number
+  value_guaranteed_min?: number
   created_at?: string
   updated_at?: string
 }
