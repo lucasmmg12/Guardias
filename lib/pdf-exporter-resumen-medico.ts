@@ -2,7 +2,6 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { ResumenPorMedico } from './ginecologia-resumenes'
 import { calcularNumeroLiquidacion } from './utils'
-import { logExportacionPDF } from './historial-logger'
 
 const MESES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -14,7 +13,6 @@ interface PDFResumenMedicoOptions {
   mes: number
   anio: number
   medicoNombre: string
-  liquidacionId?: string | null
 }
 
 export function exportPDFResumenPorMedico({
@@ -220,13 +218,5 @@ export function exportPDFResumenPorMedico({
   // ============================================
   const nombreArchivo = `Resumen_${medicoNombre.replace(/[^a-zA-Z0-9]/g, '_')}_${MESES[mes - 1]}_${anio}.pdf`
   doc.save(nombreArchivo)
-
-  // Guardar log en historial
-  logExportacionPDF('medico', liquidacionId || null, {
-    mes,
-    anio,
-    especialidad: 'Ginecología',
-    prestadorNombre: medicoNombre
-  }).catch(err => console.error('Error guardando log:', err))
 }
 

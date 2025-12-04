@@ -601,6 +601,10 @@ export async function procesarExcelAdmisiones(
       resultado.errores.push(`Error actualizando totales: ${errorUpdate.message}`)
     }
 
+    // Guardar log simple de procesamiento
+    const { guardarLogProcesamiento } = await import('./historial-logger')
+    await guardarLogProcesamiento('Admisiones Clínicas', mes, anio, liquidacionId).catch(() => {})
+
   } catch (error: any) {
     resultado.errores.push(`Error general: ${error.message || 'Error desconocido'}`)
   }

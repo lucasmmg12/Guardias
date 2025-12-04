@@ -11,7 +11,6 @@ import { ExcelDataTable } from '@/components/custom/ExcelDataTable'
 import { cargarExcelDataDesdeBD } from '@/lib/excel-reconstructor'
 import { ExcelData } from '@/lib/excel-reader'
 import { exportResumenPrestadorToExcel } from '@/lib/excel-exporter'
-import { logEdicionCelda, logEliminacionFila } from '@/lib/historial-logger'
 
 const MESES = [
   { value: 1, label: 'Enero' },
@@ -206,34 +205,6 @@ export default function ResumenesPediatriaPage() {
 
       await Promise.all(promesas)
 
-      // Guardar logs de edición
-      for (const [filaExcel, campos] of cambiosPorFila.entries()) {
-        const row = excelData?.rows.find((r: any) => (r as any).__fila_excel === filaExcel)
-        for (const [campo, valorNuevo] of campos.entries()) {
-          // Obtener valor anterior (si está disponible)
-          const valorAnterior = row ? (row as any)[campo] : null
-          
-          // Mapear campo de BD a nombre de columna del Excel
-          let columna = campo
-          if (campo === 'obra_social') {
-            columna = excelData?.headers.find(h => h.toLowerCase().includes('cliente') || h.toLowerCase().includes('obra')) || campo
-          } else if (campo === 'medico_nombre') {
-            columna = excelData?.headers.find(h => h.toLowerCase().includes('responsable') || h.toLowerCase().includes('medico')) || campo
-          } else if (campo === 'paciente') {
-            columna = excelData?.headers.find(h => h.toLowerCase().includes('paciente')) || campo
-          }
-
-          await logEdicionCelda(liquidacionActual.id, {
-            filaExcel,
-            columna,
-            valorAnterior,
-            valorNuevo,
-            paciente: row ? (row as any).paciente : undefined,
-            fecha: row ? (row as any).fecha : undefined
-          }).catch(err => console.error('Error guardando log de edición:', err))
-        }
-      }
-
       // Limpiar cambios pendientes
       cambiosPendientesRef.current.clear()
     } catch (error) {
@@ -264,18 +235,6 @@ export default function ResumenesPediatriaPage() {
         console.error('Error eliminando fila:', error)
         return
       }
-
-      // Obtener información para el log
-      const paciente = (row as any).paciente || (row as any).Paciente
-      const fecha = (row as any).fecha || (row as any)['Fecha Visita']
-
-      // Guardar log de eliminación
-      await logEliminacionFila(liquidacionActual.id, {
-        filaExcel,
-        motivo: 'Eliminación manual',
-        paciente,
-        fecha
-      }).catch(err => console.error('Error guardando log de eliminación:', err))
 
       // Recargar ExcelData desde BD para asegurar sincronización
       const excelDataRecargado = await cargarExcelDataDesdeBD(liquidacionActual.id, supabase)

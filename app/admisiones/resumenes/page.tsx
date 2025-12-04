@@ -209,12 +209,10 @@ export default function ResumenesAdmisionesPage() {
   }, [mes, anio, prestadorExpandido, detallePacientesPorPrestador])
 
   function handleExportarPDFPrestadores() {
-    const liquidacionId = liquidacionActual?.id || null
     exportPDFResumenPorPrestador({
       resumenes: resumenesPorPrestador,
       mes,
-      anio,
-      liquidacionId
+      anio
     })
   }
 
@@ -248,8 +246,7 @@ export default function ResumenesAdmisionesPage() {
         anio,
         cantidad: prestador.cantidad,
         valorUnitario: prestador.valor_unitario,
-        total: prestador.total,
-        liquidacionId: liquidacionId || null
+        total: prestador.total
       })
     } catch (error) {
       console.error('Error exportando PDF individual:', error)

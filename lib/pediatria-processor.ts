@@ -900,6 +900,10 @@ export async function procesarExcelPediatria(
       resultado.errores.push(`Error actualizando totales: ${errorUpdate.message}`)
     }
 
+    // Guardar log simple de procesamiento
+    const { guardarLogProcesamiento } = await import('./historial-logger')
+    await guardarLogProcesamiento('Pediatría', mes, anio, liquidacionId).catch(() => {})
+
   } catch (error: any) {
     resultado.errores.push(`Error general: ${error.message || 'Error desconocido'}`)
   }

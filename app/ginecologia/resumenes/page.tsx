@@ -6,7 +6,6 @@ import { supabase } from '@/lib/supabase/client'
 import { calcularResumenPorMedico, calcularResumenPorPrestador, ResumenPorMedico, ResumenPorPrestador, obtenerResidentesFormativos, TotalesResidentesFormativos } from '@/lib/ginecologia-resumenes'
 import { exportPDFResumenPorMedico } from '@/lib/pdf-exporter-resumen-medico'
 import { exportPDFResumenPorPrestador } from '@/lib/pdf-exporter-resumen-prestador'
-import { logEdicionCelda, logEliminacionFila } from '@/lib/historial-logger'
 import { LiquidacionGuardia } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, FileDown, Download, History, Eye, FileSpreadsheet, GraduationCap } from 'lucide-react'
@@ -241,14 +240,6 @@ export default function ResumenesGinecologiaPage() {
         return
       }
 
-      // Guardar log de eliminación
-      await logEliminacionFila(liquidacionActual.id, {
-        filaExcel,
-        motivo: 'Eliminación manual',
-        paciente,
-        fecha
-      }).catch(err => console.error('Error guardando log de eliminación:', err))
-
       // Recargar ExcelData desde BD para asegurar sincronización
       // Esto actualiza los índices y asegura que todo esté correcto
       const excelDataRecargado = await cargarExcelDataDesdeBD(liquidacionActual.id, supabase)
@@ -415,8 +406,7 @@ export default function ResumenesGinecologiaPage() {
       resumenes,
       mes,
       anio,
-      medicoNombre,
-      liquidacionId: liquidacionActual?.id || null
+      medicoNombre
     })
   }
 
@@ -424,8 +414,7 @@ export default function ResumenesGinecologiaPage() {
     exportPDFResumenPorPrestador({
       resumenes: resumenesPorPrestador,
       mes,
-      anio,
-      liquidacionId: liquidacionActual?.id || null
+      anio
     })
   }
 
