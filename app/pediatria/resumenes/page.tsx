@@ -11,6 +11,7 @@ import { ExcelDataTable } from '@/components/custom/ExcelDataTable'
 import { cargarExcelDataDesdeBD } from '@/lib/excel-reconstructor'
 import { ExcelData } from '@/lib/excel-reader'
 import { exportResumenPrestadorToExcel } from '@/lib/excel-exporter'
+import { logEdicionCelda, logEliminacionFila } from '@/lib/historial-logger'
 
 const MESES = [
   { value: 1, label: 'Enero' },
