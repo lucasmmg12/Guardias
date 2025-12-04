@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Sparkles, Stethoscope, Baby, Upload, User, DollarSign, Hospital, BarChart3, Plus, BookOpen, ClipboardList, Scissors } from 'lucide-react'
+import { Sparkles, Stethoscope, Baby, Upload, User, DollarSign, Hospital, BarChart3, Plus, BookOpen, ClipboardList, Scissors, Linkedin, Instagram, MessageCircle, Globe } from 'lucide-react'
 
 export default function HomePage() {
     return (
@@ -35,11 +35,11 @@ export default function HomePage() {
                 </div>
 
                 {/* Cards de Módulos */}
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mt-12">
+                <div className="flex flex-col gap-6 mt-12">
                     {/* Módulo Pediatría */}
                     <Link href="/pediatria">
                         <div 
-                            className="relative rounded-2xl shadow-2xl overflow-hidden p-8 hover:scale-105 transition-all duration-300 cursor-pointer group"
+                            className="relative rounded-2xl shadow-2xl overflow-hidden p-6 hover:scale-[1.02] transition-all duration-300 cursor-pointer group"
                             style={{
                                 background: 'rgba(255, 255, 255, 0.1)',
                                 backdropFilter: 'blur(20px)',
@@ -55,20 +55,22 @@ export default function HomePage() {
                                     animation: 'borderGlow 3s ease-in-out infinite',
                                 }}
                             ></div>
-                            <div className="relative">
-                                <div className="mb-4 flex justify-center">
-                                    <Stethoscope className="h-12 w-12 text-green-400" />
+                            <div className="relative flex items-center gap-6">
+                                <div className="flex-shrink-0">
+                                    <Stethoscope className="h-16 w-16 text-green-400" />
                                 </div>
-                                <h2 className="text-2xl font-bold text-green-400 mb-2">Pediatría</h2>
-                                <p className="text-gray-300 mb-4">
-                                    Pago por producción con retención del 30%
-                                </p>
-                                <ul className="text-sm text-gray-400 space-y-1">
-                                    <li>✓ Cálculo automático de retenciones</li>
-                                    <li>✓ Adicionales por Obra Social</li>
-                                    <li>✓ Generación de PDFs</li>
-                                </ul>
-                                <div className="mt-4 text-green-400 group-hover:translate-x-2 transition-transform flex items-center gap-2">
+                                <div className="flex-1">
+                                    <h2 className="text-2xl font-bold text-green-400 mb-2">Pediatría</h2>
+                                    <p className="text-gray-300 mb-3">
+                                        Pago por producción con retención del 30%
+                                    </p>
+                                    <ul className="text-sm text-gray-400 space-y-1 flex flex-wrap gap-x-4">
+                                        <li>✓ Cálculo automático de retenciones</li>
+                                        <li>✓ Adicionales por Obra Social</li>
+                                        <li>✓ Generación de PDFs</li>
+                                    </ul>
+                                </div>
+                                <div className="flex-shrink-0 text-green-400 group-hover:translate-x-2 transition-transform flex items-center gap-2">
                                     Procesar liquidación 
                                     <span className="group-hover:translate-x-1 transition-transform">→</span>
                                 </div>
@@ -79,7 +81,7 @@ export default function HomePage() {
                     {/* Módulo Ginecología */}
                     <Link href="/ginecologia">
                         <div 
-                            className="relative rounded-2xl shadow-2xl overflow-hidden p-8 hover:scale-105 transition-all duration-300 cursor-pointer group"
+                            className="relative rounded-2xl shadow-2xl overflow-hidden p-6 hover:scale-[1.02] transition-all duration-300 cursor-pointer group"
                             style={{
                                 background: 'rgba(255, 255, 255, 0.1)',
                                 backdropFilter: 'blur(20px)',
@@ -95,20 +97,22 @@ export default function HomePage() {
                                     animation: 'borderGlow 3s ease-in-out infinite',
                                 }}
                             ></div>
-                            <div className="relative">
-                                <div className="mb-4 flex justify-center">
-                                    <Baby className="h-12 w-12 text-blue-400" />
+                            <div className="relative flex items-center gap-6">
+                                <div className="flex-shrink-0">
+                                    <Baby className="h-16 w-16 text-blue-400" />
                                 </div>
-                                <h2 className="text-2xl font-bold text-blue-400 mb-2">Ginecología</h2>
-                                <p className="text-gray-300 mb-4">
-                                    Pago por hora con reglas de residentes
-                                </p>
-                                <ul className="text-sm text-gray-400 space-y-1">
-                                    <li>✓ Horario formativo (07:30-15:00)</li>
-                                    <li>✓ Diferenciación residentes/planta</li>
-                                    <li>✓ Cálculo por horas trabajadas</li>
-                                </ul>
-                                <div className="mt-4 text-blue-400 group-hover:translate-x-2 transition-transform flex items-center gap-2">
+                                <div className="flex-1">
+                                    <h2 className="text-2xl font-bold text-blue-400 mb-2">Ginecología</h2>
+                                    <p className="text-gray-300 mb-3">
+                                        Pago por hora con reglas de residentes
+                                    </p>
+                                    <ul className="text-sm text-gray-400 space-y-1 flex flex-wrap gap-x-4">
+                                        <li>✓ Horario formativo (07:30-15:00)</li>
+                                        <li>✓ Diferenciación residentes/planta</li>
+                                        <li>✓ Cálculo por horas trabajadas</li>
+                                    </ul>
+                                </div>
+                                <div className="flex-shrink-0 text-blue-400 group-hover:translate-x-2 transition-transform flex items-center gap-2">
                                     Procesar liquidación 
                                     <span className="group-hover:translate-x-1 transition-transform">→</span>
                                 </div>
@@ -119,7 +123,7 @@ export default function HomePage() {
                     {/* Módulo Admisiones Clínicas */}
                     <Link href="/admisiones">
                         <div 
-                            className="relative rounded-2xl shadow-2xl overflow-hidden p-8 hover:scale-105 transition-all duration-300 cursor-pointer group"
+                            className="relative rounded-2xl shadow-2xl overflow-hidden p-6 hover:scale-[1.02] transition-all duration-300 cursor-pointer group"
                             style={{
                                 background: 'rgba(255, 255, 255, 0.1)',
                                 backdropFilter: 'blur(20px)',
@@ -135,20 +139,22 @@ export default function HomePage() {
                                     animation: 'borderGlow 3s ease-in-out infinite',
                                 }}
                             ></div>
-                            <div className="relative">
-                                <div className="mb-4 flex justify-center">
-                                    <ClipboardList className="h-12 w-12 text-purple-400" />
+                            <div className="relative flex items-center gap-6">
+                                <div className="flex-shrink-0">
+                                    <ClipboardList className="h-16 w-16 text-purple-400" />
                                 </div>
-                                <h2 className="text-2xl font-bold text-purple-400 mb-2">Admisiones Clínicas</h2>
-                                <p className="text-gray-300 mb-4">
-                                    Pago fijo por admisión con deduplicación
-                                </p>
-                                <ul className="text-sm text-gray-400 space-y-1">
-                                    <li>✓ Valor fijo: $10,000</li>
-                                    <li>✓ Regla FCFS (First Come First Served)</li>
-                                    <li>✓ Deduplicación automática</li>
-                                </ul>
-                                <div className="mt-4 text-purple-400 group-hover:translate-x-2 transition-transform flex items-center gap-2">
+                                <div className="flex-1">
+                                    <h2 className="text-2xl font-bold text-purple-400 mb-2">Admisiones Clínicas</h2>
+                                    <p className="text-gray-300 mb-3">
+                                        Pago fijo por admisión con deduplicación
+                                    </p>
+                                    <ul className="text-sm text-gray-400 space-y-1 flex flex-wrap gap-x-4">
+                                        <li>✓ Valor fijo: $10,000</li>
+                                        <li>✓ Regla FCFS (First Come First Served)</li>
+                                        <li>✓ Deduplicación automática</li>
+                                    </ul>
+                                </div>
+                                <div className="flex-shrink-0 text-purple-400 group-hover:translate-x-2 transition-transform flex items-center gap-2">
                                     Procesar liquidación 
                                     <span className="group-hover:translate-x-1 transition-transform">→</span>
                                 </div>
@@ -163,7 +169,7 @@ export default function HomePage() {
                         rel="noopener noreferrer"
                     >
                         <div 
-                            className="relative rounded-2xl shadow-2xl overflow-hidden p-8 hover:scale-105 transition-all duration-300 cursor-pointer group"
+                            className="relative rounded-2xl shadow-2xl overflow-hidden p-6 hover:scale-[1.02] transition-all duration-300 cursor-pointer group"
                             style={{
                                 background: 'rgba(255, 255, 255, 0.1)',
                                 backdropFilter: 'blur(20px)',
@@ -179,20 +185,22 @@ export default function HomePage() {
                                     animation: 'borderGlow 3s ease-in-out infinite',
                                 }}
                             ></div>
-                            <div className="relative">
-                                <div className="mb-4 flex justify-center">
-                                    <Scissors className="h-12 w-12 text-orange-400" />
+                            <div className="relative flex items-center gap-6">
+                                <div className="flex-shrink-0">
+                                    <Scissors className="h-16 w-16 text-orange-400" />
                                 </div>
-                                <h2 className="text-2xl font-bold text-orange-400 mb-2">Instrumentadores</h2>
-                                <p className="text-gray-300 mb-4">
-                                    Liquidaciones de procedimientos quirúrgicos
-                                </p>
-                                <ul className="text-sm text-gray-400 space-y-1">
-                                    <li>✓ Múltiples obras sociales</li>
-                                    <li>✓ Gestión de nomencladores</li>
-                                    <li>✓ Sistema integral</li>
-                                </ul>
-                                <div className="mt-4 text-orange-400 group-hover:translate-x-2 transition-transform flex items-center gap-2">
+                                <div className="flex-1">
+                                    <h2 className="text-2xl font-bold text-orange-400 mb-2">Instrumentadores</h2>
+                                    <p className="text-gray-300 mb-3">
+                                        Liquidaciones de procedimientos quirúrgicos
+                                    </p>
+                                    <ul className="text-sm text-gray-400 space-y-1 flex flex-wrap gap-x-4">
+                                        <li>✓ Múltiples obras sociales</li>
+                                        <li>✓ Gestión de nomencladores</li>
+                                        <li>✓ Sistema integral</li>
+                                    </ul>
+                                </div>
+                                <div className="flex-shrink-0 text-orange-400 group-hover:translate-x-2 transition-transform flex items-center gap-2">
                                     Ir al módulo 
                                     <span className="group-hover:translate-x-1 transition-transform">→</span>
                                 </div>
@@ -314,6 +322,46 @@ export default function HomePage() {
 
                 {/* Footer */}
                 <div className="text-center text-gray-400 text-sm mt-12">
+                    {/* Redes Sociales */}
+                    <div className="flex items-center justify-center gap-4 mb-6">
+                        <a
+                            href="https://www.linkedin.com/in/lucas-marinero-182521308/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:bg-green-500/20 hover:border-green-500/50 transition-all duration-300 hover:scale-110"
+                            aria-label="LinkedIn"
+                        >
+                            <Linkedin className="h-5 w-5 text-green-400" />
+                        </a>
+                        <a
+                            href="https://www.instagram.com/growsanjuan/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:bg-green-500/20 hover:border-green-500/50 transition-all duration-300 hover:scale-110"
+                            aria-label="Instagram"
+                        >
+                            <Instagram className="h-5 w-5 text-green-400" />
+                        </a>
+                        <a
+                            href="https://api.whatsapp.com/send/?phone=5492643229503&text&type=phone_number&app_absent=0"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:bg-green-500/20 hover:border-green-500/50 transition-all duration-300 hover:scale-110"
+                            aria-label="WhatsApp"
+                        >
+                            <MessageCircle className="h-5 w-5 text-green-400" />
+                        </a>
+                        <a
+                            href="https://www.growsanjuan.com"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:bg-green-500/20 hover:border-green-500/50 transition-all duration-300 hover:scale-110"
+                            aria-label="Sitio Web"
+                        >
+                            <Globe className="h-5 w-5 text-green-400" />
+                        </a>
+                    </div>
+                    
                     <p className="flex items-center justify-center gap-2">
                         Powered by{' '}
                         <span className="text-green-400 font-semibold">Grow Labs</span>
