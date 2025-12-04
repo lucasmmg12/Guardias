@@ -436,13 +436,10 @@ export async function procesarExcelAdmisiones(
     // Contadores para debugging
     let filasSinFecha = 0
     let filasFechaInvalida = 0
-    let filasDuplicadas = 0
     let filasProcesadas = 0
 
-    // Set para deduplicación: clave = "paciente|fecha|medico"
-    // Para First Come First Served: clave = "paciente|fecha"
-    const admisionesProcesadas = new Set<string>() // Para FCFS
-    const admisionesPorMedico = new Map<string, Set<string>>() // Para contar por médico
+    // NOTA: Los duplicados NO se eliminan automáticamente
+    // Se guardan todos los registros y se marcan visualmente en color celeste en la UI
 
     for (let i = 0; i < excelData.rows.length; i++) {
       const row = excelData.rows[i]
@@ -501,27 +498,12 @@ export async function procesarExcelAdmisiones(
           continue
         }
 
-        // Normalizar valores para deduplicación
+        // Normalizar valores
         const pacienteNormalizado = (paciente || '').trim().toLowerCase()
         const medicoNombreNormalizado = medicoNombre ? normalizarNombre(medicoNombre.trim()) : ''
         
-        // REGLA B: First Come First Served (mismo paciente + misma fecha = solo el primero)
-        // Clave para FCFS: paciente + fecha (sin importar el médico)
-        const claveFCFS = `${pacienteNormalizado}|${fecha}`
-        
-        if (admisionesProcesadas.has(claveFCFS)) {
-          // Ya procesamos una admisión para este paciente en esta fecha
-          filasDuplicadas++
-          resultado.filasExcluidas.push({
-            numeroFila: 11 + i,
-            razon: 'duplicado',
-            datos: row
-          })
-          continue
-        }
-        
-        // Marcar como procesada (FCFS)
-        admisionesProcesadas.add(claveFCFS)
+        // NOTA: Los duplicados (mismo paciente + misma fecha) se guardan todos
+        // Se marcan visualmente en color celeste en la UI para revisión manual
         
         // Buscar médico en el mapa
         let medico: Medico | null = null
@@ -570,9 +552,9 @@ export async function procesarExcelAdmisiones(
     }
 
     // Agregar resumen de advertencias al final
-    console.log(`Resumen: ${filasProcesadas} procesadas, ${filasSinFecha} sin fecha, ${filasFechaInvalida} fecha inválida, ${filasDuplicadas} duplicadas`)
-    if (filasSinFecha > 0 || filasFechaInvalida > 0 || filasDuplicadas > 0) {
-      resultado.advertencias.push(`Total omitidas: ${filasSinFecha + filasFechaInvalida + filasDuplicadas} (${filasSinFecha} sin fecha, ${filasFechaInvalida} fecha inválida, ${filasDuplicadas} duplicadas)`)
+    console.log(`Resumen: ${filasProcesadas} procesadas, ${filasSinFecha} sin fecha, ${filasFechaInvalida} fecha inválida`)
+    if (filasSinFecha > 0 || filasFechaInvalida > 0) {
+      resultado.advertencias.push(`Total omitidas: ${filasSinFecha + filasFechaInvalida} (${filasSinFecha} sin fecha, ${filasFechaInvalida} fecha inválida)`)
     }
 
     // 6. Guardar detalles en la base de datos
