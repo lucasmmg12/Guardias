@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Sparkles, Stethoscope, Baby, Upload, User, DollarSign, Hospital, BarChart3, Plus, BookOpen, ClipboardList } from 'lucide-react'
+import { Sparkles, Stethoscope, Baby, Upload, User, DollarSign, Hospital, BarChart3, Plus, BookOpen, ClipboardList, Scissors } from 'lucide-react'
 
 export default function HomePage() {
     return (
@@ -35,7 +35,7 @@ export default function HomePage() {
                 </div>
 
                 {/* Cards de Módulos */}
-                <div className="grid md:grid-cols-3 gap-6 mt-12">
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mt-12">
                     {/* Módulo Pediatría */}
                     <Link href="/pediatria">
                         <div 
@@ -155,6 +155,50 @@ export default function HomePage() {
                             </div>
                         </div>
                     </Link>
+
+                    {/* Módulo Instrumentadores */}
+                    <a 
+                        href="https://liquidaciones-osde.vercel.app/" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                    >
+                        <div 
+                            className="relative rounded-2xl shadow-2xl overflow-hidden p-8 hover:scale-105 transition-all duration-300 cursor-pointer group"
+                            style={{
+                                background: 'rgba(255, 255, 255, 0.1)',
+                                backdropFilter: 'blur(20px)',
+                                border: '1px solid rgba(251, 146, 60, 0.3)',
+                                boxShadow: '0 8px 32px 0 rgba(251, 146, 60, 0.3)',
+                            }}
+                        >
+                            {/* Borde brillante animado */}
+                            <div 
+                                className="absolute inset-0 rounded-2xl"
+                                style={{
+                                    background: 'linear-gradient(45deg, transparent, rgba(251, 146, 60, 0.3), transparent)',
+                                    animation: 'borderGlow 3s ease-in-out infinite',
+                                }}
+                            ></div>
+                            <div className="relative">
+                                <div className="mb-4 flex justify-center">
+                                    <Scissors className="h-12 w-12 text-orange-400" />
+                                </div>
+                                <h2 className="text-2xl font-bold text-orange-400 mb-2">Instrumentadores</h2>
+                                <p className="text-gray-300 mb-4">
+                                    Liquidaciones de procedimientos quirúrgicos
+                                </p>
+                                <ul className="text-sm text-gray-400 space-y-1">
+                                    <li>✓ Múltiples obras sociales</li>
+                                    <li>✓ Gestión de nomencladores</li>
+                                    <li>✓ Sistema integral</li>
+                                </ul>
+                                <div className="mt-4 text-orange-400 group-hover:translate-x-2 transition-transform flex items-center gap-2">
+                                    Ir al módulo 
+                                    <span className="group-hover:translate-x-1 transition-transform">→</span>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
                 </div>
 
                 {/* Manual de Usuario */}
