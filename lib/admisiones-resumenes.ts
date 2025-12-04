@@ -107,3 +107,102 @@ export function calcularTotalGeneral(resumenes: ResumenPorMedico[]): {
   }
 }
 
+export interface ResumenPorPrestador {
+  medico_id: string | null
+  medico_nombre: string
+  cantidad: number
+  valor_unitario: number
+  total: number
+}
+
+/**
+ * Calcula el resumen por prestador (agrupado por médico)
+ * Para Admisiones Clínicas: valor fijo de $10,000 por admisión, sin retenciones
+ */
+export async function calcularResumenPorPrestador(
+  mes: number,
+  anio: number,
+  liquidacionId?: string
+): Promise<ResumenPorPrestador[]> {
+  // Obtener resumen por médico pasando liquidacionId
+  const resumenPorMedico = await calcularResumenPorMedico(mes, anio, liquidacionId)
+
+  // Agrupar por médico - USAR CLAVE ÚNICA (ID o nombre normalizado)
+  const resumenMap = new Map<string, ResumenPorPrestador>()
+
+  resumenPorMedico.forEach(resumen => {
+    // Usar ID si existe, sino usar nombre normalizado para evitar agrupar médicos diferentes
+    const nombreNormalizado = resumen.medico_nombre.toLowerCase().trim().replace(/\s+/g, ' ')
+    const clave = resumen.medico_id || `nombre-${nombreNormalizado}`
+    const medicoNombre = resumen.medico_nombre
+
+    if (resumenMap.has(clave)) {
+      const prestador = resumenMap.get(clave)!
+      prestador.cantidad += resumen.cantidad
+      prestador.total += resumen.total
+    } else {
+      resumenMap.set(clave, {
+        medico_id: resumen.medico_id,
+        medico_nombre: medicoNombre,
+        cantidad: resumen.cantidad,
+        valor_unitario: resumen.valor_unitario,
+        total: resumen.total
+      })
+    }
+  })
+
+  // Convertir a array y ordenar por nombre
+  return Array.from(resumenMap.values()).sort((a, b) =>
+    a.medico_nombre.localeCompare(b.medico_nombre)
+  )
+}
+
+/**
+ * Obtiene el detalle de pacientes por prestador (médico)
+ */
+export async function obtenerDetallePacientesPorPrestador(
+  medicoId: string | null,
+  medicoNombre: string,
+  mes: number,
+  anio: number,
+  liquidacionId?: string
+): Promise<DetalleGuardia[]> {
+  try {
+    let query = supabase
+      .from('detalle_guardia')
+      .select(`
+        *,
+        liquidaciones_guardia!inner(mes, anio, especialidad)
+      `)
+      .eq('liquidaciones_guardia.mes', mes)
+      .eq('liquidaciones_guardia.anio', anio)
+      .eq('liquidaciones_guardia.especialidad', 'Admisiones Clínicas')
+
+    // Si se especifica liquidacionId, filtrar por ella
+    if (liquidacionId) {
+      query = query.eq('liquidacion_id', liquidacionId)
+    }
+
+    // Filtrar por médico
+    if (medicoId) {
+      query = query.eq('medico_id', medicoId)
+    } else {
+      // Si no hay ID, filtrar por nombre (normalizado)
+      const nombreNormalizado = medicoNombre.toLowerCase().trim()
+      query = query.ilike('medico_nombre', `%${nombreNormalizado}%`)
+    }
+
+    const { data, error } = await query.order('fecha', { ascending: true })
+
+    if (error) {
+      console.error('Error obteniendo detalle de pacientes:', error)
+      throw error
+    }
+
+    return (data as DetalleGuardia[]) || []
+  } catch (error) {
+    console.error('Error en obtenerDetallePacientesPorPrestador:', error)
+    throw error
+  }
+}
+
