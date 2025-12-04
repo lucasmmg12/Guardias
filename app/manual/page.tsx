@@ -2,11 +2,11 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, BookOpen, Stethoscope, Baby, Upload, FileText, History, FileSpreadsheet, User, DollarSign, Hospital, BarChart3, Plus, GraduationCap, ChevronRight, ChevronDown, CheckCircle2, XCircle, AlertTriangle, Info } from 'lucide-react'
+import { ArrowLeft, BookOpen, Stethoscope, Baby, Upload, FileText, History, FileSpreadsheet, User, DollarSign, Hospital, BarChart3, Plus, GraduationCap, ChevronRight, ChevronDown, CheckCircle2, XCircle, AlertTriangle, Info, ClipboardList } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 
-type SeccionManual = 'inicio' | 'pediatria' | 'ginecologia' | 'mapa' | 'problemas'
+type SeccionManual = 'inicio' | 'pediatria' | 'ginecologia' | 'admisiones' | 'mapa' | 'problemas'
 
 export default function ManualPage() {
   const router = useRouter()
@@ -109,6 +109,17 @@ export default function ManualPage() {
                 Módulo Ginecología
               </button>
               <button
+                onClick={() => setSeccionActiva('admisiones')}
+                className={`w-full text-left px-4 py-3 rounded-lg transition-all flex items-center gap-2 ${
+                  seccionActiva === 'admisiones'
+                    ? 'bg-green-500/20 text-green-400 border border-green-500/50'
+                    : 'text-gray-400 hover:text-gray-300 hover:bg-white/5'
+                }`}
+              >
+                <ClipboardList className="h-4 w-4" />
+                Módulo Admisiones Clínicas
+              </button>
+              <button
                 onClick={() => setSeccionActiva('problemas')}
                 className={`w-full text-left px-4 py-3 rounded-lg transition-all flex items-center gap-2 ${
                   seccionActiva === 'problemas'
@@ -192,7 +203,7 @@ export default function ManualPage() {
                     }}
                   >
                     <h3 className="text-xl font-semibold text-green-400 mb-4">🎯 ¿Qué Módulo Usar?</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div 
                         className="p-4 rounded-lg"
                         style={{
@@ -255,6 +266,41 @@ export default function ManualPage() {
                           </Button>
                         </Link>
                       </div>
+                      {/* Admisiones Clínicas */}
+                      <div 
+                        className="p-6 rounded-xl"
+                        style={{
+                          background: 'rgba(168, 85, 247, 0.15)',
+                          border: '2px solid rgba(168, 85, 247, 0.5)',
+                        }}
+                      >
+                        <div className="flex items-center gap-3 mb-4">
+                          <ClipboardList className="h-8 w-8 text-purple-400" />
+                          <div>
+                            <h3 className="text-xl font-bold text-purple-400">Admisiones Clínicas</h3>
+                            <p className="text-sm text-gray-400">Pago fijo por admisión</p>
+                          </div>
+                        </div>
+                        <ul className="space-y-2 mb-4">
+                          <li className="flex items-center gap-2">
+                            <CheckCircle2 className="h-4 w-4 text-purple-400" />
+                            Valor fijo: $10,000
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <CheckCircle2 className="h-4 w-4 text-purple-400" />
+                            Deduplicación FCFS
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <CheckCircle2 className="h-4 w-4 text-purple-400" />
+                            Sin retención
+                          </li>
+                        </ul>
+                        <Link href="/admisiones">
+                          <Button className="w-full mt-4 bg-purple-600 hover:bg-purple-500">
+                            Ir a Admisiones →
+                          </Button>
+                        </Link>
+                      </div>
                     </div>
                   </div>
 
@@ -274,7 +320,7 @@ export default function ManualPage() {
                         </div>
                         <div>
                           <h4 className="font-semibold text-white mb-1">Selecciona el módulo</h4>
-                          <p className="text-sm text-gray-400">Elige Pediatría o Ginecología según corresponda</p>
+                          <p className="text-sm text-gray-400">Elige Pediatría, Ginecología o Admisiones Clínicas según corresponda</p>
                         </div>
                       </div>
                       <div className="flex items-start gap-3 p-3 rounded-lg bg-white/5">
@@ -383,6 +429,31 @@ export default function ManualPage() {
                             <ChevronRight className="h-4 w-4 text-blue-400" />
                             <span>Resúmenes</span>
                             <span className="text-xs text-gray-500">(5 tabs)</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Admisiones Clínicas */}
+                      <div 
+                        className="p-4 rounded-lg"
+                        style={{
+                          background: 'rgba(168, 85, 247, 0.1)',
+                          border: '1px solid rgba(168, 85, 247, 0.3)',
+                        }}
+                      >
+                        <div className="flex items-center gap-2 mb-3">
+                          <ClipboardList className="h-5 w-5 text-purple-400" />
+                          <h4 className="font-semibold text-purple-400">Módulo Admisiones Clínicas</h4>
+                        </div>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-center gap-2 text-gray-300">
+                            <ChevronRight className="h-4 w-4 text-purple-400" />
+                            <span>Cargar Liquidación</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-gray-300">
+                            <ChevronRight className="h-4 w-4 text-purple-400" />
+                            <span>Resúmenes</span>
+                            <span className="text-xs text-gray-500">(4 tabs)</span>
                           </div>
                         </div>
                       </div>
@@ -874,6 +945,315 @@ export default function ManualPage() {
                               Excel
                             </h4>
                             <p className="text-sm text-gray-300">Edición y revisión</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Sección: Módulo Admisiones Clínicas */}
+              {seccionActiva === 'admisiones' && (
+                <div className="space-y-6">
+                  <h2 className="text-3xl font-bold text-purple-400 mb-6 flex items-center gap-3">
+                    <ClipboardList className="h-8 w-8" />
+                    Módulo de Admisiones Clínicas
+                  </h2>
+
+                  {/* Formato especial */}
+                  <div 
+                    className="p-6 rounded-xl"
+                    style={{
+                      background: 'rgba(239, 68, 68, 0.1)',
+                      border: '2px solid rgba(239, 68, 68, 0.5)',
+                    }}
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <AlertTriangle className="h-6 w-6 text-red-400" />
+                      <h3 className="text-lg font-semibold text-red-400">⚠️ Formato Especial del Excel</h3>
+                    </div>
+                    <div className="space-y-2 text-sm text-gray-300">
+                      <p>• <strong>Filas 1-9:</strong> Metadatos y texto basura (se ignoran) ⚠️</p>
+                      <p>• <strong>Fila 10:</strong> Headers (nombres de columnas) ⚠️</p>
+                      <p>• <strong>Desde Fila 11:</strong> Datos de las admisiones</p>
+                      <p className="text-xs text-gray-400 mt-2">El sistema filtra automáticamente las filas basura y solo procesa datos válidos</p>
+                    </div>
+                  </div>
+
+                  {/* Reglas de negocio */}
+                  <div 
+                    className="p-6 rounded-xl cursor-pointer"
+                    style={{
+                      background: subseccionExpandida === 'reglas-adm' ? 'rgba(168, 85, 247, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                      border: '1px solid rgba(168, 85, 247, 0.3)',
+                    }}
+                    onClick={() => toggleSubseccion('reglas-adm')}
+                  >
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xl font-semibold text-purple-400 flex items-center gap-2">
+                        <FileText className="h-5 w-5" />
+                        Reglas de Negocio
+                      </h3>
+                      {subseccionExpandida === 'reglas-adm' ? (
+                        <ChevronDown className="h-5 w-5 text-purple-400" />
+                      ) : (
+                        <ChevronRight className="h-5 w-5 text-gray-400" />
+                      )}
+                    </div>
+                    {subseccionExpandida === 'reglas-adm' && (
+                      <div className="mt-4 space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div 
+                            className="p-4 rounded-lg"
+                            style={{
+                              background: 'rgba(168, 85, 247, 0.1)',
+                              border: '1px solid rgba(168, 85, 247, 0.3)',
+                            }}
+                          >
+                            <h4 className="font-semibold text-purple-400 mb-2">Valor Fijo</h4>
+                            <p className="text-2xl font-bold text-white">$10,000</p>
+                            <p className="text-xs text-gray-400 mt-1">Por cada admisión válida</p>
+                            <p className="text-xs text-gray-400 mt-1">Valor fijo para septiembre 2025</p>
+                          </div>
+                          <div 
+                            className="p-4 rounded-lg"
+                            style={{
+                              background: 'rgba(168, 85, 247, 0.1)',
+                              border: '1px solid rgba(168, 85, 247, 0.3)',
+                            }}
+                          >
+                            <h4 className="font-semibold text-purple-400 mb-2">Sin Retención</h4>
+                            <p className="text-2xl font-bold text-white">0%</p>
+                            <p className="text-xs text-gray-400 mt-1">No se aplica retención</p>
+                            <p className="text-xs text-gray-400 mt-1">Pago completo al prestador</p>
+                          </div>
+                        </div>
+
+                        {/* Deduplicación */}
+                        <div 
+                          className="p-4 rounded-lg"
+                          style={{
+                            background: 'rgba(103, 232, 249, 0.1)',
+                            border: '1px solid rgba(103, 232, 249, 0.3)',
+                          }}
+                        >
+                          <h4 className="font-semibold text-cyan-400 mb-3 flex items-center gap-2">
+                            <Info className="h-5 w-5" />
+                            Sistema de Deduplicación (FCFS)
+                          </h4>
+                          <div className="space-y-3">
+                            <div>
+                              <p className="text-sm font-semibold text-gray-300 mb-2">Regla A: Auto-duplicado</p>
+                              <p className="text-sm text-gray-400">Si el mismo médico admite al mismo paciente en la misma fecha múltiples veces, se cuenta como <strong className="text-cyan-400">1 admisión</strong>.</p>
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-gray-300 mb-2">Regla B: First Come First Served (FCFS)</p>
+                              <p className="text-sm text-gray-400">Si un paciente aparece en la misma fecha pero con <strong>diferentes médicos</strong>, se aplica la regla FCFS:</p>
+                              <ul className="text-sm text-gray-400 mt-2 space-y-1 ml-4">
+                                <li>• Se mantiene el <strong className="text-cyan-400">primer registro</strong> encontrado</li>
+                                <li>• Los registros posteriores se marcan como <strong className="text-cyan-400">duplicados</strong> (color celeste)</li>
+                                <li>• Solo un médico recibe el pago por paciente/día</li>
+                              </ul>
+                            </div>
+                            <div className="mt-3 p-3 rounded bg-cyan-500/10 border border-cyan-500/30">
+                              <p className="text-xs text-cyan-300">
+                                <strong>Nota:</strong> Los duplicados se guardan en la base de datos pero se marcan visualmente para revisión manual.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Validaciones excluidas */}
+                        <div 
+                          className="p-4 rounded-lg"
+                          style={{
+                            background: 'rgba(34, 197, 94, 0.1)',
+                            border: '1px solid rgba(34, 197, 94, 0.3)',
+                          }}
+                        >
+                          <h4 className="font-semibold text-green-400 mb-3 flex items-center gap-2">
+                            <CheckCircle2 className="h-5 w-5" />
+                            Validaciones Excluidas (Solo para Admisiones)
+                          </h4>
+                          <div className="space-y-2 text-sm text-gray-300">
+                            <p className="flex items-start gap-2">
+                              <CheckCircle2 className="h-4 w-4 text-green-400 mt-0.5 flex-shrink-0" />
+                              <span><strong>NO se valida obra social</strong> - No se requiere verificar si el paciente tiene obra social</span>
+                            </p>
+                            <p className="flex items-start gap-2">
+                              <CheckCircle2 className="h-4 w-4 text-green-400 mt-0.5 flex-shrink-0" />
+                              <span><strong>NO se valida horario de inicio</strong> - No se requiere hora de atención</span>
+                            </p>
+                            <p className="flex items-start gap-2">
+                              <CheckCircle2 className="h-4 w-4 text-green-400 mt-0.5 flex-shrink-0" />
+                              <span><strong>SÍ se detectan duplicados</strong> - Se marcan en color celeste para revisión</span>
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Proceso de carga */}
+                  <div 
+                    className="p-6 rounded-xl cursor-pointer"
+                    style={{
+                      background: subseccionExpandida === 'carga-adm' ? 'rgba(168, 85, 247, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                      border: '1px solid rgba(168, 85, 247, 0.3)',
+                    }}
+                    onClick={() => toggleSubseccion('carga-adm')}
+                  >
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xl font-semibold text-purple-400 flex items-center gap-2">
+                        <Upload className="h-5 w-5" />
+                        Cargar Liquidación
+                      </h3>
+                      {subseccionExpandida === 'carga-adm' ? (
+                        <ChevronDown className="h-5 w-5 text-purple-400" />
+                      ) : (
+                        <ChevronRight className="h-5 w-5 text-gray-400" />
+                      )}
+                    </div>
+                    {subseccionExpandida === 'carga-adm' && (
+                      <div className="mt-4 space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                          <div className="text-center p-4 rounded-lg bg-purple-500/10">
+                            <div className="text-3xl mb-2">1️⃣</div>
+                            <p className="text-sm text-gray-300">Acceder al módulo</p>
+                          </div>
+                          <div className="text-center p-4 rounded-lg bg-purple-500/10">
+                            <div className="text-3xl mb-2">2️⃣</div>
+                            <p className="text-sm text-gray-300">Cargar Excel</p>
+                          </div>
+                          <div className="text-center p-4 rounded-lg bg-purple-500/10">
+                            <div className="text-3xl mb-2">3️⃣</div>
+                            <p className="text-sm text-gray-300">Confirmar período</p>
+                          </div>
+                          <div className="text-center p-4 rounded-lg bg-purple-500/10">
+                            <div className="text-3xl mb-2">4️⃣</div>
+                            <p className="text-sm text-gray-300">Procesar</p>
+                          </div>
+                        </div>
+                        <div 
+                          className="p-4 rounded-lg"
+                          style={{
+                            background: 'rgba(0, 0, 0, 0.2)',
+                            border: '1px solid rgba(168, 85, 247, 0.2)',
+                          }}
+                        >
+                          <h4 className="font-semibold text-white mb-2">📊 Columnas Requeridas</h4>
+                          <div className="text-sm text-gray-300 space-y-1">
+                            <p>• <strong>Fecha Visita:</strong> Fecha de la admisión (formato: DD/MM/YYYY o YYYY-MM-DD)</p>
+                            <p>• <strong>Paciente:</strong> Nombre del paciente</p>
+                            <p>• <strong>Responsable de admisión:</strong> Nombre del médico responsable</p>
+                            <p className="text-xs text-gray-400 mt-2">El sistema filtra automáticamente filas sin fecha válida</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Resúmenes */}
+                  <div 
+                    className="p-6 rounded-xl cursor-pointer"
+                    style={{
+                      background: subseccionExpandida === 'resumenes-adm' ? 'rgba(168, 85, 247, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                      border: '1px solid rgba(168, 85, 247, 0.3)',
+                    }}
+                    onClick={() => toggleSubseccion('resumenes-adm')}
+                  >
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xl font-semibold text-purple-400 flex items-center gap-2">
+                        <BarChart3 className="h-5 w-5" />
+                        Resúmenes Disponibles
+                      </h3>
+                      {subseccionExpandida === 'resumenes-adm' ? (
+                        <ChevronDown className="h-5 w-5 text-purple-400" />
+                      ) : (
+                        <ChevronRight className="h-5 w-5 text-gray-400" />
+                      )}
+                    </div>
+                    {subseccionExpandida === 'resumenes-adm' && (
+                      <div className="mt-4 space-y-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div 
+                            className="p-4 rounded-lg"
+                            style={{
+                              background: 'rgba(168, 85, 247, 0.1)',
+                              border: '1px solid rgba(168, 85, 247, 0.3)',
+                            }}
+                          >
+                            <h4 className="font-semibold text-purple-400 mb-2 flex items-center gap-2">
+                              <User className="h-4 w-4" />
+                              Por Médico
+                            </h4>
+                            <p className="text-sm text-gray-300">Resumen agrupado por médico responsable</p>
+                            <p className="text-xs text-gray-400 mt-1">Cantidad, valor unitario y total</p>
+                          </div>
+                          <div 
+                            className="p-4 rounded-lg"
+                            style={{
+                              background: 'rgba(168, 85, 247, 0.1)',
+                              border: '1px solid rgba(168, 85, 247, 0.3)',
+                            }}
+                          >
+                            <h4 className="font-semibold text-purple-400 mb-2 flex items-center gap-2">
+                              <BarChart3 className="h-4 w-4" />
+                              Por Prestador
+                            </h4>
+                            <p className="text-sm text-gray-300">Resumen consolidado por prestador</p>
+                            <p className="text-xs text-gray-400 mt-1">Con detalle de pacientes atendidos</p>
+                            <p className="text-xs text-purple-300 mt-1 font-semibold">✨ Incluye PDF individual por prestador</p>
+                          </div>
+                          <div 
+                            className="p-4 rounded-lg"
+                            style={{
+                              background: 'rgba(168, 85, 247, 0.1)',
+                              border: '1px solid rgba(168, 85, 247, 0.3)',
+                            }}
+                          >
+                            <h4 className="font-semibold text-purple-400 mb-2 flex items-center gap-2">
+                              <FileSpreadsheet className="h-4 w-4" />
+                              Excel Original
+                            </h4>
+                            <p className="text-sm text-gray-300">Visualización y edición</p>
+                            <p className="text-xs text-gray-400 mt-1">Duplicados marcados en celeste</p>
+                          </div>
+                          <div 
+                            className="p-4 rounded-lg"
+                            style={{
+                              background: 'rgba(168, 85, 247, 0.1)',
+                              border: '1px solid rgba(168, 85, 247, 0.3)',
+                            }}
+                          >
+                            <h4 className="font-semibold text-purple-400 mb-2 flex items-center gap-2">
+                              <History className="h-4 w-4" />
+                              Historial
+                            </h4>
+                            <p className="text-sm text-gray-300">Liquidaciones procesadas</p>
+                            <p className="text-xs text-gray-400 mt-1">Por mes y año</p>
+                          </div>
+                        </div>
+                        <div 
+                          className="p-4 rounded-lg mt-4"
+                          style={{
+                            background: 'rgba(103, 232, 249, 0.1)',
+                            border: '1px solid rgba(103, 232, 249, 0.3)',
+                          }}
+                        >
+                          <h4 className="font-semibold text-cyan-400 mb-2 flex items-center gap-2">
+                            <FileText className="h-4 w-4" />
+                            Exportación de PDFs
+                          </h4>
+                          <div className="text-sm text-gray-300 space-y-2">
+                            <p>• <strong>PDF Completo:</strong> Resumen de todos los prestadores</p>
+                            <p>• <strong>PDF Individual:</strong> Cada prestador puede descargar su resumen con:</p>
+                            <ul className="text-xs text-gray-400 ml-4 mt-1 space-y-1">
+                              <li>- Resumen general (cantidad, valor unitario, total)</li>
+                              <li>- Tabla detallada con todos sus pacientes (fecha, paciente, valor)</li>
+                              <li>- Formato profesional listo para presentar</li>
+                            </ul>
                           </div>
                         </div>
                       </div>
