@@ -321,52 +321,56 @@ export default function HomePage() {
                 </div>
 
                 {/* Footer */}
-                <div className="text-center text-gray-400 text-sm mt-12">
-                    {/* Redes Sociales */}
-                    <div className="flex items-center justify-center gap-4 mb-6">
-                        <a
-                            href="https://www.linkedin.com/in/lucas-marinero-182521308/"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:bg-green-500/20 hover:border-green-500/50 transition-all duration-300 hover:scale-110"
-                            aria-label="LinkedIn"
-                        >
-                            <Linkedin className="h-5 w-5 text-green-400" />
-                        </a>
-                        <a
-                            href="https://www.instagram.com/growsanjuan/"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:bg-green-500/20 hover:border-green-500/50 transition-all duration-300 hover:scale-110"
-                            aria-label="Instagram"
-                        >
-                            <Instagram className="h-5 w-5 text-green-400" />
-                        </a>
-                        <a
-                            href="https://api.whatsapp.com/send/?phone=5492643229503&text&type=phone_number&app_absent=0"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:bg-green-500/20 hover:border-green-500/50 transition-all duration-300 hover:scale-110"
-                            aria-label="WhatsApp"
-                        >
-                            <MessageCircle className="h-5 w-5 text-green-400" />
-                        </a>
-                        <a
-                            href="https://www.growsanjuan.com"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center hover:bg-green-500/20 hover:border-green-500/50 transition-all duration-300 hover:scale-110"
-                            aria-label="Sitio Web"
-                        >
-                            <Globe className="h-5 w-5 text-green-400" />
-                        </a>
+                <div className="mt-16 pt-8 border-t border-white/10">
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                        {/* Redes Sociales */}
+                        <div className="flex items-center gap-3">
+                            <a
+                                href="https://www.linkedin.com/in/lucas-marinero-182521308/"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-10 h-10 rounded-lg bg-green-500/10 border border-green-500/30 flex items-center justify-center hover:bg-green-500/20 hover:border-green-500/50 transition-all duration-300 hover:scale-110"
+                                aria-label="LinkedIn"
+                            >
+                                <Linkedin className="h-5 w-5 text-green-400" />
+                            </a>
+                            <a
+                                href="https://www.instagram.com/growsanjuan/"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-10 h-10 rounded-lg bg-green-500/10 border border-green-500/30 flex items-center justify-center hover:bg-green-500/20 hover:border-green-500/50 transition-all duration-300 hover:scale-110"
+                                aria-label="Instagram"
+                            >
+                                <Instagram className="h-5 w-5 text-green-400" />
+                            </a>
+                            <a
+                                href="https://api.whatsapp.com/send/?phone=5492643229503&text&type=phone_number&app_absent=0"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-10 h-10 rounded-lg bg-green-500/10 border border-green-500/30 flex items-center justify-center hover:bg-green-500/20 hover:border-green-500/50 transition-all duration-300 hover:scale-110"
+                                aria-label="WhatsApp"
+                            >
+                                <MessageCircle className="h-5 w-5 text-green-400" />
+                            </a>
+                            <a
+                                href="https://www.growsanjuan.com"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-10 h-10 rounded-lg bg-green-500/10 border border-green-500/30 flex items-center justify-center hover:bg-green-500/20 hover:border-green-500/50 transition-all duration-300 hover:scale-110"
+                                aria-label="Sitio Web"
+                            >
+                                <Globe className="h-5 w-5 text-green-400" />
+                            </a>
+                        </div>
+                        
+                        {/* Texto del Footer */}
+                        <div className="text-center md:text-right text-gray-300 text-sm">
+                            <p>
+                                © 2025 Grow Labs. Todos los derechos reservados. | Powered by{' '}
+                                <span className="text-green-400 font-semibold">Grow Labs Technology</span>
+                            </p>
+                        </div>
                     </div>
-                    
-                    <p className="flex items-center justify-center gap-2">
-                        Powered by{' '}
-                        <span className="text-green-400 font-semibold">Grow Labs</span>
-                    </p>
-                    <p className="mt-1">© 2025 - Sistema de Liquidaciones de Guardias Médicas</p>
                 </div>
 
                 {/* Decoración inferior */}
