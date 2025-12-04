@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Sparkles, Stethoscope, Baby, Upload, User, DollarSign, Hospital, BarChart3, Plus, BookOpen } from 'lucide-react'
+import { Sparkles, Stethoscope, Baby, Upload, User, DollarSign, Hospital, BarChart3, Plus, BookOpen, ClipboardList } from 'lucide-react'
 
 export default function HomePage() {
     return (
@@ -35,7 +35,7 @@ export default function HomePage() {
                 </div>
 
                 {/* Cards de Módulos */}
-                <div className="grid md:grid-cols-2 gap-6 mt-12">
+                <div className="grid md:grid-cols-3 gap-6 mt-12">
                     {/* Módulo Pediatría */}
                     <Link href="/pediatria">
                         <div 
@@ -109,6 +109,46 @@ export default function HomePage() {
                                     <li>✓ Cálculo por horas trabajadas</li>
                                 </ul>
                                 <div className="mt-4 text-blue-400 group-hover:translate-x-2 transition-transform flex items-center gap-2">
+                                    Procesar liquidación 
+                                    <span className="group-hover:translate-x-1 transition-transform">→</span>
+                                </div>
+                            </div>
+                        </div>
+                    </Link>
+
+                    {/* Módulo Admisiones Clínicas */}
+                    <Link href="/admisiones">
+                        <div 
+                            className="relative rounded-2xl shadow-2xl overflow-hidden p-8 hover:scale-105 transition-all duration-300 cursor-pointer group"
+                            style={{
+                                background: 'rgba(255, 255, 255, 0.1)',
+                                backdropFilter: 'blur(20px)',
+                                border: '1px solid rgba(168, 85, 247, 0.3)',
+                                boxShadow: '0 8px 32px 0 rgba(168, 85, 247, 0.3)',
+                            }}
+                        >
+                            {/* Borde brillante animado */}
+                            <div 
+                                className="absolute inset-0 rounded-2xl"
+                                style={{
+                                    background: 'linear-gradient(45deg, transparent, rgba(168, 85, 247, 0.3), transparent)',
+                                    animation: 'borderGlow 3s ease-in-out infinite',
+                                }}
+                            ></div>
+                            <div className="relative">
+                                <div className="mb-4 flex justify-center">
+                                    <ClipboardList className="h-12 w-12 text-purple-400" />
+                                </div>
+                                <h2 className="text-2xl font-bold text-purple-400 mb-2">Admisiones Clínicas</h2>
+                                <p className="text-gray-300 mb-4">
+                                    Pago fijo por admisión con deduplicación
+                                </p>
+                                <ul className="text-sm text-gray-400 space-y-1">
+                                    <li>✓ Valor fijo: $10,000</li>
+                                    <li>✓ Regla FCFS (First Come First Served)</li>
+                                    <li>✓ Deduplicación automática</li>
+                                </ul>
+                                <div className="mt-4 text-purple-400 group-hover:translate-x-2 transition-transform flex items-center gap-2">
                                     Procesar liquidación 
                                     <span className="group-hover:translate-x-1 transition-transform">→</span>
                                 </div>
