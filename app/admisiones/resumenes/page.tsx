@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { calcularResumenPorMedico, calcularTotalGeneral, ResumenPorMedico, calcularResumenPorPrestador, obtenerDetallePacientesPorPrestador, ResumenPorPrestador } from '@/lib/admisiones-resumenes'
 import { exportPDFResumenPorPrestador } from '@/lib/pdf-exporter-resumen-prestador-admisiones'
+import { exportPDFResumenPrestadorIndividual } from '@/lib/pdf-exporter-resumen-prestador-individual-admisiones'
 import { DetalleGuardia } from '@/lib/types'
 import { LiquidacionGuardia } from '@/lib/types'
 import { Button } from '@/components/ui/button'
@@ -215,6 +216,43 @@ export default function ResumenesAdmisionesPage() {
     })
   }
 
+  async function handleExportarPDFPrestadorIndividual(prestador: ResumenPorPrestador) {
+    try {
+      // Obtener liquidación específica
+      const { data: liquidacion } = await supabase
+        .from('liquidaciones_guardia')
+        .select('id')
+        .eq('especialidad', 'Admisiones Clínicas')
+        .eq('mes', mes)
+        .eq('anio', anio)
+        .maybeSingle()
+
+      const liquidacionId = liquidacion ? (liquidacion as any).id : undefined
+
+      // Obtener detalles de pacientes
+      const detalles = await obtenerDetallePacientesPorPrestador(
+        prestador.medico_id,
+        prestador.medico_nombre,
+        mes,
+        anio,
+        liquidacionId
+      )
+
+      // Generar PDF individual
+      exportPDFResumenPrestadorIndividual({
+        prestadorNombre: prestador.medico_nombre,
+        detalles,
+        mes,
+        anio,
+        cantidad: prestador.cantidad,
+        valorUnitario: prestador.valor_unitario,
+        total: prestador.total
+      })
+    } catch (error) {
+      console.error('Error exportando PDF individual:', error)
+    }
+  }
+
   function formatearMoneda(valor: number | null): string {
     if (valor === null || valor === undefined) return '$0,00'
     return new Intl.NumberFormat('es-AR', {
@@ -383,7 +421,7 @@ export default function ResumenesAdmisionesPage() {
                         <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400">Cantidad</th>
                         <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400">Valor Unitario</th>
                         <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400">Total</th>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400">Detalle</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 w-48">Acciones</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -401,16 +439,27 @@ export default function ResumenesAdmisionesPage() {
                               <td className="px-4 py-3 text-right text-gray-300">{formatearMoneda(resumen.valor_unitario)}</td>
                               <td className="px-4 py-3 text-right text-gray-300 font-semibold">{formatearMoneda(resumen.total)}</td>
                               <td className="px-4 py-3 text-center">
-                                <Button
-                                  onClick={() => cargarDetallePacientes(resumen)}
-                                  variant="outline"
-                                  size="sm"
-                                  className="border-purple-500/50 text-purple-400 hover:bg-purple-500/20"
-                                  disabled={estaCargando}
-                                >
-                                  <Eye className="h-4 w-4 mr-1" />
-                                  {estaCargando ? 'Cargando...' : estaExpandido ? 'Ocultar' : 'Ver'}
-                                </Button>
+                                <div className="flex items-center justify-center gap-2">
+                                  <Button
+                                    onClick={() => cargarDetallePacientes(resumen)}
+                                    variant="outline"
+                                    size="sm"
+                                    className="border-purple-500/50 text-purple-400 hover:bg-purple-500/20"
+                                    disabled={estaCargando}
+                                  >
+                                    <Eye className="h-4 w-4 mr-1" />
+                                    {estaCargando ? 'Cargando...' : estaExpandido ? 'Ocultar' : 'Ver'}
+                                  </Button>
+                                  <Button
+                                    onClick={() => handleExportarPDFPrestadorIndividual(resumen)}
+                                    variant="outline"
+                                    size="sm"
+                                    className="border-purple-500/50 text-purple-400 hover:bg-purple-500/20"
+                                  >
+                                    <Download className="h-4 w-4 mr-1" />
+                                    PDF
+                                  </Button>
+                                </div>
                               </td>
                             </tr>
                             {estaExpandido && detalles.length > 0 && (
