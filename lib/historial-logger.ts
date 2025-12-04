@@ -37,6 +37,7 @@ export async function guardarLogHistorial(
 
     const { error } = await supabase
       .from('logs_procesamiento')
+      // @ts-ignore - La tabla no está en los tipos generados de Supabase aún
       .insert([log])
 
     if (error) {
