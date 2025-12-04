@@ -408,7 +408,8 @@ export async function procesarExcelGuardiasClinicas(
 
       const { data: liquidacionCreada, error: errorLiquidacion } = await supabase
         .from('liquidaciones_guardia')
-        .insert(nuevaLiquidacion)
+        // @ts-ignore - La tabla no está en los tipos generados de Supabase aún
+        .insert([nuevaLiquidacion])
         .select('id')
         .single()
 
