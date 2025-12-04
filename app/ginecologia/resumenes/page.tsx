@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase/client'
 import { calcularResumenPorMedico, calcularResumenPorPrestador, ResumenPorMedico, ResumenPorPrestador, obtenerResidentesFormativos, TotalesResidentesFormativos } from '@/lib/ginecologia-resumenes'
 import { exportPDFResumenPorMedico } from '@/lib/pdf-exporter-resumen-medico'
 import { exportPDFResumenPorPrestador } from '@/lib/pdf-exporter-resumen-prestador'
+import { logEdicionCelda, logEliminacionFila } from '@/lib/historial-logger'
 import { LiquidacionGuardia } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, FileDown, Download, History, Eye, FileSpreadsheet, GraduationCap } from 'lucide-react'
@@ -222,8 +223,10 @@ export default function ResumenesGinecologiaPage() {
     const row = excelData.rows[rowIndex]
     if (!row) return
 
-    // Intentar obtener fila_excel desde metadata, o usar índice + 1 como fallback
+    // Obtener información para el log
     const filaExcel = (row as any).__fila_excel ?? (rowIndex + 1)
+    const paciente = (row as any).paciente || (row as any).Paciente
+    const fecha = (row as any).fecha || (row as any)['Fecha Visita']
 
     try {
       // Eliminar de BD usando fila_excel directamente
@@ -237,6 +240,14 @@ export default function ResumenesGinecologiaPage() {
         console.error('Error eliminando fila:', error)
         return
       }
+
+      // Guardar log de eliminación
+      await logEliminacionFila(liquidacionActual.id, {
+        filaExcel,
+        motivo: 'Eliminación manual',
+        paciente,
+        fecha
+      }).catch(err => console.error('Error guardando log de eliminación:', err))
 
       // Recargar ExcelData desde BD para asegurar sincronización
       // Esto actualiza los índices y asegura que todo esté correcto
@@ -404,7 +415,8 @@ export default function ResumenesGinecologiaPage() {
       resumenes,
       mes,
       anio,
-      medicoNombre
+      medicoNombre,
+      liquidacionId: liquidacionActual?.id || null
     })
   }
 
@@ -412,7 +424,8 @@ export default function ResumenesGinecologiaPage() {
     exportPDFResumenPorPrestador({
       resumenes: resumenesPorPrestador,
       mes,
-      anio
+      anio,
+      liquidacionId: liquidacionActual?.id || null
     })
   }
 

@@ -2,6 +2,7 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { ResumenPorPrestador } from './admisiones-resumenes'
 import { calcularNumeroLiquidacion } from './utils'
+import { logExportacionPDF } from './historial-logger'
 
 const MESES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -12,12 +13,14 @@ interface PDFResumenPrestadorOptions {
   resumenes: ResumenPorPrestador[]
   mes: number
   anio: number
+  liquidacionId?: string | null
 }
 
 export function exportPDFResumenPorPrestador({
   resumenes,
   mes,
-  anio
+  anio,
+  liquidacionId
 }: PDFResumenPrestadorOptions) {
   const doc = new jsPDF({
     orientation: 'portrait',
@@ -214,5 +217,13 @@ export function exportPDFResumenPorPrestador({
   // ============================================
   const nombreArchivo = `Resumen_Prestadores_Admisiones_${MESES[mes - 1]}_${anio}.pdf`
   doc.save(nombreArchivo)
+
+  // Guardar log en historial
+  logExportacionPDF('completo', liquidacionId || null, {
+    mes,
+    anio,
+    especialidad: 'Admisiones Clínicas',
+    cantidadPrestadores: resumenes.length
+  }).catch(err => console.error('Error guardando log:', err))
 }
 
