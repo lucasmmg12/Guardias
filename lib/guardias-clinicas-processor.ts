@@ -780,6 +780,7 @@ export async function procesarExcelGuardiasClinicas(
       const batch = detallesConsultas.slice(i, i + batchSize)
       const { error: errorDetalles } = await supabase
         .from('detalle_guardia')
+        // @ts-ignore - La tabla no está en los tipos generados de Supabase aún
         .insert(batch)
 
       if (errorDetalles) {
