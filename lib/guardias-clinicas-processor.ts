@@ -797,6 +797,7 @@ export async function procesarExcelGuardiasClinicas(
 
     const { error: errorUpdate } = await supabase
       .from('liquidaciones_guardia')
+      // @ts-ignore - La tabla no está en los tipos generados de Supabase aún
       .update({
         total_consultas: totalConsultas,
         total_bruto: totalBruto,
