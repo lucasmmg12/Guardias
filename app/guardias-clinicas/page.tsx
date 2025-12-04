@@ -163,7 +163,7 @@ export default function GuardiasClinicasPage() {
             setLoadingConfig(true)
 
             // Verificar si ya existe
-            const { data: existente } = await supabase
+            const { data: existente, error: errorExistente } = await supabase
                 .from('clinical_groups_config')
                 .select('*')
                 .eq('doctor_id', medicoId)
@@ -171,13 +171,14 @@ export default function GuardiasClinicasPage() {
                 .eq('anio', anioConfig)
                 .single()
 
-            if (existente) {
+            if (existente && !errorExistente) {
                 // Actualizar grupo existente
+                const grupoExistente = existente as ClinicalGroupsConfig
                 const { error } = await supabase
                     .from('clinical_groups_config')
                     // @ts-ignore
                     .update({ group_type: grupoSeleccionado })
-                    .eq('id', existente.id)
+                    .eq('id', grupoExistente.id)
 
                 if (error) throw error
             } else {
@@ -312,20 +313,21 @@ export default function GuardiasClinicasPage() {
             }
 
             // Verificar si existe
-            const { data: existente } = await supabase
+            const { data: existente, error: errorExistente } = await supabase
                 .from('clinical_values_config')
                 .select('*')
                 .eq('mes', mesConfig)
                 .eq('anio', anioConfig)
                 .single()
 
-            if (existente) {
+            if (existente && !errorExistente) {
                 // Actualizar
+                const valoresExistente = existente as ClinicalValuesConfig
                 const { error } = await supabase
                     .from('clinical_values_config')
                     // @ts-ignore
                     .update(valoresData)
-                    .eq('id', existente.id)
+                    .eq('id', valoresExistente.id)
 
                 if (error) throw error
             } else {
