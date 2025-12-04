@@ -486,3 +486,14 @@ export async function readExcelFileAdmisiones(file: File): Promise<ExcelData> {
   }
 }
 
+/**
+ * Lee un archivo Excel de Horas de Guardias Clínicas con el formato específico:
+ * - Fila 10: Headers (índice 9)
+ * - Desde fila 11: Datos (índice 10)
+ * (Mismo formato que Ginecología)
+ */
+export async function readExcelFileHorasGuardiasClinicas(file: File): Promise<ExcelData> {
+  // Reutilizamos la misma función que ginecología ya que el formato es el mismo
+  return readExcelFileGinecologia(file)
+}
+
