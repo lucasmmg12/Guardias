@@ -11,7 +11,7 @@ import { Medico, ValorConsultaObraSocial, ConfiguracionAdicional } from '@/lib/t
 
 interface ExcelDataTableProps {
   data: ExcelData
-  especialidad?: 'Pediatría' | 'Ginecología'
+  especialidad?: 'Pediatría' | 'Ginecología' | 'Admisiones Clínicas'
   onCellUpdate?: (rowIndex: number, column: string, newValue: any) => Promise<void>
   onDeleteRow?: (rowIndex: number) => Promise<void>
   liquidacionId?: string
@@ -317,9 +317,59 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
   }, [rows, data.headers])
 
   // Detectar filas duplicadas
+  // Para Admisiones Clínicas: duplicado = mismo paciente + misma fecha
+  // Para otros módulos: duplicado = fila completamente igual
   const filasDuplicadas = useMemo(() => {
-    return obtenerIndicesDuplicados(rows, data.headers)
-  }, [rows, data.headers])
+    if (especialidad === 'Admisiones Clínicas') {
+      // Lógica específica para Admisiones: paciente + fecha
+      const indices: Set<number> = new Set()
+      const pacientesFechas = new Map<string, number[]>() // clave: "paciente|fecha" -> índices
+      
+      // Buscar índices de columnas relevantes
+      const pacienteIndex = data.headers.findIndex(h => {
+        const hLower = h.toLowerCase().trim()
+        return hLower === 'paciente' || hLower.includes('paciente')
+      })
+      const fechaIndex = data.headers.findIndex(h => {
+        const hLower = h.toLowerCase().trim()
+        return hLower.includes('fecha') || hLower.includes('fecha visita')
+      })
+      
+      if (pacienteIndex === -1 || fechaIndex === -1) {
+        return indices
+      }
+      
+      rows.forEach((row, index) => {
+        const paciente = row[data.headers[pacienteIndex]]
+        const fecha = row[data.headers[fechaIndex]]
+        
+        // Normalizar valores
+        const pacienteStr = paciente ? String(paciente).trim().toLowerCase() : ''
+        const fechaStr = fecha ? String(fecha).trim() : ''
+        
+        // Crear clave única: paciente + fecha
+        const clave = `${pacienteStr}|${fechaStr}`
+        
+        if (!pacientesFechas.has(clave)) {
+          pacientesFechas.set(clave, [])
+        }
+        pacientesFechas.get(clave)!.push(index)
+      })
+      
+      // Marcar como duplicados todos los índices que tienen la misma clave (excepto el primero)
+      pacientesFechas.forEach((indicesArray) => {
+        if (indicesArray.length > 1) {
+          // El primero se mantiene, los demás son duplicados
+          indicesArray.slice(1).forEach(idx => indices.add(idx))
+        }
+      })
+      
+      return indices
+    } else {
+      // Lógica original para otros módulos: fila completamente igual
+      return obtenerIndicesDuplicados(rows, data.headers)
+    }
+  }, [rows, data.headers, especialidad])
 
   // Detectar filas con residentes en horario formativo (optimizado)
   const filasResidenteHorarioFormativo = useMemo(() => {
@@ -467,71 +517,79 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
         </div>
       )}
 
-      {/* Sección expandible: Registros sin obra social */}
-      <ExpandableSection
-        title={
-          <div className="flex items-center gap-2">
-            <span className="px-2.5 py-1 bg-yellow-500/20 text-yellow-400 rounded-md text-xs font-semibold uppercase tracking-wide border border-yellow-500/30">
-              Advertencia
-            </span>
-            <span className="font-semibold">
-              {cantidadParticulares} {cantidadParticulares > 1 ? 'registros' : 'registro'} sin obra social detectado{cantidadParticulares > 1 ? 's' : ''}
-            </span>
-          </div>
-        }
-        count={cantidadParticulares}
-        description='Estos registros deben ser revisados. Si son pacientes particulares, edite la columna "Cliente" y agregue: "042 - PARTICULARES"'
-        icon={<AlertTriangle className="h-6 w-6 flex-shrink-0" />}
-        bgColor="rgba(251, 191, 36, 0.15)"
-        borderColor="rgba(251, 191, 36, 0.5)"
-        textColor="#fbbf24"
-        rows={filasParticularesList}
-        data={data}
-        onCellUpdate={onCellUpdate}
-        onDeleteRow={handleDeleteRowLocal}
-        onDeleteAll={handleDeleteAllParticulares}
-        allowEdit={true}
-        allowDelete={true}
-        mes={mes}
-        anio={anio}
-        sectionKey="sin_obra_social"
-      />
+      {/* Sección expandible: Registros sin obra social - SOLO para módulos que no sean Admisiones Clínicas */}
+      {especialidad !== 'Admisiones Clínicas' && (
+        <ExpandableSection
+          title={
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-1 bg-yellow-500/20 text-yellow-400 rounded-md text-xs font-semibold uppercase tracking-wide border border-yellow-500/30">
+                Advertencia
+              </span>
+              <span className="font-semibold">
+                {cantidadParticulares} {cantidadParticulares > 1 ? 'registros' : 'registro'} sin obra social detectado{cantidadParticulares > 1 ? 's' : ''}
+              </span>
+            </div>
+          }
+          count={cantidadParticulares}
+          description='Estos registros deben ser revisados. Si son pacientes particulares, edite la columna "Cliente" y agregue: "042 - PARTICULARES"'
+          icon={<AlertTriangle className="h-6 w-6 flex-shrink-0" />}
+          bgColor="rgba(251, 191, 36, 0.15)"
+          borderColor="rgba(251, 191, 36, 0.5)"
+          textColor="#fbbf24"
+          rows={filasParticularesList}
+          data={data}
+          onCellUpdate={onCellUpdate}
+          onDeleteRow={handleDeleteRowLocal}
+          onDeleteAll={handleDeleteAllParticulares}
+          allowEdit={true}
+          allowDelete={true}
+          mes={mes}
+          anio={anio}
+          sectionKey="sin_obra_social"
+        />
+      )}
 
-      {/* Sección expandible: Registros sin horario */}
-      <ExpandableSection
-        title={
-          <div className="flex items-center gap-2">
-            <span className="px-2.5 py-1 bg-red-500/20 text-red-400 rounded-md text-xs font-semibold uppercase tracking-wide border border-red-500/30">
-              Crítico
-            </span>
-            <span className="font-semibold">
-              {cantidadSinHorario} {cantidadSinHorario > 1 ? 'registros' : 'registro'} sin horario de inicio detectado{cantidadSinHorario > 1 ? 's' : ''}
-            </span>
-          </div>
-        }
-        count={cantidadSinHorario}
-        description="Estos registros indican que el paciente no se atendió. Deben ser eliminados."
-        icon={<Clock className="h-6 w-6 flex-shrink-0" />}
-        bgColor="rgba(239, 68, 68, 0.15)"
-        borderColor="rgba(239, 68, 68, 0.5)"
-        textColor="#ef4444"
-        rows={filasSinHorarioList}
-        data={data}
-        onDeleteRow={handleDeleteRowLocal}
-        onDeleteAll={handleDeleteAllSinHorario}
-        allowDelete={true}
-        mes={mes}
-        anio={anio}
-        sectionKey="sin_horario"
-        valoresConsultas={valoresConsultas}
-        adicionales={adicionales}
-      />
+      {/* Sección expandible: Registros sin horario - SOLO para módulos que no sean Admisiones Clínicas */}
+      {especialidad !== 'Admisiones Clínicas' && (
+        <ExpandableSection
+          title={
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-1 bg-red-500/20 text-red-400 rounded-md text-xs font-semibold uppercase tracking-wide border border-red-500/30">
+                Crítico
+              </span>
+              <span className="font-semibold">
+                {cantidadSinHorario} {cantidadSinHorario > 1 ? 'registros' : 'registro'} sin horario de inicio detectado{cantidadSinHorario > 1 ? 's' : ''}
+              </span>
+            </div>
+          }
+          count={cantidadSinHorario}
+          description="Estos registros indican que el paciente no se atendió. Deben ser eliminados."
+          icon={<Clock className="h-6 w-6 flex-shrink-0" />}
+          bgColor="rgba(239, 68, 68, 0.15)"
+          borderColor="rgba(239, 68, 68, 0.5)"
+          textColor="#ef4444"
+          rows={filasSinHorarioList}
+          data={data}
+          onDeleteRow={handleDeleteRowLocal}
+          onDeleteAll={handleDeleteAllSinHorario}
+          allowDelete={true}
+          mes={mes}
+          anio={anio}
+          sectionKey="sin_horario"
+          valoresConsultas={valoresConsultas}
+          adicionales={adicionales}
+        />
+      )}
 
       {/* Sección expandible: Registros duplicados */}
       <ExpandableSection
         title={
           <div className="flex items-center gap-2">
-            <span className="px-2.5 py-1 bg-purple-500/20 text-purple-400 rounded-md text-xs font-semibold uppercase tracking-wide border border-purple-500/30">
+            <span className={`px-2.5 py-1 rounded-md text-xs font-semibold uppercase tracking-wide border ${
+              especialidad === 'Admisiones Clínicas'
+                ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30'
+                : 'bg-purple-500/20 text-purple-400 border-purple-500/30'
+            }`}>
               Duplicado
             </span>
             <span className="font-semibold">
@@ -540,11 +598,15 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
           </div>
         }
         count={cantidadDuplicados}
-        description="Se detectaron filas completamente iguales (misma fecha, misma hora, mismo todo). Revise y elimine los duplicados si es necesario."
+        description={
+          especialidad === 'Admisiones Clínicas'
+            ? "Se detectaron pacientes repetidos en la misma fecha (regla FCFS: First Come First Served). El primer registro se mantiene, los demás son duplicados."
+            : "Se detectaron filas completamente iguales (misma fecha, misma hora, mismo todo). Revise y elimine los duplicados si es necesario."
+        }
         icon={<AlertCircle className="h-6 w-6 flex-shrink-0" />}
-        bgColor="rgba(168, 85, 247, 0.15)"
-        borderColor="rgba(168, 85, 247, 0.5)"
-        textColor="#a855f7"
+        bgColor={especialidad === 'Admisiones Clínicas' ? 'rgba(103, 232, 249, 0.15)' : 'rgba(168, 85, 247, 0.15)'}
+        borderColor={especialidad === 'Admisiones Clínicas' ? 'rgba(103, 232, 249, 0.5)' : 'rgba(168, 85, 247, 0.5)'}
+        textColor={especialidad === 'Admisiones Clínicas' ? '#67e8f9' : '#a855f7'}
         rows={filasDuplicadasList}
         data={data}
         onDeleteRow={handleDeleteRowLocal}
@@ -555,37 +617,41 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
         sectionKey="duplicados"
         valoresConsultas={valoresConsultas}
         adicionales={adicionales}
+        especialidad={especialidad}
       />
 
-      {/* Sección expandible: Residentes en horario formativo */}
-      <ExpandableSection
-        title={
-          <div className="flex items-center gap-2">
-            <span className="px-2.5 py-1 bg-blue-500/20 text-blue-400 rounded-md text-xs font-semibold uppercase tracking-wide border border-blue-500/30">
-              Informativo
-            </span>
-            <span className="font-semibold">
-              {cantidadResidenteHorarioFormativo} {cantidadResidenteHorarioFormativo > 1 ? 'consultas' : 'consulta'} de {cantidadResidenteHorarioFormativo > 1 ? 'residentes' : 'residente'} en horario formativo detectada{cantidadResidenteHorarioFormativo > 1 ? 's' : ''}
-            </span>
-          </div>
-        }
-        count={cantidadResidenteHorarioFormativo}
-        description="Estas consultas son de residentes realizadas entre lunes a sábado de 07:00 a 15:00. NO se deben pagar según las reglas del sistema."
-        icon={<UserX className="h-6 w-6 flex-shrink-0" />}
-        bgColor="rgba(59, 130, 246, 0.15)"
-        borderColor="rgba(59, 130, 246, 0.5)"
-        textColor="#3b82f6"
-        rows={filasResidenteFormativoList}
-        data={data}
-        onDeleteRow={handleDeleteRowLocal}
-        onDeleteAll={handleDeleteAllResidenteFormativo}
-        allowDelete={true}
-        mes={mes}
-        anio={anio}
-        sectionKey="residente_formativo"
-        valoresConsultas={valoresConsultas}
-        adicionales={adicionales}
-      />
+      {/* Sección expandible: Residentes en horario formativo - SOLO para módulos que no sean Admisiones Clínicas */}
+      {especialidad !== 'Admisiones Clínicas' && (
+        <ExpandableSection
+          title={
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-1 bg-blue-500/20 text-blue-400 rounded-md text-xs font-semibold uppercase tracking-wide border border-blue-500/30">
+                Informativo
+              </span>
+              <span className="font-semibold">
+                {cantidadResidenteHorarioFormativo} {cantidadResidenteHorarioFormativo > 1 ? 'consultas' : 'consulta'} de {cantidadResidenteHorarioFormativo > 1 ? 'residentes' : 'residente'} en horario formativo detectada{cantidadResidenteHorarioFormativo > 1 ? 's' : ''}
+              </span>
+            </div>
+          }
+          count={cantidadResidenteHorarioFormativo}
+          description="Estas consultas son de residentes realizadas entre lunes a sábado de 07:00 a 15:00. NO se deben pagar según las reglas del sistema."
+          icon={<UserX className="h-6 w-6 flex-shrink-0" />}
+          bgColor="rgba(59, 130, 246, 0.15)"
+          borderColor="rgba(59, 130, 246, 0.5)"
+          textColor="#3b82f6"
+          rows={filasResidenteFormativoList}
+          data={data}
+          onDeleteRow={handleDeleteRowLocal}
+          onDeleteAll={handleDeleteAllResidenteFormativo}
+          allowDelete={true}
+          mes={mes}
+          anio={anio}
+          sectionKey="residente_formativo"
+          valoresConsultas={valoresConsultas}
+          adicionales={adicionales}
+          especialidad={especialidad}
+        />
+      )}
 
       {/* 5to recuadro: Detalle completo */}
       <ExpandableSection
@@ -625,13 +691,13 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
         Total de filas: <span className="text-green-400 font-semibold">{rows.length}</span>
         {' • '}
         Columnas: <span className="text-green-400 font-semibold">{data.headers.length}</span>
-        {cantidadParticulares > 0 && (
+        {especialidad !== 'Admisiones Clínicas' && cantidadParticulares > 0 && (
           <>
             {' • '}
             Sin obra social: <span className="text-yellow-400 font-semibold">{cantidadParticulares}</span>
           </>
         )}
-        {cantidadSinHorario > 0 && (
+        {especialidad !== 'Admisiones Clínicas' && cantidadSinHorario > 0 && (
           <>
             {' • '}
             Sin horario: <span className="text-red-400 font-semibold">{cantidadSinHorario}</span>
@@ -640,10 +706,10 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
         {cantidadDuplicados > 0 && (
           <>
             {' • '}
-            Duplicados: <span className="text-purple-400 font-semibold">{cantidadDuplicados}</span>
+            Duplicados: <span className={especialidad === 'Admisiones Clínicas' ? 'text-cyan-400' : 'text-purple-400'} style={{ fontWeight: '600' }}>{cantidadDuplicados}</span>
           </>
         )}
-        {cantidadResidenteHorarioFormativo > 0 && (
+        {especialidad !== 'Admisiones Clínicas' && cantidadResidenteHorarioFormativo > 0 && (
           <>
             {' • '}
             Residente formativo: <span className="text-blue-400 font-semibold">{cantidadResidenteHorarioFormativo}</span>

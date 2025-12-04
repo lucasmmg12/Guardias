@@ -350,7 +350,13 @@ export default function ResumenesAdmisionesPage() {
                 No hay Excel disponible para {MESES[mes - 1]?.label} {anio}
               </div>
             ) : (
-              <ExcelDataTable data={excelData} />
+              <ExcelDataTable 
+                data={excelData} 
+                especialidad="Admisiones Clínicas"
+                liquidacionId={liquidacionActual?.id}
+                mes={mes}
+                anio={anio}
+              />
             )}
           </div>
         )}

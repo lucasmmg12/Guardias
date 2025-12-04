@@ -35,6 +35,8 @@ interface ExpandableSectionProps {
   valoresConsultas?: Map<string, number>
   // Adicionales para calcular adicional
   adicionales?: Map<string, number>
+  // Especialidad para determinar colores específicos
+  especialidad?: 'Pediatría' | 'Ginecología' | 'Admisiones Clínicas'
 }
 
 export function ExpandableSection({
@@ -48,6 +50,7 @@ export function ExpandableSection({
   rows,
   data,
   onCellUpdate,
+  especialidad,
   onDeleteRow,
   onDeleteAll,
   allowEdit = false,
@@ -772,7 +775,10 @@ export function ExpandableSection({
                   if (esSinHorario) {
                     rowBgColor = 'rgba(239, 68, 68, 0.15)' // Rojo para sin horario
                   } else if (esDuplicado) {
-                    rowBgColor = 'rgba(168, 85, 247, 0.15)' // Púrpura para duplicados
+                    // Color celeste para Admisiones Clínicas, púrpura para otros
+                    rowBgColor = especialidad === 'Admisiones Clínicas' 
+                      ? 'rgba(103, 232, 249, 0.15)' // Celeste para Admisiones
+                      : 'rgba(168, 85, 247, 0.15)' // Púrpura para otros módulos
                   } else if (esParticular) {
                     rowBgColor = 'rgba(251, 191, 36, 0.15)' // Amarillo para sin obra social
                   } else if (esResidenteFormativo) {
