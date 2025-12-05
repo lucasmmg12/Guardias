@@ -723,7 +723,12 @@ export default function GuardiasClinicasPage() {
                                 {/* Grupo 70% */}
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between">
-                                        <h3 className="text-lg font-semibold text-pink-300">Grupo 70%</h3>
+                                        <div className="flex items-center gap-3">
+                                            <h3 className="text-lg font-semibold text-pink-300">Grupo 70%</h3>
+                                            <span className="px-3 py-1 rounded-full bg-pink-500/20 border border-pink-500/50 text-pink-300 text-sm font-semibold">
+                                                {grupos70.length} médico{grupos70.length !== 1 ? 's' : ''}
+                                            </span>
+                                        </div>
                                         <Button
                                             onClick={() => {
                                                 setGrupoSeleccionado('GRUPO_70')
@@ -764,7 +769,12 @@ export default function GuardiasClinicasPage() {
                                 {/* Grupo 40% */}
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between">
-                                        <h3 className="text-lg font-semibold text-pink-300">Grupo 40%</h3>
+                                        <div className="flex items-center gap-3">
+                                            <h3 className="text-lg font-semibold text-pink-300">Grupo 40%</h3>
+                                            <span className="px-3 py-1 rounded-full bg-pink-500/20 border border-pink-500/50 text-pink-300 text-sm font-semibold">
+                                                {grupos40.length} médico{grupos40.length !== 1 ? 's' : ''}
+                                            </span>
+                                        </div>
                                         <Button
                                             onClick={() => {
                                                 setGrupoSeleccionado('GRUPO_40')
