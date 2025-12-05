@@ -215,88 +215,104 @@ export function ObraSocialDropdown({ value, onSelect, onCancel, className }: Obr
 
   // ✅ Returns condicionales DESPUÉS de todos los hooks
   return (
-    <div ref={dropdownRef} className={cn("relative w-full", className)} onClick={(e) => e.stopPropagation()}>
-      {/* Input de búsqueda siempre visible */}
-      <div className="relative">
-        <Input
-          ref={inputRef}
-          type="text"
-          value={searchTerm}
-          onChange={handleInputChange}
-          onKeyDown={handleKeyDown}
-          onClick={handleOpen}
-          placeholder={value || "Buscar obra social..."}
-          className="h-8 w-full bg-gray-800 border-green-500/50 text-white placeholder:text-gray-500 focus:border-green-400 focus:ring-green-400/20 pr-8"
-        />
-        {searchTerm && (
-          <button
-            type="button"
-            onClick={handleClear}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
-            tabIndex={-1}
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
-      </div>
-
-      {/* Dropdown con resultados */}
+    <>
+      {/* Overlay para bloquear clicks en las columnas debajo */}
       {isOpen && (
-        <div 
-          className="absolute z-[9999] w-full mt-1 bg-gray-800 border border-green-500/50 rounded-md shadow-lg max-h-60 overflow-auto"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {loading ? (
-            <div className="px-4 py-2 text-sm text-gray-300 text-center">
-              Cargando obras sociales...
-            </div>
-          ) : obrasFiltradas.length === 0 ? (
-            <div className="px-4 py-2 text-sm text-gray-300 text-center">
-              {debouncedSearch.trim() ? (
-                <div>
-                  <div className="mb-2">No se encontraron resultados</div>
-                  <button
-                    type="button"
-                    onClick={() => handleSelect(searchTerm.trim())}
-                    className="text-xs text-green-400 hover:text-green-300 underline"
-                  >
-                    Usar "{searchTerm.trim()}" como valor
-                  </button>
-                </div>
-              ) : (
-                'No hay obras sociales disponibles'
-              )}
-            </div>
-          ) : (
-            <div className="py-1">
-              {obrasFiltradas.map((obra) => (
-                <button
-                  key={obra}
-                  type="button"
-                  onMouseDown={(e) => {
-                    // Prevenir que el mousedown cierre el dropdown antes del click
-                    e.preventDefault()
-                    e.stopPropagation()
-                  }}
-                  onClick={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    handleSelect(obra)
-                  }}
-                  className={cn(
-                    "w-full px-4 py-2 text-left text-sm transition-colors cursor-pointer",
-                    value === obra
-                      ? "bg-green-500/30 text-white font-semibold"
-                      : "text-gray-200 hover:bg-green-500/20 hover:text-white"
-                  )}
-                >
-                  {obra}
-                </button>
-              ))}
-            </div>
+        <div
+          className="fixed inset-0 bg-black/50 z-[9998]"
+          onClick={(e) => {
+            e.stopPropagation()
+            setIsOpen(false)
+            setSearchTerm(value || '')
+          }}
+          style={{ pointerEvents: 'auto' }}
+        />
+      )}
+      
+      <div ref={dropdownRef} className={cn("relative w-full", className)} onClick={(e) => e.stopPropagation()}>
+        {/* Input de búsqueda siempre visible */}
+        <div className="relative z-[9999]">
+          <Input
+            ref={inputRef}
+            type="text"
+            value={searchTerm}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+            onClick={handleOpen}
+            placeholder={value || "Buscar obra social..."}
+            className="h-8 w-full bg-gray-800 border-green-500/50 text-white placeholder:text-gray-500 focus:border-green-400 focus:ring-green-400/20 pr-8"
+          />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={handleClear}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors z-[10000]"
+              tabIndex={-1}
+            >
+              <X className="h-4 w-4" />
+            </button>
           )}
         </div>
-      )}
-    </div>
+
+        {/* Dropdown con resultados - FONDO TOTALMENTE NEGRO */}
+        {isOpen && (
+          <div 
+            className="absolute z-[9999] w-full mt-1 bg-black border border-green-500/50 rounded-md shadow-lg max-h-60 overflow-auto"
+            onClick={(e) => e.stopPropagation()}
+            style={{ backgroundColor: '#000000' }}
+          >
+            {loading ? (
+              <div className="px-4 py-2 text-sm text-gray-300 text-center bg-black">
+                Cargando obras sociales...
+              </div>
+            ) : obrasFiltradas.length === 0 ? (
+              <div className="px-4 py-2 text-sm text-gray-300 text-center bg-black">
+                {debouncedSearch.trim() ? (
+                  <div className="bg-black">
+                    <div className="mb-2">No se encontraron resultados</div>
+                    <button
+                      type="button"
+                      onClick={() => handleSelect(searchTerm.trim())}
+                      className="text-xs text-green-400 hover:text-green-300 underline"
+                    >
+                      Usar "{searchTerm.trim()}" como valor
+                    </button>
+                  </div>
+                ) : (
+                  'No hay obras sociales disponibles'
+                )}
+              </div>
+            ) : (
+              <div className="py-1 bg-black">
+                {obrasFiltradas.map((obra) => (
+                  <button
+                    key={obra}
+                    type="button"
+                    onMouseDown={(e) => {
+                      // Prevenir que el mousedown cierre el dropdown antes del click
+                      e.preventDefault()
+                      e.stopPropagation()
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      handleSelect(obra)
+                    }}
+                    className={cn(
+                      "w-full px-4 py-2 text-left text-sm transition-colors cursor-pointer bg-black",
+                      value === obra
+                        ? "bg-green-500/30 text-white font-semibold"
+                        : "text-gray-200 hover:bg-green-500/20 hover:text-white"
+                    )}
+                  >
+                    {obra}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </>
   )
 }
