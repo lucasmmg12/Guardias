@@ -190,14 +190,22 @@ export function ObraSocialDropdown({ value, onSelect, onCancel, className }: Obr
       setIsOpen(false)
       setSearchTerm(value || '')
       onCancel?.()
-    } else if (e.key === 'Enter' && obrasFiltradas.length === 1) {
-      // Si hay solo un resultado, seleccionarlo con Enter
+    } else if (e.key === 'Enter') {
       e.preventDefault()
-      handleSelect(obrasFiltradas[0])
-    } else if (e.key === 'Enter' && searchTerm.trim() && obrasFiltradas.length === 0) {
-      // Si no hay resultados pero hay texto, usar ese texto como valor
-      e.preventDefault()
-      handleSelect(searchTerm.trim())
+      // ✅ SIEMPRE guardar el texto escrito cuando se presiona Enter
+      if (searchTerm.trim()) {
+        // Si hay resultados filtrados y solo uno, seleccionarlo
+        if (obrasFiltradas.length === 1) {
+          handleSelect(obrasFiltradas[0])
+        } else {
+          // Si hay múltiples resultados o ninguno, usar el texto escrito
+          handleSelect(searchTerm.trim())
+        }
+      } else {
+        // Si no hay texto, cerrar sin guardar
+        setIsOpen(false)
+        onCancel?.()
+      }
     }
   }, [onCancel, obrasFiltradas, searchTerm, value, handleSelect])
 
@@ -216,22 +224,38 @@ export function ObraSocialDropdown({ value, onSelect, onCancel, className }: Obr
   // ✅ Returns condicionales DESPUÉS de todos los hooks
   return (
     <>
-      {/* Overlay para bloquear clicks en las columnas debajo */}
+      {/* Overlay para bloquear clicks en las columnas debajo - NO bloquea el dropdown */}
       {isOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-[9998]"
           onClick={(e) => {
-            e.stopPropagation()
-            setIsOpen(false)
-            setSearchTerm(value || '')
+            // Solo cerrar si el click NO es en el dropdown
+            const target = e.target as Node
+            if (dropdownRef.current && !dropdownRef.current.contains(target)) {
+              e.stopPropagation()
+              setIsOpen(false)
+              setSearchTerm(value || '')
+            }
+          }}
+          onMouseDown={(e) => {
+            // Prevenir que el mousedown interfiera con el input
+            const target = e.target as Node
+            if (dropdownRef.current && dropdownRef.current.contains(target)) {
+              e.stopPropagation()
+            }
           }}
           style={{ pointerEvents: 'auto' }}
         />
       )}
       
-      <div ref={dropdownRef} className={cn("relative w-full", className)} onClick={(e) => e.stopPropagation()}>
+      <div 
+        ref={dropdownRef} 
+        className={cn("relative w-full", className)} 
+        onClick={(e) => e.stopPropagation()}
+        style={{ position: 'relative', zIndex: 9999 }}
+      >
         {/* Input de búsqueda siempre visible */}
-        <div className="relative z-[9999]">
+        <div className="relative" style={{ zIndex: 10000 }}>
           <Input
             ref={inputRef}
             type="text"
@@ -241,13 +265,15 @@ export function ObraSocialDropdown({ value, onSelect, onCancel, className }: Obr
             onClick={handleOpen}
             placeholder={value || "Buscar obra social..."}
             className="h-8 w-full bg-gray-800 border-green-500/50 text-white placeholder:text-gray-500 focus:border-green-400 focus:ring-green-400/20 pr-8"
+            style={{ position: 'relative', zIndex: 10000 }}
           />
           {searchTerm && (
             <button
               type="button"
               onClick={handleClear}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors z-[10000]"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
               tabIndex={-1}
+              style={{ zIndex: 10001 }}
             >
               <X className="h-4 w-4" />
             </button>
@@ -259,7 +285,8 @@ export function ObraSocialDropdown({ value, onSelect, onCancel, className }: Obr
           <div 
             className="absolute z-[9999] w-full mt-1 bg-black border border-green-500/50 rounded-md shadow-lg max-h-60 overflow-auto"
             onClick={(e) => e.stopPropagation()}
-            style={{ backgroundColor: '#000000' }}
+            onMouseDown={(e) => e.stopPropagation()}
+            style={{ backgroundColor: '#000000', zIndex: 10000 }}
           >
             {loading ? (
               <div className="px-4 py-2 text-sm text-gray-300 text-center bg-black">
