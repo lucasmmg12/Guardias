@@ -209,13 +209,14 @@ export default function ResumenesGinecologiaPage() {
           
           try {
             // Obtener detalle actual para verificar si es horario formativo
-            const { data: detalleActual } = await supabase
+            const { data: detalleActualData } = await supabase
               .from('detalle_guardia')
               .select('es_horario_formativo')
               .eq('liquidacion_id', liquidacionActual.id)
               .eq('fila_excel', filaExcel)
               .maybeSingle()
             
+            const detalleActual = detalleActualData as { es_horario_formativo: boolean } | null
             const esHorarioFormativo = detalleActual?.es_horario_formativo || false
             
             // Cargar valor de consulta para la nueva obra social
