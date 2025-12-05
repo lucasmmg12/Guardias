@@ -618,21 +618,25 @@ export async function procesarExcelGuardiasClinicas(
           'Médico', 'Medico', 'Responsable', 'Profesional'
         ])
         
-        // Buscar columnas de horas con variaciones: "8 a 16", "8a12/16a8", etc.
+        // Buscar columnas de horas con variaciones: incluir nombres exactos del archivo
         const franjas816 = buscarValor(row, [
+          'Horas semanales de 8 a 16 hs', 'Horas semanales de 8 a 16',
           '8 a 16', '8-16', '8a16', '8 a 12', '8-12',
           'Semanal 8 a 16', 'Semanal 8-16', 'Horas Semanal 8-16',
           '8a12/16a8', '8a12', '16a8'
         ])
         const franjas168 = buscarValor(row, [
+          'Horas semanales de 16 a 8 hs', 'Horas semanales de 16 a 8',
           '16 a 8', '16-8', '16a8', '16 a 8',
           'Semanal 16 a 8', 'Semanal 16-8', 'Horas Semanal 16-8'
         ])
         const horasWeekend = buscarValor(row, [
-          'Fin de semana', 'Fin de Semana', 'Weekend', 'Finde',
-          'Horas fin de semana', 'Horas Weekend'
+          'Horas fin de semana / feriados', 'Horas fin de semana /',
+          'Horas fin de semana', 'Fin de semana', 'Fin de Semana', 
+          'Weekend', 'Finde', 'Horas Weekend'
         ])
         const horasWeekendNight = buscarValor(row, [
+          'Horas nocturnas fin de semana /', 'Horas nocturnas fin de semana',
           'Noche finde', 'Noche Finde', 'Weekend Night', 'Finde Noche',
           'Horas noche finde', 'Horas nocturnas finde'
         ])

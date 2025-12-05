@@ -488,12 +488,176 @@ export async function readExcelFileAdmisiones(file: File): Promise<ExcelData> {
 
 /**
  * Lee un archivo Excel de Horas de Guardias Clínicas con el formato específico:
- * - Fila 10: Headers (índice 9)
- * - Desde fila 11: Datos (índice 10)
- * (Mismo formato que Ginecología)
+ * - Fila 2: Título "Horas de Guardia"
+ * - Fila 3: Mes/Año (ej: "agosto 2025")
+ * - Fila 4: Headers (índice 3)
+ * - Desde fila 5: Datos (índice 4)
+ * - Detener cuando encuentra filas de totales
  */
 export async function readExcelFileHorasGuardiasClinicas(file: File): Promise<ExcelData> {
-  // Reutilizamos la misma función que ginecología ya que el formato es el mismo
-  return readExcelFileGinecologia(file)
+  try {
+    const arrayBuffer = await file.arrayBuffer()
+    const workbook = XLSX.read(arrayBuffer, { type: 'array' })
+    
+    // Obtener la primera hoja
+    const sheetName = workbook.SheetNames[0]
+    if (!sheetName) {
+      throw new Error('El archivo Excel no contiene hojas')
+    }
+
+    const worksheet = workbook.Sheets[sheetName]
+    const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1')
+    
+    // Intentar leer el mes/año de la fila 3 (índice 2) si existe
+    const row3: any[] = []
+    for (let col = 0; col <= Math.min(range.e.c, 10); col++) {
+      const cellAddress = XLSX.utils.encode_cell({ r: 2, c: col })
+      const cell = worksheet[cellAddress]
+      row3.push(cell ? cell.v : null)
+    }
+    
+    // Extraer mes/año de la fila 3 (formato: "agosto 2025" o similar)
+    let periodo = null
+    const row3Text = row3.map(cell => String(cell || '')).join(' ')
+    const mesAnioMatch = row3Text.match(/(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)\s+(\d{4})/i)
+    if (mesAnioMatch) {
+      const meses: { [key: string]: number } = {
+        'enero': 1, 'febrero': 2, 'marzo': 3, 'abril': 4,
+        'mayo': 5, 'junio': 6, 'julio': 7, 'agosto': 8,
+        'septiembre': 9, 'octubre': 10, 'noviembre': 11, 'diciembre': 12
+      }
+      const mesNombre = mesAnioMatch[1].toLowerCase()
+      const anio = parseInt(mesAnioMatch[2])
+      const mes = meses[mesNombre]
+      if (mes && anio) {
+        // Crear período aproximado (primer y último día del mes)
+        const primerDia = `01/${mes.toString().padStart(2, '0')}/${anio}`
+        const ultimoDia = `31/${mes.toString().padStart(2, '0')}/${anio}`
+        periodo = { desde: primerDia, hasta: ultimoDia }
+      }
+    }
+
+    // Leer la fila 4 (índice 3) para los headers
+    const headers: Array<{ name: string; colIndex: number }> = []
+    const maxCols = Math.min(range.e.c + 1, 50)
+    
+    // Primero, encontrar la última columna con un header válido en la fila 4
+    let lastHeaderCol = -1
+    for (let col = 0; col < maxCols; col++) {
+      const cellAddress = XLSX.utils.encode_cell({ r: 3, c: col }) // Fila 4 = índice 3
+      const cell = worksheet[cellAddress]
+      if (cell && cell.v !== null && cell.v !== undefined) {
+        const headerValue = String(cell.v).trim()
+        if (headerValue !== '') {
+          lastHeaderCol = col
+        }
+      }
+    }
+    
+    // Si no encontramos headers, lanzar error
+    if (lastHeaderCol === -1) {
+      throw new Error('No se encontraron headers en la fila 4. Verifique que el archivo tenga el formato correcto.')
+    }
+    
+    // Leer todos los headers desde la columna 0 hasta la última con header válido
+    for (let col = 0; col <= lastHeaderCol; col++) {
+      const cellAddress = XLSX.utils.encode_cell({ r: 3, c: col }) // Fila 4 = índice 3
+      const cell = worksheet[cellAddress]
+      
+      if (cell && cell.v !== null && cell.v !== undefined) {
+        const headerValue = String(cell.v).trim()
+        headers.push({
+          name: headerValue || `Columna ${col + 1}`,
+          colIndex: col
+        })
+      } else {
+        headers.push({
+          name: `Columna ${col + 1}`,
+          colIndex: col
+        })
+      }
+    }
+
+    // Filtrar headers vacíos solo para la visualización
+    const headerNames = headers.map(h => h.name).filter(name => !name.startsWith('Columna'))
+
+    // Leer datos manualmente desde la fila 5 (índice 4) en adelante
+    // Detener antes de las filas de totales (buscar filas que contengan "Total" o "Diferencia")
+    const rows: ExcelRow[] = []
+    
+    for (let rowIndex = 4; rowIndex <= range.e.r; rowIndex++) { // Desde fila 5 (índice 4)
+      // Verificar si esta fila es un total (contiene "Total" o "Diferencia")
+      let esFilaTotal = false
+      for (let col = 0; col <= lastHeaderCol; col++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: col })
+        const cell = worksheet[cellAddress]
+        if (cell && cell.v !== null && cell.v !== undefined) {
+          const cellValue = String(cell.v).toLowerCase()
+          if (cellValue.includes('total') || cellValue.includes('diferencia') || 
+              cellValue.includes('horas del mes') || cellValue.includes('horas de guardia')) {
+            esFilaTotal = true
+            break
+          }
+        }
+      }
+      
+      if (esFilaTotal) {
+        // Detener el procesamiento cuando encontramos filas de totales
+        break
+      }
+      
+      const row: ExcelRow = {}
+      let hasData = false
+      
+      // Leer usando el índice de columna real del Excel
+      headers.forEach((headerInfo) => {
+        const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: headerInfo.colIndex })
+        const cell = worksheet[cellAddress]
+        
+        if (cell && cell.v !== null && cell.v !== undefined) {
+          let value: any = cell.v
+          
+          // Para columnas numéricas (horas), mantener como número
+          if (cell.t === 'n' && typeof value === 'number') {
+            // Mantener el número tal cual
+            value = value
+          } else if (typeof value === 'string') {
+            // Intentar convertir string a número si es posible
+            const numValue = parseFloat(value.replace(',', '.'))
+            if (!isNaN(numValue)) {
+              value = numValue
+            }
+          }
+          
+          // Solo agregar al row si el header tiene un nombre válido
+          if (!headerInfo.name.startsWith('Columna')) {
+            row[headerInfo.name] = value
+            hasData = true
+          }
+        } else {
+          // Solo agregar null si el header tiene un nombre válido
+          if (!headerInfo.name.startsWith('Columna')) {
+            row[headerInfo.name] = null
+          }
+        }
+      })
+      
+      // Solo agregar la fila si tiene al menos un dato y no está vacía
+      if (hasData) {
+        rows.push(row)
+      }
+    }
+
+    return {
+      periodo,
+      headers: headerNames,
+      rows
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error
+    }
+    throw new Error('Error al leer el archivo Excel de Horas de Guardias Clínicas: ' + String(error))
+  }
 }
 
