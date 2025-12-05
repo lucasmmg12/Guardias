@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Check, X, Edit2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ObraSocialDropdown } from './ObraSocialDropdown'
 
 interface InlineEditCellProps {
     value: string | number | null
@@ -12,7 +13,7 @@ interface InlineEditCellProps {
     onSave: (newValue: string | number) => Promise<void>
     className?: string
     isEditable?: boolean
-    columnName?: string // Mantenemos por compatibilidad pero no lo usamos
+    columnName?: string
 }
 
 export function InlineEditCell({
@@ -29,15 +30,25 @@ export function InlineEditCell({
     const inputRef = useRef<HTMLInputElement>(null)
     const isSavingRef = useRef(false)
 
+    // Detectar si es columna Cliente/Obra Social (solo para determinar qué renderizar)
+    const esColumnaCliente = useMemo(() => {
+        const columnLower = columnName?.toLowerCase().trim() || ''
+        return columnLower === 'cliente' || 
+               columnLower === 'obra social' || 
+               columnLower.includes('obra social') ||
+               (columnLower.includes('obra') && columnLower.includes('social'))
+    }, [columnName])
+
     useEffect(() => {
         setCurrentValue(value ?? '')
     }, [value])
 
     useEffect(() => {
-        if (isEditing && inputRef.current) {
+        // Solo enfocar si NO es columna Cliente (el dropdown maneja su propio foco)
+        if (isEditing && !esColumnaCliente && inputRef.current) {
             inputRef.current.focus()
         }
-    }, [isEditing])
+    }, [isEditing, esColumnaCliente])
 
     const handleSave = useCallback(async () => {
         if (isSavingRef.current) return
@@ -73,6 +84,13 @@ export function InlineEditCell({
         }
     }, [handleSave, handleCancel])
 
+    // Callback para cuando se selecciona una obra social del dropdown
+    const handleObraSocialSelect = useCallback((obra: string) => {
+        setCurrentValue(obra)
+        // Guardar inmediatamente después de seleccionar
+        handleSave()
+    }, [handleSave])
+
     // ✅ TODOS LOS HOOKS DEBEN ESTAR ANTES DE CUALQUIER RETURN CONDICIONAL
     const handleEditClick = useCallback(() => {
         setIsEditing(true)
@@ -96,33 +114,57 @@ export function InlineEditCell({
     if (isEditing) {
         return (
             <div className="flex items-center gap-1 animate-in fade-in zoom-in-95 duration-200">
-                <Input
-                    ref={inputRef}
-                    type={type}
-                    value={currentValue}
-                    onChange={(e) => setCurrentValue(type === 'number' ? Number(e.target.value) : e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    disabled={isLoading}
-                    className="h-8 min-w-[100px] bg-gray-800 border-green-500/50 focus:border-green-400 text-white"
-                />
-                <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 text-green-400 hover:text-green-300 hover:bg-green-500/20"
-                    onClick={handleSave}
-                    disabled={isLoading}
-                >
-                    <Check className="h-4 w-4" />
-                </Button>
-                <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-500/20"
-                    onClick={handleCancel}
-                    disabled={isLoading}
-                >
-                    <X className="h-4 w-4" />
-                </Button>
+                {esColumnaCliente ? (
+                    // Dropdown para columna Cliente/Obra Social
+                    <>
+                        <ObraSocialDropdown
+                            value={String(currentValue || '')}
+                            onSelect={handleObraSocialSelect}
+                            onCancel={handleCancel}
+                            className="flex-1"
+                        />
+                        <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-500/20"
+                            onClick={handleCancel}
+                            disabled={isLoading}
+                        >
+                            <X className="h-4 w-4" />
+                        </Button>
+                    </>
+                ) : (
+                    // Input normal para otras columnas
+                    <>
+                        <Input
+                            ref={inputRef}
+                            type={type}
+                            value={currentValue}
+                            onChange={(e) => setCurrentValue(type === 'number' ? Number(e.target.value) : e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            disabled={isLoading}
+                            className="h-8 min-w-[100px] bg-gray-800 border-green-500/50 focus:border-green-400 text-white"
+                        />
+                        <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-green-400 hover:text-green-300 hover:bg-green-500/20"
+                            onClick={handleSave}
+                            disabled={isLoading}
+                        >
+                            <Check className="h-4 w-4" />
+                        </Button>
+                        <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-500/20"
+                            onClick={handleCancel}
+                            disabled={isLoading}
+                        >
+                            <X className="h-4 w-4" />
+                        </Button>
+                    </>
+                )}
             </div>
         )
     }
