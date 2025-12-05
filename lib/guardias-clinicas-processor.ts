@@ -24,8 +24,8 @@ interface ConfiguracionGrupo {
 }
 
 interface ConfiguracionValores {
-  value_hour_weekly_8_16: number      // Valor fijo por franja 8-16 días semana
-  value_hour_weekly_16_8: number      // Valor fijo por franja 16-8 días semana
+  value_hour_weekly_8_16: number      // Valor por hora 8-16 días semana
+  value_hour_weekly_16_8: number      // Valor por hora 16-8 días semana
   value_hour_weekend: number          // Valor por hora fines de semana/feriados
   value_hour_weekend_night: number    // Valor por hora nocturna fines de semana/feriados
   value_guaranteed_min: number       // Valor mínimo POR HORA trabajada
@@ -792,15 +792,15 @@ export async function procesarExcelGuardiasClinicas(
         const hWeekend = horasWeekend ? (typeof horasWeekend === 'number' ? horasWeekend : parseFloat(String(horasWeekend))) : 0
         const hWeekendNight = horasWeekendNight ? (typeof horasWeekendNight === 'number' ? horasWeekendNight : parseFloat(String(horasWeekendNight))) : 0
 
-        // Calcular valores
-        const valorFranjas816 = f816 * valores.value_hour_weekly_8_16
-        const valorFranjas168 = f168 * valores.value_hour_weekly_16_8
+        // Calcular valores (todas son horas trabajadas, se multiplican por valor por hora)
+        const valorHoras816 = f816 * valores.value_hour_weekly_8_16
+        const valorHoras168 = f168 * valores.value_hour_weekly_16_8
         const valorHorasWeekend = hWeekend * valores.value_hour_weekend
         const valorHorasWeekendNight = hWeekendNight * valores.value_hour_weekend_night
         
         // Total de horas: suma simple de los 4 valores (SIN aplicar garantía mínima aquí)
         // La garantía mínima solo se usa para calcular el mínimo acordado al final
-        const totalHoras = valorFranjas816 + valorFranjas168 + valorHorasWeekend + valorHorasWeekendNight
+        const totalHoras = valorHoras816 + valorHoras168 + valorHorasWeekend + valorHorasWeekendNight
 
         // Crear detalle de horas
         const detalleHora: DetalleHorasGuardiaInsert = {
@@ -813,8 +813,8 @@ export async function procesarExcelGuardiasClinicas(
           franjas_16_8: f168,
           horas_weekend: hWeekend,
           horas_weekend_night: hWeekendNight,
-          valor_franjas_8_16: valorFranjas816,
-          valor_franjas_16_8: valorFranjas168,
+          valor_franjas_8_16: valorHoras816,  // Nota: aunque el campo se llama "franjas", en realidad son horas
+          valor_franjas_16_8: valorHoras168,  // Nota: aunque el campo se llama "franjas", en realidad son horas
           valor_horas_weekend: valorHorasWeekend,
           valor_horas_weekend_night: valorHorasWeekendNight,
           total_horas: totalHoras,
@@ -899,11 +899,9 @@ export async function procesarExcelGuardiasClinicas(
 
     // Calcular total de horas por médico
     for (const [medicoId, horas] of horasPorMedico.entries()) {
-      // Calcular valor de franjas (valores fijos)
-      const valorFranjas816 = horas.franjas_8_16 * valores.value_hour_weekly_8_16
-      const valorFranjas168 = horas.franjas_16_8 * valores.value_hour_weekly_16_8
-      
-      // Calcular valor de horas (valores por hora)
+      // Calcular valor de horas (todas son horas trabajadas, se multiplican por valor por hora)
+      const valorHoras816 = horas.franjas_8_16 * valores.value_hour_weekly_8_16
+      const valorHoras168 = horas.franjas_16_8 * valores.value_hour_weekly_16_8
       const valorHorasWeekend = horas.horas_weekend * valores.value_hour_weekend
       const valorHorasWeekendNight = horas.horas_weekend_night * valores.value_hour_weekend_night
       
@@ -912,7 +910,7 @@ export async function procesarExcelGuardiasClinicas(
       
       // Total de horas: suma simple (SIN aplicar garantía mínima aquí)
       // La garantía mínima solo se usa para calcular el mínimo acordado al final
-      const totalHoras = valorFranjas816 + valorFranjas168 + valorHorasWeekend + valorHorasWeekendNight
+      const totalHoras = valorHoras816 + valorHoras168 + valorHorasWeekend + valorHorasWeekendNight
 
       const totales = totalesPorMedico.get(medicoId) || {
         netoConsultas: 0,
