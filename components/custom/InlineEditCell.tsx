@@ -4,8 +4,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Check, X, Edit2 } from 'lucide-react'
-import { cn, obtenerSugerenciasObraSocial, CODIGO_PARTICULARES } from '@/lib/utils'
-import { ObraSocialDropdown } from './ObraSocialDropdown'
+import { cn } from '@/lib/utils'
 
 interface InlineEditCellProps {
     value: string | number | null
@@ -13,7 +12,7 @@ interface InlineEditCellProps {
     onSave: (newValue: string | number) => Promise<void>
     className?: string
     isEditable?: boolean
-    columnName?: string // Nombre de la columna para mostrar sugerencias específicas
+    columnName?: string // Mantenemos por compatibilidad pero no lo usamos
 }
 
 export function InlineEditCell({
@@ -28,34 +27,19 @@ export function InlineEditCell({
     const [currentValue, setCurrentValue] = useState<string | number>(value ?? '')
     const [isLoading, setIsLoading] = useState(false)
     const inputRef = useRef<HTMLInputElement>(null)
-    const isSavingRef = useRef(false) // Prevenir múltiples guardados
-    
-    // Memoizar si es columna Cliente u Obra Social
-    const esColumnaCliente = useMemo(() => {
-      const columnLower = columnName?.toLowerCase().trim() || ''
-      return columnLower === 'cliente' || 
-             columnLower === 'obra social' || 
-             columnLower.includes('obra social') ||
-             (columnLower.includes('obra') && columnLower.includes('social'))
-    }, [columnName])
-    
-    // Memoizar sugerencias
-    const sugerencias = useMemo(() => {
-      return esColumnaCliente ? obtenerSugerenciasObraSocial(String(value)) : []
-    }, [esColumnaCliente, value])
+    const isSavingRef = useRef(false)
 
     useEffect(() => {
         setCurrentValue(value ?? '')
     }, [value])
 
     useEffect(() => {
-        if (isEditing && !esColumnaCliente && inputRef.current) {
+        if (isEditing && inputRef.current) {
             inputRef.current.focus()
         }
-    }, [isEditing, esColumnaCliente])
+    }, [isEditing])
 
     const handleSave = useCallback(async () => {
-        // Prevenir múltiples guardados simultáneos
         if (isSavingRef.current) return
         
         if (currentValue === value) {
@@ -70,7 +54,6 @@ export function InlineEditCell({
             setIsEditing(false)
         } catch (error) {
             console.error('Error saving:', error)
-            // Aquí podrías mostrar un toast de error
         } finally {
             setIsLoading(false)
             isSavingRef.current = false
@@ -90,74 +73,40 @@ export function InlineEditCell({
         }
     }, [handleSave, handleCancel])
 
-    // Manejar selección de obra social de forma más estable
-    const handleObraSocialSelect = useCallback(async (obra: string) => {
-        if (isSavingRef.current) return
-        
-        setCurrentValue(obra)
-        // Pequeño delay para asegurar que el estado se actualice antes de guardar
-        await new Promise(resolve => setTimeout(resolve, 0))
-        await handleSave()
-    }, [handleSave])
-
     if (!isEditable) {
         return <div className={cn("px-2 py-1", className)}>{value}</div>
     }
 
     if (isEditing) {
         return (
-            <div className="flex flex-col gap-1 animate-in fade-in zoom-in-95 duration-200">
-                <div className="flex items-center gap-1">
-                    {esColumnaCliente ? (
-                        <>
-                            <ObraSocialDropdown
-                                value={String(currentValue)}
-                                onSelect={handleObraSocialSelect}
-                                onCancel={handleCancel}
-                                className="flex-1"
-                            />
-                            <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-500/20"
-                                onClick={handleCancel}
-                                disabled={isLoading}
-                            >
-                                <X className="h-4 w-4" />
-                            </Button>
-                        </>
-                    ) : (
-                        <>
-                            <Input
-                                ref={inputRef}
-                                type={type}
-                                value={currentValue}
-                                onChange={(e) => setCurrentValue(type === 'number' ? Number(e.target.value) : e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                disabled={isLoading}
-                                className="h-8 min-w-[100px] bg-gray-800 border-green-500/50 focus:border-green-400 text-white"
-                            />
-                            <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8 text-green-400 hover:text-green-300 hover:bg-green-500/20"
-                                onClick={handleSave}
-                                disabled={isLoading}
-                            >
-                                <Check className="h-4 w-4" />
-                            </Button>
-                            <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-500/20"
-                                onClick={handleCancel}
-                                disabled={isLoading}
-                            >
-                                <X className="h-4 w-4" />
-                            </Button>
-                        </>
-                    )}
-                </div>
+            <div className="flex items-center gap-1 animate-in fade-in zoom-in-95 duration-200">
+                <Input
+                    ref={inputRef}
+                    type={type}
+                    value={currentValue}
+                    onChange={(e) => setCurrentValue(type === 'number' ? Number(e.target.value) : e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    disabled={isLoading}
+                    className="h-8 min-w-[100px] bg-gray-800 border-green-500/50 focus:border-green-400 text-white"
+                />
+                <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 text-green-400 hover:text-green-300 hover:bg-green-500/20"
+                    onClick={handleSave}
+                    disabled={isLoading}
+                >
+                    <Check className="h-4 w-4" />
+                </Button>
+                <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-500/20"
+                    onClick={handleCancel}
+                    disabled={isLoading}
+                >
+                    <X className="h-4 w-4" />
+                </Button>
             </div>
         )
     }
@@ -166,7 +115,6 @@ export function InlineEditCell({
         setIsEditing(true)
     }, [])
 
-    // Memoizar el valor formateado
     const displayValue = useMemo(() => {
         if (value === null || value === '') {
             return <span className="text-gray-500 italic text-xs">Vacío</span>
