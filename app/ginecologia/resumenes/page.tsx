@@ -220,7 +220,7 @@ export default function ResumenesGinecologiaPage() {
             const esHorarioFormativo = detalleActual?.es_horario_formativo || false
             
             // Cargar valor de consulta para la nueva obra social
-            const { data: valorConsulta } = await supabase
+            const { data: valorConsultaData } = await supabase
               .from('valores_consultas_obra_social')
               .select('valor')
               .eq('tipo_consulta', 'CONSULTA GINECOLOGICA')
@@ -229,6 +229,7 @@ export default function ResumenesGinecologiaPage() {
               .eq('obra_social', nuevaObraSocial)
               .maybeSingle()
             
+            const valorConsulta = valorConsultaData as { valor: number } | null
             let montoFacturado = valorConsulta?.valor || 0
             let importeCalculado = montoFacturado
             
