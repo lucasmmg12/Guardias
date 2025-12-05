@@ -1,5 +1,5 @@
 import { supabase } from './supabase/client'
-import { DetalleGuardia, DetalleHorasGuardia, Medico, ClinicalGroupsConfig } from './types'
+import { DetalleGuardia, DetalleHorasGuardia, Medico, ClinicalGroupsConfig, ClinicalValuesConfig } from './types'
 
 export interface ResumenPorMedico {
   medico_id: string | null
@@ -256,6 +256,18 @@ export async function calcularResumenPorPrestador(
     gruposPorMedico.set(grupo.doctor_id, grupo.group_type as 'GRUPO_70' | 'GRUPO_40')
   }
 
+  // Obtener configuración de valores (horas) para recalcular total_horas correctamente
+  const { data: valoresData } = await supabase
+    .from('clinical_values_config')
+    .select('*')
+    .eq('mes', mes)
+    .eq('anio', anio)
+    .single() as { data: ClinicalValuesConfig | null }
+
+  if (!valoresData) {
+    console.error('[Guardias Clínicas Resúmenes] No se encontró configuración de valores para recalcular horas')
+  }
+
   // Agrupar por médico
   const resumenMap = new Map<string, ResumenPorPrestador>()
 
@@ -292,11 +304,26 @@ export async function calcularResumenPorPrestador(
     }
   }
 
-  // Procesar horas
+  // Procesar horas - RECALCULAR total_horas usando valores de configuración actuales
+  // Esto asegura que el cálculo sea correcto incluso si los valores guardados en BD están mal
   for (const detalleHora of todosLosDetallesHoras) {
     if (!detalleHora.medico_id) continue
 
     const clave = detalleHora.medico_id
+
+    // Recalcular total_horas usando valores de configuración actuales
+    let totalHorasRecalculado = 0
+    if (valoresData) {
+      // Todas son horas trabajadas, se multiplican por valor por hora
+      const valorHoras816 = (detalleHora.franjas_8_16 || 0) * valoresData.value_hour_weekly_8_16
+      const valorHoras168 = (detalleHora.franjas_16_8 || 0) * valoresData.value_hour_weekly_16_8
+      const valorHorasWeekend = (detalleHora.horas_weekend || 0) * valoresData.value_hour_weekend
+      const valorHorasWeekendNight = (detalleHora.horas_weekend_night || 0) * valoresData.value_hour_weekend_night
+      totalHorasRecalculado = valorHoras816 + valorHoras168 + valorHorasWeekend + valorHorasWeekendNight
+    } else {
+      // Si no hay configuración, usar el valor guardado como fallback
+      totalHorasRecalculado = detalleHora.total_horas || 0
+    }
 
     const resumen = resumenMap.get(clave) || {
       medico_id: detalleHora.medico_id,
@@ -308,7 +335,7 @@ export async function calcularResumenPorPrestador(
       total_final: 0
     }
 
-    resumen.total_horas += detalleHora.total_horas || 0
+    resumen.total_horas += totalHorasRecalculado
     resumenMap.set(clave, resumen)
   }
 
