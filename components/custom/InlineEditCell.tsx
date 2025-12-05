@@ -73,6 +73,22 @@ export function InlineEditCell({
         }
     }, [handleSave, handleCancel])
 
+    // ✅ TODOS LOS HOOKS DEBEN ESTAR ANTES DE CUALQUIER RETURN CONDICIONAL
+    const handleEditClick = useCallback(() => {
+        setIsEditing(true)
+    }, [])
+
+    const displayValue = useMemo(() => {
+        if (value === null || value === '') {
+            return <span className="text-gray-500 italic text-xs">Vacío</span>
+        }
+        if (type === 'number' && typeof value === 'number') {
+            return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(value)
+        }
+        return value
+    }, [value, type])
+
+    // ✅ AHORA SÍ: Returns condicionales DESPUÉS de todos los hooks
     if (!isEditable) {
         return <div className={cn("px-2 py-1", className)}>{value}</div>
     }
@@ -110,20 +126,6 @@ export function InlineEditCell({
             </div>
         )
     }
-
-    const handleEditClick = useCallback(() => {
-        setIsEditing(true)
-    }, [])
-
-    const displayValue = useMemo(() => {
-        if (value === null || value === '') {
-            return <span className="text-gray-500 italic text-xs">Vacío</span>
-        }
-        if (type === 'number' && typeof value === 'number') {
-            return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(value)
-        }
-        return value
-    }, [value, type])
 
     return (
         <div
