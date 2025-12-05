@@ -1,6 +1,6 @@
 import { supabase } from './supabase/client'
 import { ExcelData, ExcelRow } from './excel-reader'
-import { Medico, DetalleGuardiaInsert, LiquidacionGuardiaInsert, DetalleHorasGuardiaInsert } from './types'
+import { Medico, DetalleGuardiaInsert, LiquidacionGuardiaInsert, DetalleHorasGuardiaInsert, ValorConsultaObraSocial } from './types'
 import { calcularNumeroLiquidacion, esParticular } from './utils'
 
 interface FilaExcluida {
@@ -372,6 +372,56 @@ export async function procesarExcelGuardiasClinicas(
 
     const valores: ConfiguracionValores = valoresData
 
+    // 3.5. Cargar valores de consultas de guardia clínica
+    const { data: valoresConsultasData } = await supabase
+      .from('valores_consultas_obra_social')
+      .select('*')
+      .eq('tipo_consulta', 'CONSULTA DE GUARDIA CLINICA')
+      .eq('mes', mes)
+      .eq('anio', anio) as { data: ValorConsultaObraSocial[] | null }
+
+    const valoresConsultas = valoresConsultasData || []
+    const valoresPorObraSocial = new Map<string, number>()
+    valoresConsultas.forEach(v => {
+      valoresPorObraSocial.set(v.obra_social, v.valor)
+    })
+    
+    // Cargar valores de PARTICULARES al inicio para evitar consultas dentro del loop
+    const { data: valorParticularData } = await supabase
+      .from('valores_consultas_obra_social')
+      .select('valor')
+      .eq('obra_social', 'PARTICULARES')
+      .eq('tipo_consulta', 'CONSULTA DE GUARDIA CLINICA')
+      .eq('mes', mes)
+      .eq('anio', anio)
+      .single()
+    
+    const valorParticular = valorParticularData ? (valorParticularData as any).valor : null
+    
+    // Si no se encontró con 'PARTICULARES', intentar con '042 - PARTICULARES'
+    let valorParticular042 = null
+    if (!valorParticular) {
+      const { data: valorParticular042Data } = await supabase
+        .from('valores_consultas_obra_social')
+        .select('valor')
+        .eq('obra_social', '042 - PARTICULARES')
+        .eq('tipo_consulta', 'CONSULTA DE GUARDIA CLINICA')
+        .eq('mes', mes)
+        .eq('anio', anio)
+        .single()
+      
+      valorParticular042 = valorParticular042Data ? (valorParticular042Data as any).valor : null
+    }
+    
+    // Agregar valores de PARTICULARES al mapa si se encontraron
+    if (valorParticular) {
+      valoresPorObraSocial.set('PARTICULARES', valorParticular)
+      valoresPorObraSocial.set('042 - PARTICULARES', valorParticular)
+    } else if (valorParticular042) {
+      valoresPorObraSocial.set('PARTICULARES', valorParticular042)
+      valoresPorObraSocial.set('042 - PARTICULARES', valorParticular042)
+    }
+
     // 4. Crear o obtener liquidación
     const numeroLiquidacion = calcularNumeroLiquidacion(mes, anio)
     
@@ -537,16 +587,34 @@ export async function procesarExcelGuardiasClinicas(
           // Continuar con hora null si no hay hora
         }
 
-        // Validar PARTICULARES o SIN COBERTURA - PROCESAR IGUAL
-        let obraSocialFinal = obraSocial ? obraSocial.trim() : ''
-        if (esParticular(obraSocialFinal) || obraSocialFinal.toUpperCase().includes('SIN COBERTURA')) {
+        // Normalizar obra social y obtener valor de consulta
+        let obraSocialFinal: string
+        if (!obraSocial || obraSocial.trim() === '') {
+          // Si está vacío, asignar '042 - PARTICULARES' o 'PARTICULARES' según lo que esté en el mapa
+          if (valoresPorObraSocial.has('042 - PARTICULARES')) {
+            obraSocialFinal = '042 - PARTICULARES'
+          } else if (valoresPorObraSocial.has('PARTICULARES')) {
+            obraSocialFinal = 'PARTICULARES'
+          } else {
+            obraSocialFinal = '042 - PARTICULARES' // Por defecto
+          }
+        } else if (esParticular(obraSocial.trim()) || obraSocial.trim().toUpperCase().includes('SIN COBERTURA')) {
+          // Si es un nombre de persona o SIN COBERTURA, asignar '042 - PARTICULARES' o 'PARTICULARES'
           resultado.filasExcluidas.push({
             numeroFila: i + 1,
             razon: 'particular',
             datos: row
           })
-          resultado.advertencias.push(`Fila ${i + 1}: Obra social "${obraSocialFinal}" marcada como PARTICULAR/SIN COBERTURA - se procesará igual`)
-          // NO hacer continue, procesar igual
+          resultado.advertencias.push(`Fila ${i + 1}: Obra social "${obraSocial.trim()}" marcada como PARTICULAR/SIN COBERTURA - se procesará igual`)
+          if (valoresPorObraSocial.has('042 - PARTICULARES')) {
+            obraSocialFinal = '042 - PARTICULARES'
+          } else if (valoresPorObraSocial.has('PARTICULARES')) {
+            obraSocialFinal = 'PARTICULARES'
+          } else {
+            obraSocialFinal = '042 - PARTICULARES' // Por defecto
+          }
+        } else {
+          obraSocialFinal = obraSocial.trim()
         }
 
         // Buscar médico
@@ -576,15 +644,22 @@ export async function procesarExcelGuardiasClinicas(
           duplicados.add(claveDuplicado)
         }
 
-        // Obtener total bruto
-        const montoBruto = totalBruto 
-          ? (typeof totalBruto === 'number' ? totalBruto : parseFloat(String(totalBruto))) 
-          : 0
+        // Obtener valor unitario de consulta desde la base de datos
+        let valorUnitario = valoresPorObraSocial.get(obraSocialFinal) || 0
+        
+        // Solo registrar advertencia si NO es PARTICULARES y no tiene valor
+        if (valorUnitario === 0 && obraSocialFinal !== 'PARTICULARES' && obraSocialFinal !== '042 - PARTICULARES') {
+          resultado.advertencias.push(`Fila ${i + 1}: No hay valor configurado para obra social: ${obraSocialFinal}`)
+        }
 
-        // Si hay médico, acumular total bruto por médico
+        // Calcular monto facturado usando el valor unitario de la base de datos
+        // Cada fila representa una consulta, así que el valor unitario es el monto facturado
+        const montoFacturado = valorUnitario
+
+        // Si hay médico, acumular total bruto por médico (ahora usando montoFacturado)
         if (medico) {
           const brutoActual = totalBrutoPorMedico.get(medico.id) || 0
-          totalBrutoPorMedico.set(medico.id, brutoActual + montoBruto)
+          totalBrutoPorMedico.set(medico.id, brutoActual + montoFacturado)
         }
 
         // Crear detalle (se calculará el neto después)
@@ -598,7 +673,7 @@ export async function procesarExcelGuardiasClinicas(
           medico_nombre: medico?.nombre || medicoNombre || 'Sin médico asignado',
           medico_matricula: medico?.matricula_provincial || null,
           medico_es_residente: medico?.es_residente || false,
-          monto_facturado: montoBruto,
+          monto_facturado: montoFacturado, // Usar valor de la BD, no del Excel
           porcentaje_retencion: null,
           monto_retencion: null,
           monto_adicional: 0,
