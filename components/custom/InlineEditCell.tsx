@@ -85,11 +85,36 @@ export function InlineEditCell({
     }, [handleSave, handleCancel])
 
     // Callback para cuando se selecciona una obra social del dropdown
-    const handleObraSocialSelect = useCallback((obra: string) => {
-        setCurrentValue(obra)
-        // Guardar inmediatamente después de seleccionar
-        handleSave()
-    }, [handleSave])
+    const handleObraSocialSelect = useCallback(async (obra: string) => {
+        if (isSavingRef.current) return
+        
+        const obraTrimmed = obra.trim()
+        if (!obraTrimmed) return
+        
+        // Actualizar el valor actual
+        setCurrentValue(obraTrimmed)
+        
+        // Si el valor es el mismo, solo cerrar edición
+        if (obraTrimmed === String(value || '')) {
+            setIsEditing(false)
+            return
+        }
+
+        // Guardar el nuevo valor
+        isSavingRef.current = true
+        setIsLoading(true)
+        try {
+            await onSave(obraTrimmed)
+            setIsEditing(false)
+        } catch (error) {
+            console.error('Error saving:', error)
+            // Revertir el valor en caso de error
+            setCurrentValue(value ?? '')
+        } finally {
+            setIsLoading(false)
+            isSavingRef.current = false
+        }
+    }, [value, onSave])
 
     // ✅ TODOS LOS HOOKS DEBEN ESTAR ANTES DE CUALQUIER RETURN CONDICIONAL
     const handleEditClick = useCallback(() => {
@@ -145,6 +170,15 @@ export function InlineEditCell({
                             onCancel={handleCancel}
                             className="flex-1"
                         />
+                        <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-green-400 hover:text-green-300 hover:bg-green-500/20"
+                            onClick={handleSave}
+                            disabled={isLoading}
+                        >
+                            <Check className="h-4 w-4" />
+                        </Button>
                         <Button
                             size="icon"
                             variant="ghost"

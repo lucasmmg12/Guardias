@@ -154,14 +154,19 @@ export function ObraSocialDropdown({ value, onSelect, onCancel, className }: Obr
 
   // Seleccionar obra social
   const handleSelect = useCallback((obra: string) => {
+    if (!obra || !obra.trim()) return
+    
+    const obraTrimmed = obra.trim()
     // Cerrar dropdown primero
     setIsOpen(false)
-    setSearchTerm(obra)
+    setSearchTerm(obraTrimmed)
     
-    // Usar setTimeout para asegurar que el estado se actualice antes de llamar onSelect
-    setTimeout(() => {
-      onSelect(obra)
-    }, 0)
+    // Llamar onSelect inmediatamente con el valor correcto
+    try {
+      onSelect(obraTrimmed)
+    } catch (error) {
+      console.error('Error en handleSelect:', error)
+    }
   }, [onSelect])
 
   // Manejar cambio en el input (sin debounce - respuesta inmediata)
@@ -185,18 +190,23 @@ export function ObraSocialDropdown({ value, onSelect, onCancel, className }: Obr
       onCancel?.()
     } else if (e.key === 'Enter') {
       e.preventDefault()
+      e.stopPropagation()
+      
       // ✅ SIEMPRE guardar el texto escrito cuando se presiona Enter
-      if (searchTerm.trim()) {
+      const textoEscrito = searchTerm.trim()
+      
+      if (textoEscrito) {
         // Si hay resultados filtrados y solo uno, seleccionarlo
         if (obrasFiltradas.length === 1) {
           handleSelect(obrasFiltradas[0])
         } else {
           // Si hay múltiples resultados o ninguno, usar el texto escrito
-          handleSelect(searchTerm.trim())
+          handleSelect(textoEscrito)
         }
       } else {
         // Si no hay texto, cerrar sin guardar
         setIsOpen(false)
+        setSearchTerm(value || '')
         onCancel?.()
       }
     }
