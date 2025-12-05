@@ -1,5 +1,5 @@
 import { supabase } from './supabase/client'
-import { DetalleGuardia, DetalleHorasGuardia, Medico } from './types'
+import { DetalleGuardia, DetalleHorasGuardia, Medico, ClinicalGroupsConfig } from './types'
 
 export interface ResumenPorMedico {
   medico_id: string | null
@@ -218,14 +218,15 @@ export async function calcularResumenPorPrestador(
   }
 
   // Obtener configuración de grupos para calcular neto de consultas
-  const { data: gruposConfig } = await supabase
+  const { data: gruposConfigData, error: errorGrupos } = await supabase
     .from('clinical_groups_config')
     .select('*')
     .eq('mes', mes)
     .eq('anio', anio)
 
   const gruposPorMedico = new Map<string, 'GRUPO_70' | 'GRUPO_40'>()
-  if (gruposConfig) {
+  if (gruposConfigData && !errorGrupos) {
+    const gruposConfig = gruposConfigData as ClinicalGroupsConfig[]
     for (const grupo of gruposConfig) {
       gruposPorMedico.set(grupo.doctor_id, grupo.group_type as 'GRUPO_70' | 'GRUPO_40')
     }
