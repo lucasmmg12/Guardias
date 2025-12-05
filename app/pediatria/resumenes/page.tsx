@@ -206,7 +206,7 @@ export default function ResumenesPediatriaPage() {
           
           try {
             // Cargar valor de consulta para la nueva obra social
-            const { data: valorConsulta } = await supabase
+            const { data: valorConsultaData } = await supabase
               .from('valores_consultas_obra_social')
               .select('valor')
               .eq('tipo_consulta', 'CONSULTA DE GUARDIA PEDIATRICA')
@@ -215,6 +215,7 @@ export default function ResumenesPediatriaPage() {
               .eq('obra_social', nuevaObraSocial)
               .maybeSingle()
             
+            const valorConsulta = valorConsultaData as { valor: number } | null
             const montoFacturado = valorConsulta?.valor || 0
             
             // Calcular retención del 30%
@@ -223,7 +224,7 @@ export default function ResumenesPediatriaPage() {
             const montoNeto = montoFacturado - montoRetencion
             
             // Buscar adicional para la nueva obra social
-            const { data: adicional } = await supabase
+            const { data: adicionalData } = await supabase
               .from('configuracion_adicionales')
               .select('monto_adicional')
               .eq('especialidad', 'Pediatría')
@@ -233,6 +234,7 @@ export default function ResumenesPediatriaPage() {
               .eq('aplica_adicional', true)
               .maybeSingle()
             
+            const adicional = adicionalData as { monto_adicional: number } | null
             const montoAdicional = adicional?.monto_adicional || 0
             const importeCalculado = montoNeto + montoAdicional
             
