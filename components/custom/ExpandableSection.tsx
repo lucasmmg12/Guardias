@@ -36,7 +36,7 @@ interface ExpandableSectionProps {
   // Adicionales para calcular adicional
   adicionales?: Map<string, number>
   // Especialidad para determinar colores específicos
-  especialidad?: 'Pediatría' | 'Ginecología' | 'Admisiones Clínicas'
+  especialidad?: 'Pediatría' | 'Ginecología' | 'Admisiones Clínicas' | 'Guardias Clínicas'
 }
 
 export function ExpandableSection({
