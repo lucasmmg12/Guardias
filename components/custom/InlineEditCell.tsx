@@ -93,15 +93,26 @@ export function InlineEditCell({
             <div className="flex flex-col gap-1 animate-in fade-in zoom-in-95 duration-200">
                 <div className="flex items-center gap-1">
                     {esColumnaCliente ? (
-                        <ObraSocialDropdown
-                            value={String(currentValue)}
-                            onSelect={(obra) => {
-                                setCurrentValue(obra)
-                                handleSave()
-                            }}
-                            onCancel={handleCancel}
-                            className="flex-1"
-                        />
+                        <>
+                            <ObraSocialDropdown
+                                value={String(currentValue)}
+                                onSelect={async (obra) => {
+                                    setCurrentValue(obra)
+                                    await handleSave()
+                                }}
+                                onCancel={handleCancel}
+                                className="flex-1"
+                            />
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-500/20"
+                                onClick={handleCancel}
+                                disabled={isLoading}
+                            >
+                                <X className="h-4 w-4" />
+                            </Button>
+                        </>
                     ) : (
                         <>
                             <Input

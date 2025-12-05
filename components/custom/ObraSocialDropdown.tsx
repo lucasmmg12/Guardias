@@ -14,7 +14,7 @@ interface ObraSocialDropdownProps {
 }
 
 export function ObraSocialDropdown({ value, onSelect, onCancel, className }: ObraSocialDropdownProps) {
-  const [isOpen, setIsOpen] = useState(true) // Abrir automáticamente al renderizar
+  const [isOpen, setIsOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState(value ? String(value) : '')
   const [obrasSociales, setObrasSociales] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
@@ -77,20 +77,23 @@ export function ObraSocialDropdown({ value, onSelect, onCancel, className }: Obr
     cargarObrasSociales()
   }, [])
 
-  // Inicializar searchTerm con el valor actual cuando se abre y abrir automáticamente
+  // Inicializar searchTerm cuando cambia el value
+  useEffect(() => {
+    if (value) {
+      setSearchTerm(String(value))
+    } else {
+      setSearchTerm('')
+    }
+  }, [value])
+
+  // Enfocar el input cuando se abre el dropdown
   useEffect(() => {
     if (isOpen) {
-      if (value) {
-        setSearchTerm(String(value))
-      } else {
-        setSearchTerm('')
-      }
-      // Enfocar el input cuando se abre
       setTimeout(() => {
         inputRef.current?.focus()
-      }, 0)
+      }, 100)
     }
-  }, [isOpen, value])
+  }, [isOpen])
 
   // Debounce de 500ms para la búsqueda
   useEffect(() => {
@@ -115,31 +118,35 @@ export function ObraSocialDropdown({ value, onSelect, onCancel, className }: Obr
 
   // Cerrar dropdown al hacer click fuera
   useEffect(() => {
+    if (!isOpen) return
+
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false)
-        setSearchTerm('')
+        // No resetear searchTerm aquí para mantener el valor
       }
     }
 
-    if (isOpen) {
+    // Usar un pequeño delay para evitar que se cierre inmediatamente al abrir
+    const timeoutId = setTimeout(() => {
       document.addEventListener('mousedown', handleClickOutside)
-      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, 100)
+
+    return () => {
+      clearTimeout(timeoutId)
+      document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [isOpen])
 
   // Abrir dropdown cuando se hace focus en el input
   const handleOpen = useCallback(() => {
-    if (!isOpen) {
-      setIsOpen(true)
-    }
-  }, [isOpen])
+    setIsOpen(true)
+  }, [])
 
   // Seleccionar obra social
   const handleSelect = useCallback((obra: string) => {
-    onSelect(obra)
     setIsOpen(false)
-    setSearchTerm('')
+    onSelect(obra)
   }, [onSelect])
 
   // Manejar teclas
@@ -163,9 +170,15 @@ export function ObraSocialDropdown({ value, onSelect, onCancel, className }: Obr
           ref={inputRef}
           type="text"
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => {
+            setSearchTerm(e.target.value)
+            if (!isOpen) {
+              setIsOpen(true)
+            }
+          }}
           onFocus={handleOpen}
           onKeyDown={handleKeyDown}
+          onClick={handleOpen}
           placeholder="Buscar obra social..."
           className="h-8 bg-gray-800 border-green-500/50 focus:border-green-400 text-white pr-8"
         />
@@ -173,13 +186,13 @@ export function ObraSocialDropdown({ value, onSelect, onCancel, className }: Obr
           {loading ? (
             <div className="h-4 w-4 border-2 border-green-400 border-t-transparent rounded-full animate-spin" />
           ) : (
-            <ChevronDown className="h-4 w-4 text-gray-400" />
+            <ChevronDown className={cn("h-4 w-4 text-gray-400 transition-transform", isOpen && "rotate-180")} />
           )}
         </div>
       </div>
 
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-gray-800 border border-green-500/50 rounded-md shadow-lg max-h-60 overflow-auto">
+        <div className="absolute z-[9999] w-full mt-1 bg-gray-800 border border-green-500/50 rounded-md shadow-lg max-h-60 overflow-auto">
           {loading ? (
             <div className="px-4 py-2 text-sm text-gray-400 text-center">
               Cargando obras sociales...
@@ -192,7 +205,7 @@ export function ObraSocialDropdown({ value, onSelect, onCancel, className }: Obr
             <div className="py-1">
               {obrasFiltradas.map((obra, idx) => (
                 <button
-                  key={idx}
+                  key={`${obra}-${idx}`}
                   type="button"
                   onClick={() => handleSelect(obra)}
                   className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-green-500/20 hover:text-white transition-colors"
