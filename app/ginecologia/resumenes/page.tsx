@@ -187,12 +187,73 @@ export default function ResumenesGinecologiaPage() {
         }
       })
 
-      // Guardar cada fila
+      // ✅ Detectar filas donde se cambió la obra social
+      const filasConObraSocialCambiada = new Set<number>()
+      cambiosPorFila.forEach((campos, filaExcel) => {
+        if (campos.has('obra_social')) {
+          filasConObraSocialCambiada.add(filaExcel)
+        }
+      })
+
+      // Guardar cada fila y recalcular si cambió la obra social
       const promesas = Array.from(cambiosPorFila.entries()).map(async ([filaExcel, campos]) => {
         const updateData: any = {}
         campos.forEach((valor, campo) => {
           updateData[campo] = valor
         })
+        
+        // ✅ Si se cambió la obra social, recalcular importes
+        // NOTA: Ginecología NO tiene retención del 30% ni adicionales
+        if (campos.has('obra_social')) {
+          const nuevaObraSocial = String(campos.get('obra_social')).trim()
+          
+          try {
+            // Obtener detalle actual para verificar si es horario formativo
+            const { data: detalleActual } = await supabase
+              .from('detalle_guardia')
+              .select('es_horario_formativo')
+              .eq('liquidacion_id', liquidacionActual.id)
+              .eq('fila_excel', filaExcel)
+              .maybeSingle()
+            
+            const esHorarioFormativo = detalleActual?.es_horario_formativo || false
+            
+            // Cargar valor de consulta para la nueva obra social
+            const { data: valorConsulta } = await supabase
+              .from('valores_consultas_obra_social')
+              .select('valor')
+              .eq('tipo_consulta', 'CONSULTA GINECOLOGICA')
+              .eq('mes', mes)
+              .eq('anio', anio)
+              .eq('obra_social', nuevaObraSocial)
+              .maybeSingle()
+            
+            let montoFacturado = valorConsulta?.valor || 0
+            let importeCalculado = montoFacturado
+            
+            // Si es horario formativo, no se paga
+            if (esHorarioFormativo) {
+              montoFacturado = 0
+              importeCalculado = 0
+            }
+            
+            // Actualizar campos calculados
+            // Ginecología: sin retención, sin adicionales
+            updateData.monto_facturado = montoFacturado
+            updateData.monto_retencion = null
+            updateData.monto_adicional = 0
+            updateData.importe_calculado = importeCalculado
+            updateData.porcentaje_retencion = null
+            
+            // También actualizar ExcelData local para reflejar los cambios
+            if (excelData && excelData.rows[filaExcel - 1]) {
+              excelData.rows[filaExcel - 1]['Importe'] = montoFacturado
+            }
+          } catch (error) {
+            console.error(`Error recalculando importes para fila ${filaExcel}:`, error)
+          }
+        }
+        
         updateData.updated_at = new Date().toISOString()
 
         const { error } = await supabase
@@ -206,6 +267,53 @@ export default function ResumenesGinecologiaPage() {
       })
 
       await Promise.all(promesas)
+
+      // ✅ Si se cambió alguna obra social, actualizar ExcelData y recargar resúmenes
+      if (filasConObraSocialCambiada.size > 0) {
+        // Actualizar estado local de ExcelData
+        if (excelData) {
+          setExcelData({ ...excelData })
+        }
+        
+        // Actualizar totales de liquidación
+        const actualizarTotales = async () => {
+          const { data: detalles } = await supabase
+            .from('detalle_guardia')
+            .select('importe_calculado, monto_facturado')
+            .eq('liquidacion_id', liquidacionActual.id) as { data: Array<{ importe_calculado: number | null; monto_facturado: number | null }> | null }
+
+          if (detalles) {
+            const totalConsultas = detalles.length
+            const totalBruto = detalles.reduce((sum, d) => sum + (d.monto_facturado || 0), 0)
+            const totalNeto = detalles.reduce((sum, d) => sum + (d.importe_calculado || 0), 0)
+
+            await supabase
+              .from('liquidaciones_guardia')
+              // @ts-ignore
+              .update({
+                total_consultas: totalConsultas,
+                total_bruto: totalBruto,
+                total_neto: totalNeto
+              })
+              .eq('id', liquidacionActual.id)
+          }
+        }
+
+        // Ejecutar actualización de totales en background
+        if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+          requestIdleCallback(actualizarTotales, { timeout: 1000 })
+        } else {
+          setTimeout(actualizarTotales, 100)
+        }
+
+        // ✅ Recargar resúmenes automáticamente si estamos en la tab correspondiente
+        if (tabActiva === 'medicos' || tabActiva === 'prestadores') {
+          // Pequeño delay para asegurar que la BD se actualizó
+          setTimeout(() => {
+            cargarResumenes()
+          }, 500)
+        }
+      }
 
       // Limpiar cambios pendientes
       cambiosPendientesRef.current.clear()

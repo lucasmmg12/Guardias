@@ -185,12 +185,74 @@ export default function ResumenesPediatriaPage() {
         }
       })
 
-      // Guardar cada fila
+      // ✅ Detectar filas donde se cambió la obra social
+      const filasConObraSocialCambiada = new Set<number>()
+      cambiosPorFila.forEach((campos, filaExcel) => {
+        if (campos.has('obra_social')) {
+          filasConObraSocialCambiada.add(filaExcel)
+        }
+      })
+
+      // Guardar cada fila y recalcular si cambió la obra social
       const promesas = Array.from(cambiosPorFila.entries()).map(async ([filaExcel, campos]) => {
         const updateData: any = {}
         campos.forEach((valor, campo) => {
           updateData[campo] = valor
         })
+        
+        // ✅ Si se cambió la obra social, recalcular importes y adicionales
+        if (campos.has('obra_social')) {
+          const nuevaObraSocial = String(campos.get('obra_social')).trim()
+          
+          try {
+            // Cargar valor de consulta para la nueva obra social
+            const { data: valorConsulta } = await supabase
+              .from('valores_consultas_obra_social')
+              .select('valor')
+              .eq('tipo_consulta', 'CONSULTA DE GUARDIA PEDIATRICA')
+              .eq('mes', mes)
+              .eq('anio', anio)
+              .eq('obra_social', nuevaObraSocial)
+              .maybeSingle()
+            
+            const montoFacturado = valorConsulta?.valor || 0
+            
+            // Calcular retención del 30%
+            const porcentajeRetencion = 30
+            const montoRetencion = montoFacturado * (porcentajeRetencion / 100)
+            const montoNeto = montoFacturado - montoRetencion
+            
+            // Buscar adicional para la nueva obra social
+            const { data: adicional } = await supabase
+              .from('configuracion_adicionales')
+              .select('monto_adicional')
+              .eq('especialidad', 'Pediatría')
+              .eq('mes', mes)
+              .eq('anio', anio)
+              .eq('obra_social', nuevaObraSocial)
+              .eq('aplica_adicional', true)
+              .maybeSingle()
+            
+            const montoAdicional = adicional?.monto_adicional || 0
+            const importeCalculado = montoNeto + montoAdicional
+            
+            // Actualizar campos calculados
+            updateData.monto_facturado = montoFacturado
+            updateData.monto_retencion = montoRetencion
+            updateData.monto_adicional = montoAdicional
+            updateData.importe_calculado = importeCalculado
+            updateData.porcentaje_retencion = porcentajeRetencion
+            
+            // También actualizar ExcelData local para reflejar los cambios
+            if (excelData && excelData.rows[filaExcel - 1]) {
+              excelData.rows[filaExcel - 1]['Importe'] = montoFacturado
+              excelData.rows[filaExcel - 1]['Adicional'] = montoAdicional
+            }
+          } catch (error) {
+            console.error(`Error recalculando importes para fila ${filaExcel}:`, error)
+          }
+        }
+        
         updateData.updated_at = new Date().toISOString()
 
         const { error } = await supabase
@@ -204,6 +266,53 @@ export default function ResumenesPediatriaPage() {
       })
 
       await Promise.all(promesas)
+
+      // ✅ Si se cambió alguna obra social, actualizar ExcelData y recargar resúmenes
+      if (filasConObraSocialCambiada.size > 0) {
+        // Actualizar estado local de ExcelData
+        if (excelData) {
+          setExcelData({ ...excelData })
+        }
+        
+        // Actualizar totales de liquidación
+        const actualizarTotales = async () => {
+          const { data: detalles } = await supabase
+            .from('detalle_guardia')
+            .select('importe_calculado, monto_facturado')
+            .eq('liquidacion_id', liquidacionActual.id) as { data: Array<{ importe_calculado: number | null; monto_facturado: number | null }> | null }
+
+          if (detalles) {
+            const totalConsultas = detalles.length
+            const totalBruto = detalles.reduce((sum, d) => sum + (d.monto_facturado || 0), 0)
+            const totalNeto = detalles.reduce((sum, d) => sum + (d.importe_calculado || 0), 0)
+
+            await supabase
+              .from('liquidaciones_guardia')
+              // @ts-ignore
+              .update({
+                total_consultas: totalConsultas,
+                total_bruto: totalBruto,
+                total_neto: totalNeto
+              })
+              .eq('id', liquidacionActual.id)
+          }
+        }
+
+        // Ejecutar actualización de totales en background
+        if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+          requestIdleCallback(actualizarTotales, { timeout: 1000 })
+        } else {
+          setTimeout(actualizarTotales, 100)
+        }
+
+        // ✅ Recargar resúmenes automáticamente si estamos en la tab correspondiente
+        if (tabActiva === 'medicos' || tabActiva === 'prestadores') {
+          // Pequeño delay para asegurar que la BD se actualizó
+          setTimeout(() => {
+            cargarResumenes()
+          }, 500)
+        }
+      }
 
       // Limpiar cambios pendientes
       cambiosPendientesRef.current.clear()
