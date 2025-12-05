@@ -28,6 +28,7 @@ export function InlineEditCell({
     const [currentValue, setCurrentValue] = useState<string | number>(value ?? '')
     const [isLoading, setIsLoading] = useState(false)
     const inputRef = useRef<HTMLInputElement>(null)
+    const isSavingRef = useRef(false) // Prevenir múltiples guardados
     
     // Memoizar si es columna Cliente u Obra Social
     const esColumnaCliente = useMemo(() => {
@@ -48,17 +49,21 @@ export function InlineEditCell({
     }, [value])
 
     useEffect(() => {
-        if (isEditing && inputRef.current) {
+        if (isEditing && !esColumnaCliente && inputRef.current) {
             inputRef.current.focus()
         }
-    }, [isEditing])
+    }, [isEditing, esColumnaCliente])
 
     const handleSave = useCallback(async () => {
+        // Prevenir múltiples guardados simultáneos
+        if (isSavingRef.current) return
+        
         if (currentValue === value) {
             setIsEditing(false)
             return
         }
 
+        isSavingRef.current = true
         setIsLoading(true)
         try {
             await onSave(currentValue)
@@ -68,6 +73,7 @@ export function InlineEditCell({
             // Aquí podrías mostrar un toast de error
         } finally {
             setIsLoading(false)
+            isSavingRef.current = false
         }
     }, [currentValue, value, onSave])
 
@@ -84,6 +90,16 @@ export function InlineEditCell({
         }
     }, [handleSave, handleCancel])
 
+    // Manejar selección de obra social de forma más estable
+    const handleObraSocialSelect = useCallback(async (obra: string) => {
+        if (isSavingRef.current) return
+        
+        setCurrentValue(obra)
+        // Pequeño delay para asegurar que el estado se actualice antes de guardar
+        await new Promise(resolve => setTimeout(resolve, 0))
+        await handleSave()
+    }, [handleSave])
+
     if (!isEditable) {
         return <div className={cn("px-2 py-1", className)}>{value}</div>
     }
@@ -96,10 +112,7 @@ export function InlineEditCell({
                         <>
                             <ObraSocialDropdown
                                 value={String(currentValue)}
-                                onSelect={async (obra) => {
-                                    setCurrentValue(obra)
-                                    await handleSave()
-                                }}
+                                onSelect={handleObraSocialSelect}
                                 onCancel={handleCancel}
                                 className="flex-1"
                             />

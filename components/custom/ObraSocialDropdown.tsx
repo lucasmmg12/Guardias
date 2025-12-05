@@ -103,18 +103,23 @@ export function ObraSocialDropdown({ value, onSelect, onCancel, className }: Obr
   }, [isOpen])
 
   // Toggle dropdown
-  const handleToggle = useCallback(() => {
+  const handleToggle = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation() // Prevenir que se propague el evento
     setIsOpen(prev => !prev)
   }, [])
 
-  // Seleccionar obra social
+  // Seleccionar obra social - más estable
   const handleSelect = useCallback((obra: string) => {
     setIsOpen(false)
-    onSelect(obra)
+    // Usar setTimeout para asegurar que el estado se actualice antes de llamar onSelect
+    setTimeout(() => {
+      onSelect(obra)
+    }, 0)
   }, [onSelect])
 
   // Manejar teclas
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    e.stopPropagation()
     if (e.key === 'Escape') {
       setIsOpen(false)
       onCancel?.()
@@ -124,7 +129,7 @@ export function ObraSocialDropdown({ value, onSelect, onCancel, className }: Obr
   const displayValue = value || 'Seleccionar obra social...'
 
   return (
-    <div ref={dropdownRef} className={cn("relative w-full", className)}>
+    <div ref={dropdownRef} className={cn("relative w-full", className)} onClick={(e) => e.stopPropagation()}>
       <Button
         type="button"
         variant="outline"
@@ -137,7 +142,10 @@ export function ObraSocialDropdown({ value, onSelect, onCancel, className }: Obr
       </Button>
 
       {isOpen && (
-        <div className="absolute z-[9999] w-full mt-1 bg-gray-800 border border-green-500/50 rounded-md shadow-lg max-h-60 overflow-auto">
+        <div 
+          className="absolute z-[9999] w-full mt-1 bg-gray-800 border border-green-500/50 rounded-md shadow-lg max-h-60 overflow-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
           {loading ? (
             <div className="px-4 py-2 text-sm text-gray-400 text-center">
               Cargando obras sociales...
@@ -152,7 +160,10 @@ export function ObraSocialDropdown({ value, onSelect, onCancel, className }: Obr
                 <button
                   key={obra}
                   type="button"
-                  onClick={() => handleSelect(obra)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleSelect(obra)
+                  }}
                   className={cn(
                     "w-full px-4 py-2 text-left text-sm transition-colors",
                     value === obra
