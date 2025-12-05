@@ -493,19 +493,22 @@ export async function procesarExcelGuardiasClinicas(
           'Responsable', 'Médico', 'Medico', 'Profesional'
         ])
 
-        // Validaciones pre-liquidación
+        // Validaciones pre-liquidación - NO EXCLUIR, SOLO INFORMAR
         let fecha: string | null = null
         if (fechaStr) {
           fecha = convertirFechaISO(fechaStr)
         }
         
+        // Si no hay fecha válida, usar fecha por defecto del mes/año seleccionado
         if (!fecha) {
           resultado.filasExcluidas.push({
             numeroFila: i + 1,
             razon: 'sin_fecha',
             datos: row
           })
-          continue
+          resultado.advertencias.push(`Fila ${i + 1}: Sin fecha válida - se usará fecha por defecto del período`)
+          // Usar primer día del mes como fecha por defecto
+          fecha = `${anio}-${String(mes).padStart(2, '0')}-01`
         }
 
         const fechaAnio = parseInt(fecha.split('-')[0])
@@ -515,10 +518,12 @@ export async function procesarExcelGuardiasClinicas(
             razon: 'fecha_invalida',
             datos: row
           })
-          continue
+          resultado.advertencias.push(`Fila ${i + 1}: Fecha fuera de rango (${fechaAnio}) - se usará fecha por defecto del período`)
+          // Usar primer día del mes como fecha por defecto
+          fecha = `${anio}-${String(mes).padStart(2, '0')}-01`
         }
 
-        // Validar duración = 0 o sin hora
+        // Validar duración = 0 o sin hora - PROCESAR IGUAL
         const duracionNum = duracion ? (typeof duracion === 'number' ? duracion : parseFloat(String(duracion))) : null
         const horaFormato = convertirHora(hora)
         
@@ -528,10 +533,11 @@ export async function procesarExcelGuardiasClinicas(
             razon: duracionNum === 0 ? 'duracion_cero' : 'sin_hora',
             datos: row
           })
-          continue
+          resultado.advertencias.push(`Fila ${i + 1}: ${duracionNum === 0 ? 'Duración = 0' : 'Sin hora'} - se procesará igual`)
+          // Continuar con hora null si no hay hora
         }
 
-        // Validar PARTICULARES o SIN COBERTURA
+        // Validar PARTICULARES o SIN COBERTURA - PROCESAR IGUAL
         let obraSocialFinal = obraSocial ? obraSocial.trim() : ''
         if (esParticular(obraSocialFinal) || obraSocialFinal.toUpperCase().includes('SIN COBERTURA')) {
           resultado.filasExcluidas.push({
@@ -539,7 +545,8 @@ export async function procesarExcelGuardiasClinicas(
             razon: 'particular',
             datos: row
           })
-          continue
+          resultado.advertencias.push(`Fila ${i + 1}: Obra social "${obraSocialFinal}" marcada como PARTICULAR/SIN COBERTURA - se procesará igual`)
+          // NO hacer continue, procesar igual
         }
 
         // Buscar médico
@@ -550,42 +557,47 @@ export async function procesarExcelGuardiasClinicas(
         }
 
         if (!medico) {
-          resultado.advertencias.push(`Fila ${i + 1}: Médico no encontrado: ${medicoNombre}`)
-          continue
+          resultado.advertencias.push(`Fila ${i + 1}: Médico no encontrado: ${medicoNombre} - se procesará sin médico asignado`)
+          // NO hacer continue, procesar con médico null
         }
 
-        // Detectar duplicados
-        const claveDuplicado = `${medico.id}|${fecha}|${horaFormato}|${paciente || ''}`
+        // Detectar duplicados - PROCESAR IGUAL PERO INFORMAR
+        const claveDuplicado = `${medico?.id || 'sin-medico'}|${fecha}|${horaFormato || 'sin-hora'}|${paciente || ''}`
         if (duplicados.has(claveDuplicado)) {
           resultado.filasExcluidas.push({
             numeroFila: i + 1,
             razon: 'duplicado',
             datos: row
           })
-          continue
+          resultado.advertencias.push(`Fila ${i + 1}: Duplicado detectado - se procesará igual`)
+          // NO hacer continue, procesar igual (permitir duplicados)
+          // NO agregar a duplicados para permitir múltiples registros iguales
+        } else {
+          duplicados.add(claveDuplicado)
         }
-        duplicados.add(claveDuplicado)
 
         // Obtener total bruto
         const montoBruto = totalBruto 
           ? (typeof totalBruto === 'number' ? totalBruto : parseFloat(String(totalBruto))) 
           : 0
 
-        // Acumular total bruto por médico
-        const brutoActual = totalBrutoPorMedico.get(medico.id) || 0
-        totalBrutoPorMedico.set(medico.id, brutoActual + montoBruto)
+        // Si hay médico, acumular total bruto por médico
+        if (medico) {
+          const brutoActual = totalBrutoPorMedico.get(medico.id) || 0
+          totalBrutoPorMedico.set(medico.id, brutoActual + montoBruto)
+        }
 
         // Crear detalle (se calculará el neto después)
         const detalle: DetalleGuardiaInsert = {
           liquidacion_id: liquidacionId,
-          medico_id: medico.id,
-          fecha,
-          hora: horaFormato,
+          medico_id: medico?.id || null,
+          fecha: fecha || `${anio}-${String(mes).padStart(2, '0')}-01`, // Fecha por defecto si no hay
+          hora: horaFormato || null,
           paciente: paciente || null,
           obra_social: obraSocialFinal || null,
-          medico_nombre: medico.nombre,
-          medico_matricula: medico.matricula_provincial || null,
-          medico_es_residente: medico.es_residente,
+          medico_nombre: medico?.nombre || medicoNombre || 'Sin médico asignado',
+          medico_matricula: medico?.matricula_provincial || null,
+          medico_es_residente: medico?.es_residente || false,
           monto_facturado: montoBruto,
           porcentaje_retencion: null,
           monto_retencion: null,
@@ -804,13 +816,21 @@ export async function procesarExcelGuardiasClinicas(
 
     // 8. Actualizar detalles de consultas con importes calculados
     for (const detalle of detallesConsultas) {
-      if (!detalle.medico_id) continue
+      // Si no hay médico, dejar importe_calculado en null y continuar
+      if (!detalle.medico_id) {
+        detalle.importe_calculado = null
+        continue
+      }
 
       const grupo = gruposPorMedico.get(detalle.medico_id)
       const totalBruto = totalBrutoPorMedico.get(detalle.medico_id) || 0
       const totales = totalesPorMedico.get(detalle.medico_id)
 
-      if (!totales) continue
+      // Si no hay totales calculados, dejar importe_calculado en null
+      if (!totales) {
+        detalle.importe_calculado = null
+        continue
+      }
 
       // Calcular porcentaje y monto según grupo
       if (grupo === 'GRUPO_70') {
@@ -832,7 +852,7 @@ export async function procesarExcelGuardiasClinicas(
 
     // 9. Guardar detalles en la base de datos
     if (detallesConsultas.length === 0) {
-      resultado.errores.push('No se procesó ninguna fila válida de consultas.')
+      resultado.errores.push('No se procesó ninguna fila de consultas.')
       return resultado
     }
 
