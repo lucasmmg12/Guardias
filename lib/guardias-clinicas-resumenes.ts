@@ -217,19 +217,43 @@ export async function calcularResumenPorPrestador(
     }
   }
 
-  // Obtener configuración de grupos para calcular neto de consultas
-  const { data: gruposConfigData, error: errorGrupos } = await supabase
-    .from('clinical_groups_config')
-    .select('*')
-    .eq('mes', mes)
-    .eq('anio', anio)
+  // Obtener configuración de grupos para calcular neto de consultas usando paginación
+  let todosLosGrupos: ClinicalGroupsConfig[] = []
+  from = 0
+  hasMore = true
+
+  while (hasMore) {
+    const { data: gruposPagina, error: errorGrupos } = await supabase
+      .from('clinical_groups_config')
+      .select('*')
+      .eq('mes', mes)
+      .eq('anio', anio)
+      .order('doctor_id', { ascending: true })
+      .range(from, from + pageSize - 1)
+
+    if (errorGrupos) {
+      console.error('[Guardias Clínicas Resúmenes] Error obteniendo grupos:', errorGrupos)
+      break
+    }
+
+    if (!gruposPagina || gruposPagina.length === 0) {
+      hasMore = false
+      break
+    }
+
+    todosLosGrupos = [...todosLosGrupos, ...gruposPagina]
+
+    if (gruposPagina.length < pageSize) {
+      hasMore = false
+    } else {
+      from += pageSize
+    }
+  }
 
   const gruposPorMedico = new Map<string, 'GRUPO_70' | 'GRUPO_40'>()
-  if (gruposConfigData && !errorGrupos) {
-    const gruposConfig = gruposConfigData as ClinicalGroupsConfig[]
-    for (const grupo of gruposConfig) {
-      gruposPorMedico.set(grupo.doctor_id, grupo.group_type as 'GRUPO_70' | 'GRUPO_40')
-    }
+  const gruposConfig = todosLosGrupos as ClinicalGroupsConfig[]
+  for (const grupo of gruposConfig) {
+    gruposPorMedico.set(grupo.doctor_id, grupo.group_type as 'GRUPO_70' | 'GRUPO_40')
   }
 
   // Agrupar por médico
