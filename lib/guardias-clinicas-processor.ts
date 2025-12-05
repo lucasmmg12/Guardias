@@ -792,23 +792,15 @@ export async function procesarExcelGuardiasClinicas(
         const hWeekend = horasWeekend ? (typeof horasWeekend === 'number' ? horasWeekend : parseFloat(String(horasWeekend))) : 0
         const hWeekendNight = horasWeekendNight ? (typeof horasWeekendNight === 'number' ? horasWeekendNight : parseFloat(String(horasWeekendNight))) : 0
 
-        // Calcular valores (se actualizarán después con la configuración)
+        // Calcular valores
         const valorFranjas816 = f816 * valores.value_hour_weekly_8_16
         const valorFranjas168 = f168 * valores.value_hour_weekly_16_8
         const valorHorasWeekend = hWeekend * valores.value_hour_weekend
         const valorHorasWeekendNight = hWeekendNight * valores.value_hour_weekend_night
         
-        // Total de horas trabajadas (para aplicar garantía mínima)
-        const totalHorasTrabajadas = hWeekend + hWeekendNight
-        let totalHoras = valorFranjas816 + valorFranjas168 + valorHorasWeekend + valorHorasWeekendNight
-        
-        // Aplicar garantía mínima POR HORA trabajada
-        if (totalHorasTrabajadas > 0) {
-          const valorPorHora = totalHoras / totalHorasTrabajadas
-          if (valorPorHora < valores.value_guaranteed_min) {
-            totalHoras = totalHorasTrabajadas * valores.value_guaranteed_min
-          }
-        }
+        // Total de horas: suma simple de los 4 valores (SIN aplicar garantía mínima aquí)
+        // La garantía mínima solo se usa para calcular el mínimo acordado al final
+        const totalHoras = valorFranjas816 + valorFranjas168 + valorHorasWeekend + valorHorasWeekendNight
 
         // Crear detalle de horas
         const detalleHora: DetalleHorasGuardiaInsert = {
@@ -918,17 +910,9 @@ export async function procesarExcelGuardiasClinicas(
       // Total de horas trabajadas (solo weekend + weekend_night, para calcular mínimo acordado)
       const totalHorasTrabajadas = horas.horas_weekend + horas.horas_weekend_night
       
-      // Valor base de horas
-      let totalHoras = valorFranjas816 + valorFranjas168 + valorHorasWeekend + valorHorasWeekendNight
-      
-      // Aplicar garantía mínima POR HORA trabajada (lógica anterior - mantener)
-      if (totalHorasTrabajadas > 0) {
-        const valorPorHora = totalHoras / totalHorasTrabajadas
-        if (valorPorHora < valores.value_guaranteed_min) {
-          // Recalcular con garantía mínima
-          totalHoras = totalHorasTrabajadas * valores.value_guaranteed_min
-        }
-      }
+      // Total de horas: suma simple (SIN aplicar garantía mínima aquí)
+      // La garantía mínima solo se usa para calcular el mínimo acordado al final
+      const totalHoras = valorFranjas816 + valorFranjas168 + valorHorasWeekend + valorHorasWeekendNight
 
       const totales = totalesPorMedico.get(medicoId) || {
         netoConsultas: 0,
