@@ -19,10 +19,8 @@ export function ObraSocialDropdown({ value, onSelect, onCancel, className }: Obr
   const [obrasSociales, setObrasSociales] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
   const dropdownRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   // Cargar todas las obras sociales al montar
   useEffect(() => {
@@ -97,30 +95,6 @@ export function ObraSocialDropdown({ value, onSelect, onCancel, className }: Obr
     }
   }, [isOpen, value])
 
-  // Debounce del término de búsqueda (500ms) - NO interfiere con la escritura
-  useEffect(() => {
-    // Limpiar timer anterior
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current)
-    }
-
-    // Solo aplicar debounce si el dropdown está abierto
-    if (isOpen) {
-      debounceTimerRef.current = setTimeout(() => {
-        setDebouncedSearch(searchTerm)
-      }, 500)
-    } else {
-      // Si se cierra, limpiar búsqueda
-      setDebouncedSearch('')
-    }
-
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current)
-      }
-    }
-  }, [searchTerm, isOpen])
-
   // Cerrar dropdown al hacer click fuera
   useEffect(() => {
     if (!isOpen) return
@@ -146,24 +120,23 @@ export function ObraSocialDropdown({ value, onSelect, onCancel, className }: Obr
     }
   }, [isOpen, value])
 
-  // Filtrar obras sociales basándose en la búsqueda con debounce
+  // Filtrar obras sociales basándose en la búsqueda (SIN debounce - inmediato)
   const obrasFiltradas = useMemo(() => {
-    if (!debouncedSearch.trim()) {
+    if (!searchTerm.trim()) {
       return obrasSociales.slice(0, 50) // Limitar a 50 para mejor rendimiento
     }
 
-    const searchLower = debouncedSearch.toLowerCase().trim()
+    const searchLower = searchTerm.toLowerCase().trim()
     return obrasSociales.filter(obra => 
       obra.toLowerCase().includes(searchLower)
     ).slice(0, 50) // Limitar a 50 resultados
-  }, [obrasSociales, debouncedSearch])
+  }, [obrasSociales, searchTerm])
 
   // Seleccionar obra social
   const handleSelect = useCallback((obra: string) => {
     // Cerrar dropdown primero
     setIsOpen(false)
     setSearchTerm(obra)
-    setDebouncedSearch(obra)
     
     // Usar setTimeout para asegurar que el estado se actualice antes de llamar onSelect
     setTimeout(() => {
@@ -224,7 +197,7 @@ export function ObraSocialDropdown({ value, onSelect, onCancel, className }: Obr
   // ✅ Returns condicionales DESPUÉS de todos los hooks
   return (
     <>
-      {/* Overlay para bloquear clicks en las columnas debajo - NO bloquea el dropdown */}
+      {/* Overlay para bloquear clicks en las columnas debajo - BLOQUEO TOTAL */}
       {isOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-[9998]"
@@ -244,7 +217,12 @@ export function ObraSocialDropdown({ value, onSelect, onCancel, className }: Obr
               e.stopPropagation()
             }
           }}
-          style={{ pointerEvents: 'auto' }}
+          style={{ 
+            pointerEvents: 'auto',
+            // Bloquear completamente las interacciones debajo
+            userSelect: 'none',
+            WebkitUserSelect: 'none'
+          }}
         />
       )}
       
@@ -294,7 +272,7 @@ export function ObraSocialDropdown({ value, onSelect, onCancel, className }: Obr
               </div>
             ) : obrasFiltradas.length === 0 ? (
               <div className="px-4 py-2 text-sm text-gray-300 text-center bg-black">
-                {debouncedSearch.trim() ? (
+                {searchTerm.trim() ? (
                   <div className="bg-black">
                     <div className="mb-2">No se encontraron resultados</div>
                     <button
