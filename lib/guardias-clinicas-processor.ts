@@ -526,13 +526,14 @@ export async function procesarExcelGuardiasClinicas(
 
     resultado.liquidacionId = liquidacionId
 
-    // 5. Procesar archivo de CONSULTAS (igual que ginecología)
-    console.log(`Procesando ${excelDataConsultas.rows.length} filas de consultas`)
+    // 5. Mapeo de nombres de médicos (COMBINADO: consultas + horas)
+    // Esto asegura que los médicos se mapeen correctamente en ambos archivos
+    console.log(`Extrayendo nombres únicos de consultas y horas`)
     
-    // Mapeo de nombres de médicos (igual que ginecología)
     const nombresUnicos = new Set<string>()
     const nombresOriginales = new Map<string, string>()
     
+    // Extraer nombres de CONSULTAS
     for (const row of excelDataConsultas.rows) {
       const medicoNombre = buscarValor(row, [
         'Responsable', 'Médico', 'Medico', 'Profesional',
@@ -550,6 +551,24 @@ export async function procesarExcelGuardiasClinicas(
       }
     }
     
+    // Extraer nombres de HORAS (importante para mapear correctamente)
+    for (const row of excelDataHoras.rows) {
+      const medicoNombre = buscarValor(row, [
+        'Médico', 'Medico', 'Responsable', 'Profesional'
+      ])
+      
+      if (medicoNombre && typeof medicoNombre === 'string' && medicoNombre.trim() !== '') {
+        const nombreNormalizado = normalizarNombre(medicoNombre.trim())
+        if (nombreNormalizado !== '') {
+          nombresUnicos.add(nombreNormalizado)
+          if (!nombresOriginales.has(nombreNormalizado)) {
+            nombresOriginales.set(nombreNormalizado, medicoNombre.trim())
+          }
+        }
+      }
+    }
+    
+    // Crear mapa de nombres normalizados -> médicos
     const mapaNombresMedicos = new Map<string, Medico>()
     for (const nombreNormalizado of nombresUnicos) {
       const medico = buscarMedico(nombresOriginales.get(nombreNormalizado) || nombreNormalizado, medicos)
@@ -557,6 +576,15 @@ export async function procesarExcelGuardiasClinicas(
         mapaNombresMedicos.set(nombreNormalizado, medico)
       }
     }
+    
+    console.log(`[Mapeo] Médicos encontrados: ${mapaNombresMedicos.size}/${nombresUnicos.size}`)
+    const nombresNoEncontrados = Array.from(nombresUnicos).filter(n => !mapaNombresMedicos.has(n))
+    if (nombresNoEncontrados.length > 0) {
+      resultado.advertencias.push(`Médicos no encontrados en BD (${nombresNoEncontrados.length}): ${nombresNoEncontrados.slice(0, 5).map(n => nombresOriginales.get(n) || n).join(', ')}${nombresNoEncontrados.length > 5 ? '...' : ''}`)
+    }
+    
+    // 6. Procesar archivo de CONSULTAS
+    console.log(`Procesando ${excelDataConsultas.rows.length} filas de consultas`)
 
     // Procesar consultas
     const detallesConsultas: DetalleGuardiaInsert[] = []
@@ -740,7 +768,7 @@ export async function procesarExcelGuardiasClinicas(
       }
     }
 
-    // 6. Procesar archivo de HORAS y guardar en BD
+    // 7. Procesar archivo de HORAS y guardar en BD
     console.log(`Procesando ${excelDataHoras.rows.length} filas de horas`)
     
     const detallesHoras: DetalleHorasGuardiaInsert[] = []
@@ -777,10 +805,27 @@ export async function procesarExcelGuardiasClinicas(
           'Horas noche finde', 'Horas nocturnas finde'
         ])
 
-        if (!medicoNombre) continue
+        if (!medicoNombre) {
+          resultado.advertencias.push(`Fila ${i + 1} (horas): Sin nombre de médico`)
+          continue
+        }
 
-        // Buscar médico
-        const medico = buscarMedico(medicoNombre, medicos)
+        // Buscar médico usando el mapa de nombres normalizados (igual que consultas)
+        let medico: Medico | null = null
+        if (typeof medicoNombre === 'string' && medicoNombre.trim() !== '') {
+          const nombreNormalizado = normalizarNombre(medicoNombre.trim())
+          medico = mapaNombresMedicos.get(nombreNormalizado) || null
+          
+          // Si no está en el mapa, intentar búsqueda directa como fallback
+          if (!medico) {
+            medico = buscarMedico(medicoNombre.trim(), medicos)
+            if (medico) {
+              // Agregar al mapa para futuras búsquedas
+              mapaNombresMedicos.set(nombreNormalizado, medico)
+            }
+          }
+        }
+        
         if (!medico) {
           resultado.advertencias.push(`Fila ${i + 1} (horas): Médico no encontrado: ${medicoNombre}`)
           continue
