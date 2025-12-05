@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Check, X, Edit2 } from 'lucide-react'
 import { cn, obtenerSugerenciasObraSocial, CODIGO_PARTICULARES } from '@/lib/utils'
+import { ObraSocialDropdown } from './ObraSocialDropdown'
 
 interface InlineEditCellProps {
     value: string | number | null
@@ -28,9 +29,13 @@ export function InlineEditCell({
     const [isLoading, setIsLoading] = useState(false)
     const inputRef = useRef<HTMLInputElement>(null)
     
-    // Memoizar si es columna Cliente
+    // Memoizar si es columna Cliente u Obra Social
     const esColumnaCliente = useMemo(() => {
-      return columnName?.toLowerCase().trim() === 'cliente'
+      const columnLower = columnName?.toLowerCase().trim() || ''
+      return columnLower === 'cliente' || 
+             columnLower === 'obra social' || 
+             columnLower.includes('obra social') ||
+             (columnLower.includes('obra') && columnLower.includes('social'))
     }, [columnName])
     
     // Memoizar sugerencias
@@ -87,56 +92,48 @@ export function InlineEditCell({
         return (
             <div className="flex flex-col gap-1 animate-in fade-in zoom-in-95 duration-200">
                 <div className="flex items-center gap-1">
-                    <Input
-                        ref={inputRef}
-                        type={type}
-                        value={currentValue}
-                        onChange={(e) => setCurrentValue(type === 'number' ? Number(e.target.value) : e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        disabled={isLoading}
-                        className="h-8 min-w-[100px] bg-gray-800 border-green-500/50 focus:border-green-400 text-white"
-                        placeholder={esColumnaCliente ? "Ingrese obra social o código" : undefined}
-                    />
-                    <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8 text-green-400 hover:text-green-300 hover:bg-green-500/20"
-                        onClick={handleSave}
-                        disabled={isLoading}
-                    >
-                        <Check className="h-4 w-4" />
-                    </Button>
-                    <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-500/20"
-                        onClick={handleCancel}
-                        disabled={isLoading}
-                    >
-                        <X className="h-4 w-4" />
-                    </Button>
+                    {esColumnaCliente ? (
+                        <ObraSocialDropdown
+                            value={String(currentValue)}
+                            onSelect={(obra) => {
+                                setCurrentValue(obra)
+                                handleSave()
+                            }}
+                            onCancel={handleCancel}
+                            className="flex-1"
+                        />
+                    ) : (
+                        <>
+                            <Input
+                                ref={inputRef}
+                                type={type}
+                                value={currentValue}
+                                onChange={(e) => setCurrentValue(type === 'number' ? Number(e.target.value) : e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                disabled={isLoading}
+                                className="h-8 min-w-[100px] bg-gray-800 border-green-500/50 focus:border-green-400 text-white"
+                            />
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 text-green-400 hover:text-green-300 hover:bg-green-500/20"
+                                onClick={handleSave}
+                                disabled={isLoading}
+                            >
+                                <Check className="h-4 w-4" />
+                            </Button>
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-500/20"
+                                onClick={handleCancel}
+                                disabled={isLoading}
+                            >
+                                <X className="h-4 w-4" />
+                            </Button>
+                        </>
+                    )}
                 </div>
-                {/* Mostrar sugerencias para columna Cliente */}
-                        {esColumnaCliente && sugerencias.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1">
-                        {sugerencias.map((sugerencia, idx) => {
-                            const handleSugerenciaClick = () => {
-                                setCurrentValue(sugerencia)
-                                inputRef.current?.focus()
-                            }
-                            return (
-                                <button
-                                    key={idx}
-                                    type="button"
-                                    onClick={handleSugerenciaClick}
-                                    className="text-[10px] px-2 py-0.5 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded hover:bg-blue-500/30 transition-colors"
-                                >
-                                    {sugerencia}
-                                </button>
-                            )
-                        })}
-                    </div>
-                )}
             </div>
         )
     }
