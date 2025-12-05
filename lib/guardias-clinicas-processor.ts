@@ -822,22 +822,85 @@ export async function procesarExcelGuardiasClinicas(
             if (medico) {
               // Agregar al mapa para futuras búsquedas
               mapaNombresMedicos.set(nombreNormalizado, medico)
+              console.log(`[Mapeo Horas] Médico encontrado por búsqueda directa: "${medicoNombre}" -> "${medico.nombre}"`)
+            }
+          }
+          
+          // Si aún no se encuentra, intentar búsqueda más flexible por apellido
+          if (!medico) {
+            const nombreLower = medicoNombre.trim().toLowerCase()
+            const partesNombre = nombreLower.split(/[\s,]+/).filter(p => p.length > 2)
+            
+            if (partesNombre.length > 0) {
+              // Buscar por apellido (primera parte del nombre)
+              const apellidoBuscado = partesNombre[0]
+              
+              for (const m of medicos) {
+                const medicoNombreLower = m.nombre.toLowerCase()
+                const partesMedico = medicoNombreLower.split(/[\s,]+/).filter(p => p.length > 2)
+                
+                // Si el apellido (primera parte) coincide y tiene más de 3 caracteres
+                if (partesMedico.length > 0 && 
+                    partesMedico[0] === apellidoBuscado && 
+                    apellidoBuscado.length > 3) {
+                  // Verificar que haya al menos otra coincidencia (nombre o segundo apellido)
+                  const coincidencias = partesNombre.filter(pn => 
+                    partesMedico.some(pm => pm === pn || pm.includes(pn) || pn.includes(pm))
+                  )
+                  
+                  if (coincidencias.length >= 2 || (coincidencias.length === 1 && apellidoBuscado.length > 5)) {
+                    medico = m
+                    mapaNombresMedicos.set(nombreNormalizado, medico)
+                    resultado.advertencias.push(`Fila ${i + 1} (horas): Médico encontrado por apellido: "${medicoNombre}" -> "${m.nombre}"`)
+                    break
+                  }
+                }
+              }
             }
           }
         }
         
         if (!medico) {
-          resultado.advertencias.push(`Fila ${i + 1} (horas): Médico no encontrado: ${medicoNombre}`)
+          resultado.advertencias.push(`Fila ${i + 1} (horas): Médico no encontrado: ${medicoNombre} - SE OMITEN LAS HORAS`)
           continue
         }
 
-        // Obtener valores (convertir a número)
-        const f816 = franjas816 ? (typeof franjas816 === 'number' ? franjas816 : parseFloat(String(franjas816))) : 0
-        const f168 = franjas168 ? (typeof franjas168 === 'number' ? franjas168 : parseFloat(String(franjas168))) : 0
-        const hWeekend = horasWeekend ? (typeof horasWeekend === 'number' ? horasWeekend : parseFloat(String(horasWeekend))) : 0
-        const hWeekendNight = horasWeekendNight ? (typeof horasWeekendNight === 'number' ? horasWeekendNight : parseFloat(String(horasWeekendNight))) : 0
+        // Función auxiliar para convertir valores a número (maneja diferentes formatos)
+        const convertirANumero = (valor: any): number => {
+          if (typeof valor === 'number') {
+            return isNaN(valor) ? 0 : valor
+          }
+          if (!valor || valor === null || valor === undefined) {
+            return 0
+          }
+          // Convertir a string, limpiar y reemplazar coma por punto
+          const str = String(valor).trim().replace(/[^\d,.-]/g, '').replace(',', '.')
+          const num = parseFloat(str)
+          return isNaN(num) ? 0 : num
+        }
+        
+        // Obtener valores (convertir a número) - MEJORADO para manejar diferentes formatos
+        const f816 = convertirANumero(franjas816)
+        const f168 = convertirANumero(franjas168)
+        const hWeekend = convertirANumero(horasWeekend)
+        const hWeekendNight = convertirANumero(horasWeekendNight)
+        
+        // Validar y loggear si hay valores que no se pudieron convertir correctamente
+        if (franjas816 && f816 === 0 && String(franjas816).trim() !== '0' && String(franjas816).trim() !== '') {
+          resultado.advertencias.push(`Fila ${i + 1} (horas): Valor "8-16" no se pudo convertir a número: ${franjas816} (usando 0)`)
+        }
+        if (franjas168 && f168 === 0 && String(franjas168).trim() !== '0' && String(franjas168).trim() !== '') {
+          resultado.advertencias.push(`Fila ${i + 1} (horas): Valor "16-8" no se pudo convertir a número: ${franjas168} (usando 0)`)
+        }
+        if (horasWeekend && hWeekend === 0 && String(horasWeekend).trim() !== '0' && String(horasWeekend).trim() !== '') {
+          resultado.advertencias.push(`Fila ${i + 1} (horas): Valor "weekend" no se pudo convertir a número: ${horasWeekend} (usando 0)`)
+        }
+        if (horasWeekendNight && hWeekendNight === 0 && String(horasWeekendNight).trim() !== '0' && String(horasWeekendNight).trim() !== '') {
+          resultado.advertencias.push(`Fila ${i + 1} (horas): Valor "weekend night" no se pudo convertir a número: ${horasWeekendNight} (usando 0)`)
+        }
 
         // Calcular valores (todas son horas trabajadas, se multiplican por valor por hora)
+        // IMPORTANTE: 1 hora = valor_hour_xxx (multiplicación directa: horas × valor_por_hora)
         const valorHoras816 = f816 * valores.value_hour_weekly_8_16
         const valorHoras168 = f168 * valores.value_hour_weekly_16_8
         const valorHorasWeekend = hWeekend * valores.value_hour_weekend
