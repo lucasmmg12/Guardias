@@ -126,21 +126,23 @@ export function ObraSocialDropdown({ value, onSelect, onCancel, className }: Obr
     if (!isOpen) return
 
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node
+      if (dropdownRef.current && !dropdownRef.current.contains(target)) {
         setIsOpen(false)
         // Restaurar el valor original al cerrar sin seleccionar
         setSearchTerm(value || '')
       }
     }
 
-    // Usar un pequeño delay para evitar que se cierre inmediatamente al abrir
+    // Usar 'click' en lugar de 'mousedown' para evitar conflictos con los botones
+    // Usar capture phase para capturar el evento antes de que se propague
     const timeoutId = setTimeout(() => {
-      document.addEventListener('mousedown', handleClickOutside)
+      document.addEventListener('click', handleClickOutside, true)
     }, 100)
 
     return () => {
       clearTimeout(timeoutId)
-      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('click', handleClickOutside, true)
     }
   }, [isOpen, value])
 
@@ -158,10 +160,15 @@ export function ObraSocialDropdown({ value, onSelect, onCancel, className }: Obr
 
   // Seleccionar obra social
   const handleSelect = useCallback((obra: string) => {
+    // Cerrar dropdown primero
     setIsOpen(false)
     setSearchTerm(obra)
     setDebouncedSearch(obra)
-    onSelect(obra)
+    
+    // Usar setTimeout para asegurar que el estado se actualice antes de llamar onSelect
+    setTimeout(() => {
+      onSelect(obra)
+    }, 0)
   }, [onSelect])
 
   // Manejar cambio en el input (sin debounce - respuesta inmediata)
@@ -266,12 +273,18 @@ export function ObraSocialDropdown({ value, onSelect, onCancel, className }: Obr
                 <button
                   key={obra}
                   type="button"
+                  onMouseDown={(e) => {
+                    // Prevenir que el mousedown cierre el dropdown antes del click
+                    e.preventDefault()
+                    e.stopPropagation()
+                  }}
                   onClick={(e) => {
+                    e.preventDefault()
                     e.stopPropagation()
                     handleSelect(obra)
                   }}
                   className={cn(
-                    "w-full px-4 py-2 text-left text-sm transition-colors",
+                    "w-full px-4 py-2 text-left text-sm transition-colors cursor-pointer",
                     value === obra
                       ? "bg-green-500/30 text-white font-semibold"
                       : "text-gray-200 hover:bg-green-500/20 hover:text-white"
