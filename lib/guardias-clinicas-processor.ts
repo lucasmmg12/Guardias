@@ -407,7 +407,7 @@ export async function procesarExcelGuardiasClinicas(
         .eq('mes', mes)
         .eq('anio', anio)
         .order('obra_social', { ascending: true })
-        .range(from, from + pageSize - 1) as { data: ValorConsultaObraSocial[] | null }
+        .range(from, from + pageSize - 1) as { data: ValorConsultaObraSocial[] | null; error: any | null }
 
       if (errorValores) {
         console.error('[Guardias Clínicas] Error cargando valores de consultas:', errorValores)
