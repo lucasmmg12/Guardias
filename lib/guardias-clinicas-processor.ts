@@ -330,17 +330,39 @@ export async function procesarExcelGuardiasClinicas(
   }
 
   try {
-    // 1. Cargar TODOS los médicos
-    const { data: medicosData, error: errorMedicos } = await supabase
-      .from('medicos')
-      .select('*') as { data: Medico[] | null; error: any }
+    // 1. Cargar TODOS los médicos usando paginación
+    let todosLosMedicos: Medico[] = []
+    const pageSize = 1000
+    let from = 0
+    let hasMore = true
 
-    if (errorMedicos) {
-      resultado.errores.push(`Error cargando médicos: ${errorMedicos.message}`)
-      return resultado
+    while (hasMore) {
+      const { data: medicosPagina, error: errorMedicos } = await supabase
+        .from('medicos')
+        .select('*')
+        .order('id', { ascending: true })
+        .range(from, from + pageSize - 1) as { data: Medico[] | null; error: any }
+
+      if (errorMedicos) {
+        resultado.errores.push(`Error cargando médicos: ${errorMedicos.message}`)
+        return resultado
+      }
+
+      if (!medicosPagina || medicosPagina.length === 0) {
+        hasMore = false
+        break
+      }
+
+      todosLosMedicos = [...todosLosMedicos, ...medicosPagina]
+
+      if (medicosPagina.length < pageSize) {
+        hasMore = false
+      } else {
+        from += pageSize
+      }
     }
 
-    const medicos = medicosData || []
+    const medicos = todosLosMedicos
     console.log(`[Guardias Clínicas] Médicos cargados: ${medicos.length}`)
 
     // 2. Cargar configuración de grupos (70% o 40%)
@@ -372,15 +394,41 @@ export async function procesarExcelGuardiasClinicas(
 
     const valores: ConfiguracionValores = valoresData
 
-    // 3.5. Cargar valores de consultas de guardia clínica
-    const { data: valoresConsultasData } = await supabase
-      .from('valores_consultas_obra_social')
-      .select('*')
-      .eq('tipo_consulta', 'CONSULTA DE GUARDIA CLINICA')
-      .eq('mes', mes)
-      .eq('anio', anio) as { data: ValorConsultaObraSocial[] | null }
+    // 3.5. Cargar valores de consultas de guardia clínica usando paginación
+    let todosLosValoresConsultas: ValorConsultaObraSocial[] = []
+    from = 0
+    hasMore = true
 
-    const valoresConsultas = valoresConsultasData || []
+    while (hasMore) {
+      const { data: valoresPagina, error: errorValores } = await supabase
+        .from('valores_consultas_obra_social')
+        .select('*')
+        .eq('tipo_consulta', 'CONSULTA DE GUARDIA CLINICA')
+        .eq('mes', mes)
+        .eq('anio', anio)
+        .order('obra_social', { ascending: true })
+        .range(from, from + pageSize - 1) as { data: ValorConsultaObraSocial[] | null }
+
+      if (errorValores) {
+        console.error('[Guardias Clínicas] Error cargando valores de consultas:', errorValores)
+        break
+      }
+
+      if (!valoresPagina || valoresPagina.length === 0) {
+        hasMore = false
+        break
+      }
+
+      todosLosValoresConsultas = [...todosLosValoresConsultas, ...valoresPagina]
+
+      if (valoresPagina.length < pageSize) {
+        hasMore = false
+      } else {
+        from += pageSize
+      }
+    }
+
+    const valoresConsultas = todosLosValoresConsultas
     const valoresPorObraSocial = new Map<string, number>()
     valoresConsultas.forEach(v => {
       valoresPorObraSocial.set(v.obra_social, v.valor)
@@ -829,6 +877,9 @@ export async function procesarExcelGuardiasClinicas(
       netoConsultas: number
       totalHoras: number
       totalFinal: number
+      totalHorasTrabajadas: number  // Para calcular mínimo acordado
+      minimoAcordado: number        // Mínimo acordado = value_guaranteed_min × total_horas_trabajadas
+      diferenciaSanatorio: number   // Diferencia pagada por sanatorio si aplica
     }>()
 
     // Calcular neto de consultas por médico
@@ -847,7 +898,10 @@ export async function procesarExcelGuardiasClinicas(
       totalesPorMedico.set(medicoId, {
         netoConsultas,
         totalHoras: 0,
-        totalFinal: netoConsultas
+        totalFinal: netoConsultas,
+        totalHorasTrabajadas: 0,
+        minimoAcordado: 0,
+        diferenciaSanatorio: 0
       })
     }
 
@@ -861,14 +915,13 @@ export async function procesarExcelGuardiasClinicas(
       const valorHorasWeekend = horas.horas_weekend * valores.value_hour_weekend
       const valorHorasWeekendNight = horas.horas_weekend_night * valores.value_hour_weekend_night
       
-      // Total de horas trabajadas (para aplicar garantía mínima)
+      // Total de horas trabajadas (solo weekend + weekend_night, para calcular mínimo acordado)
       const totalHorasTrabajadas = horas.horas_weekend + horas.horas_weekend_night
       
       // Valor base de horas
       let totalHoras = valorFranjas816 + valorFranjas168 + valorHorasWeekend + valorHorasWeekendNight
       
-      // Aplicar garantía mínima POR HORA trabajada
-      // Si el valor por hora es menor que el mínimo, ajustar
+      // Aplicar garantía mínima POR HORA trabajada (lógica anterior - mantener)
       if (totalHorasTrabajadas > 0) {
         const valorPorHora = totalHoras / totalHorasTrabajadas
         if (valorPorHora < valores.value_guaranteed_min) {
@@ -880,11 +933,42 @@ export async function procesarExcelGuardiasClinicas(
       const totales = totalesPorMedico.get(medicoId) || {
         netoConsultas: 0,
         totalHoras: 0,
-        totalFinal: 0
+        totalFinal: 0,
+        totalHorasTrabajadas: 0,
+        minimoAcordado: 0,
+        diferenciaSanatorio: 0
       }
 
       totales.totalHoras = totalHoras
-      totales.totalFinal = totales.netoConsultas + totalHoras
+      totales.totalHorasTrabajadas = totalHorasTrabajadas
+      
+      // Calcular mínimo acordado = value_guaranteed_min × total_horas_trabajadas
+      const minimoAcordado = totalHorasTrabajadas * valores.value_guaranteed_min
+      totales.minimoAcordado = minimoAcordado
+      
+      // Calcular total sin mínimo (consultas + horas)
+      const totalSinMinimo = totales.netoConsultas + totalHoras
+      
+      // Aplicar regla del mínimo acordado
+      // Si (total_horas + total_consultas) < mínimo_acordado, el sanatorio paga la diferencia
+      if (minimoAcordado > 0 && totalSinMinimo < minimoAcordado) {
+        const diferencia = minimoAcordado - totalSinMinimo
+        totales.diferenciaSanatorio = diferencia
+        totales.totalFinal = minimoAcordado
+        
+        // Buscar nombre del médico para el mensaje
+        const medico = medicos.find(m => m.id === medicoId)
+        const nombreMedico = medico?.nombre || medicoId
+        resultado.advertencias.push(
+          `⚠️ MÉDICO: ${nombreMedico} - El total (consultas + horas) es menor al mínimo acordado. ` +
+          `Total calculado: $${totalSinMinimo.toFixed(2)}, Mínimo acordado: $${minimoAcordado.toFixed(2)} ` +
+          `(${valores.value_guaranteed_min.toFixed(2)} × ${totalHorasTrabajadas} horas). ` +
+          `El sanatorio pagará la diferencia de $${diferencia.toFixed(2)}.`
+        )
+      } else {
+        totales.totalFinal = totalSinMinimo
+        totales.diferenciaSanatorio = 0
+      }
 
       totalesPorMedico.set(medicoId, totales)
     }
