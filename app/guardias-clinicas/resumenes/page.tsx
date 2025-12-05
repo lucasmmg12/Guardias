@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { calcularResumenPorMedico, calcularResumenPorPrestador, calcularTotalGeneral, ResumenPorMedico, ResumenPorPrestador } from '@/lib/guardias-clinicas-resumenes'
-import { LiquidacionGuardia, DetalleHorasGuardia } from '@/lib/types'
+import { LiquidacionGuardia, DetalleHorasGuardia, ClinicalValuesConfig } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, FileDown, Download, History, Eye, FileSpreadsheet, Clock } from 'lucide-react'
 import { ExcelDataTable } from '@/components/custom/ExcelDataTable'
@@ -294,17 +294,19 @@ export default function ResumenesGuardiasClinicasPage() {
 
     try {
       // Obtener configuración de valores para recalcular
-      const { data: valoresConfig } = await supabase
+      const { data: valoresConfigData, error: errorValores } = await supabase
         .from('clinical_values_config')
         .select('*')
         .eq('mes', mes)
         .eq('anio', anio)
         .single()
 
-      if (!valoresConfig) {
+      if (errorValores || !valoresConfigData) {
         console.error('No se encontró configuración de valores')
         return
       }
+
+      const valoresConfig = valoresConfigData as ClinicalValuesConfig
 
       // Agrupar cambios por fila
       const cambiosPorFila = new Map<number, Map<string, any>>()
