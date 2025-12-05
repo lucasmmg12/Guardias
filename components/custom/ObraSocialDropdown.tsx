@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Input } from '@/components/ui/input'
 import { supabase } from '@/lib/supabase/client'
-import { ChevronDown, Search, X } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface ObraSocialDropdownProps {
@@ -21,9 +21,12 @@ export function ObraSocialDropdown({ value, onSelect, onCancel, className }: Obr
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const dropdownRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const isInitialMount = useRef(true)
 
   // Cargar todas las obras sociales al montar
   useEffect(() => {
+    let isMounted = true
+    
     async function cargarObrasSociales() {
       try {
         setLoading(true)
@@ -40,7 +43,7 @@ export function ObraSocialDropdown({ value, onSelect, onCancel, className }: Obr
         let from = 0
         let hasMore = true
 
-        while (hasMore) {
+        while (hasMore && isMounted) {
           const { data: pagina, error: errorPagina } = await supabase
             .from('valores_consultas_obra_social')
             .select('obra_social')
@@ -64,34 +67,51 @@ export function ObraSocialDropdown({ value, onSelect, onCancel, className }: Obr
           }
         }
 
-        // Obtener obras sociales únicas y ordenadas
-        const obrasUnicas = Array.from(new Set(todasLasObras)).sort() as string[]
-        setObrasSociales(obrasUnicas)
+        if (isMounted) {
+          // Obtener obras sociales únicas y ordenadas
+          const obrasUnicas = Array.from(new Set(todasLasObras)).sort() as string[]
+          setObrasSociales(obrasUnicas)
+        }
       } catch (error) {
         console.error('Error cargando obras sociales:', error)
       } finally {
-        setLoading(false)
+        if (isMounted) {
+          setLoading(false)
+        }
       }
     }
 
     cargarObrasSociales()
+
+    return () => {
+      isMounted = false
+    }
   }, [])
 
-  // Inicializar searchTerm cuando cambia el value
+  // Inicializar searchTerm solo una vez al montar
   useEffect(() => {
-    if (value) {
-      setSearchTerm(String(value))
-    } else {
-      setSearchTerm('')
+    if (isInitialMount.current) {
+      isInitialMount.current = false
+      setSearchTerm(value ? String(value) : '')
     }
-  }, [value])
+  }, []) // Solo al montar
+
+  // Sincronizar searchTerm con value solo si no está abierto (para evitar bucles)
+  useEffect(() => {
+    if (!isOpen && value !== null) {
+      const valueStr = String(value)
+      // Solo actualizar si es diferente para evitar bucles
+      setSearchTerm(prev => prev !== valueStr ? valueStr : prev)
+    }
+  }, [value, isOpen]) // Removido searchTerm de dependencias para evitar bucles
 
   // Enfocar el input cuando se abre el dropdown
   useEffect(() => {
     if (isOpen) {
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         inputRef.current?.focus()
       }, 100)
+      return () => clearTimeout(timer)
     }
   }, [isOpen])
 
@@ -146,6 +166,7 @@ export function ObraSocialDropdown({ value, onSelect, onCancel, className }: Obr
   // Seleccionar obra social
   const handleSelect = useCallback((obra: string) => {
     setIsOpen(false)
+    // Llamar onSelect de forma síncrona pero después de cerrar
     onSelect(obra)
   }, [onSelect])
 
@@ -153,15 +174,12 @@ export function ObraSocialDropdown({ value, onSelect, onCancel, className }: Obr
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       setIsOpen(false)
-      setSearchTerm('')
+      setSearchTerm(value ? String(value) : '')
       onCancel?.()
     } else if (e.key === 'Enter' && obrasFiltradas.length > 0) {
       handleSelect(obrasFiltradas[0])
-    } else if (e.key === 'ArrowDown' && isOpen) {
-      e.preventDefault()
-      // Podrías implementar navegación con flechas aquí
     }
-  }, [obrasFiltradas, handleSelect, onCancel, isOpen])
+  }, [obrasFiltradas, handleSelect, onCancel, value])
 
   return (
     <div ref={dropdownRef} className={cn("relative w-full", className)}>
