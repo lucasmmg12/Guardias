@@ -655,6 +655,14 @@ export default function GuardiasClinicasPage() {
                         <Upload className="h-5 w-5" />
                         Procesar Liquidación
                     </button>
+                    <Button
+                        onClick={() => router.push('/guardias-clinicas/resumenes')}
+                        variant="outline"
+                        className="border-pink-500/50 text-pink-400 hover:bg-pink-500/20 flex items-center gap-2"
+                    >
+                        <FileText className="h-5 w-5" />
+                        Ver Resúmenes
+                    </Button>
                 </div>
 
                 {/* Contenido de Configuración */}

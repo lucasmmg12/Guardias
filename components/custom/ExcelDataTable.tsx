@@ -11,7 +11,7 @@ import { Medico, ValorConsultaObraSocial, ConfiguracionAdicional } from '@/lib/t
 
 interface ExcelDataTableProps {
   data: ExcelData
-  especialidad?: 'Pediatría' | 'Ginecología' | 'Admisiones Clínicas'
+  especialidad?: 'Pediatría' | 'Ginecología' | 'Admisiones Clínicas' | 'Guardias Clínicas'
   onCellUpdate?: (rowIndex: number, column: string, newValue: any) => Promise<void>
   onDeleteRow?: (rowIndex: number) => Promise<void>
   liquidacionId?: string

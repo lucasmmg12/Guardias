@@ -34,6 +34,11 @@ export interface Database {
         Insert: DetalleGuardiaInsert
         Update: DetalleGuardiaUpdate
       }
+      detalle_horas_guardia: {
+        Row: DetalleHorasGuardia
+        Insert: DetalleHorasGuardiaInsert
+        Update: DetalleHorasGuardiaUpdate
+      }
       logs_procesamiento: {
         Row: LogProcesamiento
         Insert: LogProcesamientoInsert
@@ -334,6 +339,76 @@ export interface DetalleGuardiaUpdate {
   estado_revision?: EstadoRevision
   observaciones?: string | null
   fila_excel?: number | null
+  created_at?: string
+  updated_at?: string
+}
+
+// Interfaces para Detalle Horas Guardia
+export interface DetalleHorasGuardia {
+  id: string
+  liquidacion_id: string
+  medico_id: string
+  medico_nombre: string
+  medico_matricula: string | null
+  medico_es_residente: boolean
+  franjas_8_16: number
+  franjas_16_8: number
+  horas_weekend: number
+  horas_weekend_night: number
+  valor_franjas_8_16: number
+  valor_franjas_16_8: number
+  valor_horas_weekend: number
+  valor_horas_weekend_night: number
+  total_horas: number
+  fila_excel: number | null
+  estado_revision: string
+  observaciones: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface DetalleHorasGuardiaInsert {
+  id?: string
+  liquidacion_id: string
+  medico_id: string
+  medico_nombre: string
+  medico_matricula?: string | null
+  medico_es_residente?: boolean
+  franjas_8_16?: number
+  franjas_16_8?: number
+  horas_weekend?: number
+  horas_weekend_night?: number
+  valor_franjas_8_16?: number
+  valor_franjas_16_8?: number
+  valor_horas_weekend?: number
+  valor_horas_weekend_night?: number
+  total_horas?: number
+  fila_excel?: number | null
+  estado_revision?: string
+  observaciones?: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+export interface DetalleHorasGuardiaUpdate {
+  id?: string
+  liquidacion_id?: string
+  medico_id?: string
+  medico_nombre?: string
+  medico_matricula?: string | null
+  medico_es_residente?: boolean
+  franjas_8_16?: number
+  franjas_16_8?: number
+  horas_weekend?: number
+  horas_weekend_night?: number
+  valor_franjas_8_16?: number
+  valor_franjas_16_8?: number
+  valor_horas_weekend?: number
+  valor_horas_weekend_night?: number
+  total_horas?: number
+  fila_excel?: number | null
+  estado_revision?: string
+  observaciones?: string | null
   created_at?: string
   updated_at?: string
 }

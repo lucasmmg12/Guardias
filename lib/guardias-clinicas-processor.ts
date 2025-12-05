@@ -1,6 +1,6 @@
 import { supabase } from './supabase/client'
 import { ExcelData, ExcelRow } from './excel-reader'
-import { Medico, DetalleGuardiaInsert, LiquidacionGuardiaInsert } from './types'
+import { Medico, DetalleGuardiaInsert, LiquidacionGuardiaInsert, DetalleHorasGuardiaInsert } from './types'
 import { calcularNumeroLiquidacion, esParticular } from './utils'
 
 interface FilaExcluida {
@@ -605,9 +605,10 @@ export async function procesarExcelGuardiasClinicas(
       }
     }
 
-    // 6. Procesar archivo de HORAS
+    // 6. Procesar archivo de HORAS y guardar en BD
     console.log(`Procesando ${excelDataHoras.rows.length} filas de horas`)
     
+    const detallesHoras: DetalleHorasGuardiaInsert[] = []
     const horasPorMedico = new Map<string, HorasMedico>()
     
     for (let i = 0; i < excelDataHoras.rows.length; i++) {
@@ -656,7 +657,47 @@ export async function procesarExcelGuardiasClinicas(
         const hWeekend = horasWeekend ? (typeof horasWeekend === 'number' ? horasWeekend : parseFloat(String(horasWeekend))) : 0
         const hWeekendNight = horasWeekendNight ? (typeof horasWeekendNight === 'number' ? horasWeekendNight : parseFloat(String(horasWeekendNight))) : 0
 
-        // Acumular horas por médico
+        // Calcular valores (se actualizarán después con la configuración)
+        const valorFranjas816 = f816 * valores.value_hour_weekly_8_16
+        const valorFranjas168 = f168 * valores.value_hour_weekly_16_8
+        const valorHorasWeekend = hWeekend * valores.value_hour_weekend
+        const valorHorasWeekendNight = hWeekendNight * valores.value_hour_weekend_night
+        
+        // Total de horas trabajadas (para aplicar garantía mínima)
+        const totalHorasTrabajadas = hWeekend + hWeekendNight
+        let totalHoras = valorFranjas816 + valorFranjas168 + valorHorasWeekend + valorHorasWeekendNight
+        
+        // Aplicar garantía mínima POR HORA trabajada
+        if (totalHorasTrabajadas > 0) {
+          const valorPorHora = totalHoras / totalHorasTrabajadas
+          if (valorPorHora < valores.value_guaranteed_min) {
+            totalHoras = totalHorasTrabajadas * valores.value_guaranteed_min
+          }
+        }
+
+        // Crear detalle de horas
+        const detalleHora: DetalleHorasGuardiaInsert = {
+          liquidacion_id: liquidacionId,
+          medico_id: medico.id,
+          medico_nombre: medico.nombre,
+          medico_matricula: medico.matricula_provincial || null,
+          medico_es_residente: medico.es_residente,
+          franjas_8_16: f816,
+          franjas_16_8: f168,
+          horas_weekend: hWeekend,
+          horas_weekend_night: hWeekendNight,
+          valor_franjas_8_16: valorFranjas816,
+          valor_franjas_16_8: valorFranjas168,
+          valor_horas_weekend: valorHorasWeekend,
+          valor_horas_weekend_night: valorHorasWeekendNight,
+          total_horas: totalHoras,
+          fila_excel: i + 1,
+          estado_revision: 'pendiente'
+        }
+
+        detallesHoras.push(detalleHora)
+
+        // Acumular horas por médico (para cálculo de totales)
         const horasActuales = horasPorMedico.get(medico.id) || {
           medico_id: medico.id,
           franjas_8_16: 0,
@@ -673,8 +714,26 @@ export async function procesarExcelGuardiasClinicas(
           horas_weekend_night: horasActuales.horas_weekend_night + hWeekendNight
         })
 
+        resultado.procesadas++
+
       } catch (error: any) {
         resultado.errores.push(`Fila ${i + 1} (horas): ${error.message}`)
+      }
+    }
+
+    // Guardar detalles de horas en BD (batch insert)
+    if (detallesHoras.length > 0) {
+      const batchSize = 500
+      for (let i = 0; i < detallesHoras.length; i += batchSize) {
+        const batch = detallesHoras.slice(i, i + batchSize)
+        const { error: errorHoras } = await supabase
+          .from('detalle_horas_guardia')
+          // @ts-ignore
+          .insert(batch)
+        
+        if (errorHoras) {
+          resultado.errores.push(`Error guardando horas (batch ${Math.floor(i / batchSize) + 1}): ${errorHoras.message}`)
+        }
       }
     }
 

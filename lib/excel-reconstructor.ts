@@ -1,5 +1,5 @@
 import { ExcelData, ExcelRow } from './excel-reader'
-import { DetalleGuardia } from './types'
+import { DetalleGuardia, DetalleHorasGuardia } from './types'
 
 /**
  * Reconstruye ExcelData desde los detalles guardados en BD
@@ -182,6 +182,131 @@ export async function cargarExcelDataDesdeBD(
     return reconstruirExcelDataDesdeDetalles(todosLosDetalles, headersOriginales)
   } catch (error) {
     console.error('Error en cargarExcelDataDesdeBD:', error)
+    return null
+  }
+}
+
+/**
+ * Reconstruye ExcelData desde los detalles de horas guardados en BD
+ */
+export function reconstruirExcelDataDesdeDetallesHoras(
+  detallesHoras: DetalleHorasGuardia[],
+  headersOriginales?: string[]
+): ExcelData {
+  if (detallesHoras.length === 0) {
+    return {
+      periodo: null,
+      headers: headersOriginales || [],
+      rows: []
+    }
+  }
+
+  // Ordenar por fila_excel para mantener el orden original
+  const detallesOrdenados = [...detallesHoras].sort((a, b) => {
+    const filaA = a.fila_excel || 0
+    const filaB = b.fila_excel || 0
+    return filaA - filaB
+  })
+
+  // Headers para el archivo de horas
+  const headers = headersOriginales || [
+    'Responsable',
+    'Horas semanales de 8 a 16 hs',
+    'Horas semanales de 16 a 8 hs',
+    'Horas fin de semana / feriados',
+    'Horas nocturnas fin de semana /',
+    'Total'
+  ]
+
+  // Reconstruir filas desde los detalles
+  const rows: ExcelRow[] = detallesOrdenados.map(detalle => {
+    const row: ExcelRow = {}
+    
+    // Almacenar fila_excel como metadata
+    if (detalle.fila_excel !== null && detalle.fila_excel !== undefined) {
+      ;(row as any).__fila_excel = detalle.fila_excel
+    }
+    
+    // Mapear campos de detalle_horas_guardia a columnas del Excel
+    headers.forEach(header => {
+      const headerLower = header.toLowerCase().trim()
+      
+      if (headerLower.includes('responsable') || headerLower.includes('medico')) {
+        row[header] = detalle.medico_nombre || null
+      } else if (headerLower.includes('8 a 16') || headerLower.includes('8-16')) {
+        row[header] = detalle.franjas_8_16 || 0
+      } else if (headerLower.includes('16 a 8') || headerLower.includes('16-8')) {
+        row[header] = detalle.franjas_16_8 || 0
+      } else if (headerLower.includes('fin de semana') && !headerLower.includes('nocturn')) {
+        row[header] = detalle.horas_weekend || 0
+      } else if (headerLower.includes('nocturn') || headerLower.includes('noche')) {
+        row[header] = detalle.horas_weekend_night || 0
+      } else if (headerLower.includes('total')) {
+        row[header] = detalle.total_horas || 0
+      } else {
+        row[header] = null
+      }
+    })
+    
+    return row
+  })
+
+  return {
+    periodo: null,
+    headers,
+    rows
+  }
+}
+
+/**
+ * Reconstruye ExcelData de horas desde BD de forma optimizada
+ */
+export async function cargarExcelDataHorasDesdeBD(
+  liquidacionId: string,
+  supabase: any,
+  headersOriginales?: string[]
+): Promise<ExcelData | null> {
+  try {
+    const todosLosDetalles: DetalleHorasGuardia[] = []
+    const pageSize = 1000
+    let from = 0
+    let hasMore = true
+
+    // Cargar todos los registros usando paginación
+    while (hasMore) {
+      const { data: detalles, error } = await supabase
+        .from('detalle_horas_guardia')
+        .select('*')
+        .eq('liquidacion_id', liquidacionId)
+        .order('fila_excel', { ascending: true, nullsFirst: false })
+        .range(from, from + pageSize - 1)
+
+      if (error) {
+        console.error('Error cargando detalles de horas:', error)
+        return null
+      }
+
+      if (!detalles || detalles.length === 0) {
+        hasMore = false
+        break
+      }
+
+      todosLosDetalles.push(...(detalles as DetalleHorasGuardia[]))
+
+      if (detalles.length < pageSize) {
+        hasMore = false
+      } else {
+        from += pageSize
+      }
+    }
+
+    if (todosLosDetalles.length === 0) {
+      return null
+    }
+
+    return reconstruirExcelDataDesdeDetallesHoras(todosLosDetalles, headersOriginales)
+  } catch (error) {
+    console.error('Error en cargarExcelDataHorasDesdeBD:', error)
     return null
   }
 }
