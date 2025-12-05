@@ -106,6 +106,28 @@ export function InlineEditCell({
         return value
     }, [value, type])
 
+    // Verificar si el dropdown está abierto para deshabilitar hover
+    const [dropdownOpen, setDropdownOpen] = useState(false)
+    
+    useEffect(() => {
+        const checkDropdown = () => {
+            const isOpen = document.body.hasAttribute('data-dropdown-open')
+            setDropdownOpen(isOpen)
+        }
+        
+        // Verificar inicialmente
+        checkDropdown()
+        
+        // Observar cambios en el atributo
+        const observer = new MutationObserver(checkDropdown)
+        observer.observe(document.body, {
+            attributes: true,
+            attributeFilter: ['data-dropdown-open']
+        })
+        
+        return () => observer.disconnect()
+    }, [])
+
     // ✅ AHORA SÍ: Returns condicionales DESPUÉS de todos los hooks
     if (!isEditable) {
         return <div className={cn("px-2 py-1", className)}>{value}</div>
@@ -172,7 +194,9 @@ export function InlineEditCell({
     return (
         <div
             className={cn(
-                "group flex items-center justify-between px-2 py-1 rounded hover:bg-white/5 cursor-pointer transition-colors min-h-[32px]",
+                "group flex items-center justify-between px-2 py-1 rounded cursor-pointer transition-colors min-h-[32px]",
+                // Solo aplicar hover si el dropdown NO está abierto
+                !dropdownOpen && "hover:bg-white/5",
                 className
             )}
             onClick={handleEditClick}
@@ -180,7 +204,10 @@ export function InlineEditCell({
             <span className="truncate">
                 {displayValue}
             </span>
-            <Edit2 className="h-3 w-3 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <Edit2 className={cn(
+                "h-3 w-3 text-gray-500 transition-opacity",
+                dropdownOpen ? "opacity-0" : "opacity-0 group-hover:opacity-100"
+            )} />
         </div>
     )
 }

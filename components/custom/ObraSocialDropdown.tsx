@@ -95,6 +95,26 @@ export function ObraSocialDropdown({ value, onSelect, onCancel, className }: Obr
     }
   }, [isOpen, value])
 
+  // Deshabilitar hover en las celdas cuando el dropdown está abierto
+  useEffect(() => {
+    if (isOpen) {
+      // Agregar atributo de datos al body para deshabilitar hover en celdas
+      document.body.setAttribute('data-dropdown-open', 'true')
+      // Agregar clase CSS para deshabilitar hover
+      document.body.classList.add('dropdown-open')
+    } else {
+      // Remover atributo y clase cuando se cierra
+      document.body.removeAttribute('data-dropdown-open')
+      document.body.classList.remove('dropdown-open')
+    }
+
+    return () => {
+      // Limpiar al desmontar
+      document.body.removeAttribute('data-dropdown-open')
+      document.body.classList.remove('dropdown-open')
+    }
+  }, [isOpen])
+
   // Cerrar dropdown al hacer click fuera
   useEffect(() => {
     if (!isOpen) return
@@ -216,6 +236,18 @@ export function ObraSocialDropdown({ value, onSelect, onCancel, className }: Obr
             if (dropdownRef.current && dropdownRef.current.contains(target)) {
               e.stopPropagation()
             }
+          }}
+          onMouseEnter={(e) => {
+            // Prevenir que el hover active las celdas de abajo
+            e.stopPropagation()
+          }}
+          onMouseMove={(e) => {
+            // Prevenir que el movimiento del mouse active las celdas de abajo
+            e.stopPropagation()
+          }}
+          onMouseOver={(e) => {
+            // Prevenir que el mouseover active las celdas de abajo
+            e.stopPropagation()
           }}
           style={{ 
             pointerEvents: 'auto',
