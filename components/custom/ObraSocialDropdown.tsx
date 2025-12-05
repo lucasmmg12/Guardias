@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { Button } from '@/components/ui/button'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { Input } from '@/components/ui/input'
 import { supabase } from '@/lib/supabase/client'
-import { ChevronDown } from 'lucide-react'
+import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface ObraSocialDropdownProps {
@@ -14,10 +14,15 @@ interface ObraSocialDropdownProps {
 }
 
 export function ObraSocialDropdown({ value, onSelect, onCancel, className }: ObraSocialDropdownProps) {
+  // ✅ TODOS LOS HOOKS PRIMERO (siempre se ejecutan)
   const [isOpen, setIsOpen] = useState(false)
   const [obrasSociales, setObrasSociales] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   // Cargar todas las obras sociales al montar
   useEffect(() => {
@@ -81,6 +86,41 @@ export function ObraSocialDropdown({ value, onSelect, onCancel, className }: Obr
     }
   }, [])
 
+  // Inicializar searchTerm con el value cuando se abre o cambia el value
+  useEffect(() => {
+    if (isOpen) {
+      setSearchTerm(value || '')
+      // Enfocar el input cuando se abre
+      setTimeout(() => {
+        inputRef.current?.focus()
+      }, 100)
+    }
+  }, [isOpen, value])
+
+  // Debounce del término de búsqueda (500ms) - NO interfiere con la escritura
+  useEffect(() => {
+    // Limpiar timer anterior
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+    }
+
+    // Solo aplicar debounce si el dropdown está abierto
+    if (isOpen) {
+      debounceTimerRef.current = setTimeout(() => {
+        setDebouncedSearch(searchTerm)
+      }, 500)
+    } else {
+      // Si se cierra, limpiar búsqueda
+      setDebouncedSearch('')
+    }
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+      }
+    }
+  }, [searchTerm, isOpen])
+
   // Cerrar dropdown al hacer click fuera
   useEffect(() => {
     if (!isOpen) return
@@ -88,6 +128,8 @@ export function ObraSocialDropdown({ value, onSelect, onCancel, className }: Obr
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false)
+        // Restaurar el valor original al cerrar sin seleccionar
+        setSearchTerm(value || '')
       }
     }
 
@@ -100,63 +142,127 @@ export function ObraSocialDropdown({ value, onSelect, onCancel, className }: Obr
       clearTimeout(timeoutId)
       document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [isOpen])
+  }, [isOpen, value])
 
-  // Toggle dropdown
-  const handleToggle = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation() // Prevenir que se propague el evento
-    setIsOpen(prev => !prev)
-  }, [])
+  // Filtrar obras sociales basándose en la búsqueda con debounce
+  const obrasFiltradas = useMemo(() => {
+    if (!debouncedSearch.trim()) {
+      return obrasSociales.slice(0, 50) // Limitar a 50 para mejor rendimiento
+    }
 
-  // Seleccionar obra social - más estable
+    const searchLower = debouncedSearch.toLowerCase().trim()
+    return obrasSociales.filter(obra => 
+      obra.toLowerCase().includes(searchLower)
+    ).slice(0, 50) // Limitar a 50 resultados
+  }, [obrasSociales, debouncedSearch])
+
+  // Seleccionar obra social
   const handleSelect = useCallback((obra: string) => {
     setIsOpen(false)
-    // Usar setTimeout para asegurar que el estado se actualice antes de llamar onSelect
-    setTimeout(() => {
-      onSelect(obra)
-    }, 0)
+    setSearchTerm(obra)
+    setDebouncedSearch(obra)
+    onSelect(obra)
   }, [onSelect])
+
+  // Manejar cambio en el input (sin debounce - respuesta inmediata)
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const nuevoValor = e.target.value
+    setSearchTerm(nuevoValor) // Actualización inmediata para que el usuario vea lo que escribe
+    
+    // Abrir dropdown si no está abierto
+    if (!isOpen) {
+      setIsOpen(true)
+    }
+  }, [isOpen])
 
   // Manejar teclas
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     e.stopPropagation()
+    
     if (e.key === 'Escape') {
       setIsOpen(false)
+      setSearchTerm(value || '')
       onCancel?.()
+    } else if (e.key === 'Enter' && obrasFiltradas.length === 1) {
+      // Si hay solo un resultado, seleccionarlo con Enter
+      e.preventDefault()
+      handleSelect(obrasFiltradas[0])
+    } else if (e.key === 'Enter' && searchTerm.trim() && obrasFiltradas.length === 0) {
+      // Si no hay resultados pero hay texto, usar ese texto como valor
+      e.preventDefault()
+      handleSelect(searchTerm.trim())
     }
-  }, [onCancel])
+  }, [onCancel, obrasFiltradas, searchTerm, value, handleSelect])
 
-  const displayValue = value || 'Seleccionar obra social...'
+  // Abrir dropdown
+  const handleOpen = useCallback(() => {
+    setIsOpen(true)
+  }, [])
 
+  // Limpiar búsqueda
+  const handleClear = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    setSearchTerm('')
+    inputRef.current?.focus()
+  }, [])
+
+  // ✅ Returns condicionales DESPUÉS de todos los hooks
   return (
     <div ref={dropdownRef} className={cn("relative w-full", className)} onClick={(e) => e.stopPropagation()}>
-      <Button
-        type="button"
-        variant="outline"
-        onClick={handleToggle}
-        onKeyDown={handleKeyDown}
-        className="w-full h-8 justify-between bg-gray-800 border-green-500/50 text-white hover:bg-gray-700 hover:border-green-400"
-      >
-        <span className="truncate text-left flex-1">{displayValue}</span>
-        <ChevronDown className={cn("h-4 w-4 text-gray-400 transition-transform flex-shrink-0", isOpen && "rotate-180")} />
-      </Button>
+      {/* Input de búsqueda siempre visible */}
+      <div className="relative">
+        <Input
+          ref={inputRef}
+          type="text"
+          value={searchTerm}
+          onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
+          onClick={handleOpen}
+          placeholder={value || "Buscar obra social..."}
+          className="h-8 w-full bg-gray-800 border-green-500/50 text-white placeholder:text-gray-500 focus:border-green-400 focus:ring-green-400/20 pr-8"
+        />
+        {searchTerm && (
+          <button
+            type="button"
+            onClick={handleClear}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+            tabIndex={-1}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
 
+      {/* Dropdown con resultados */}
       {isOpen && (
         <div 
           className="absolute z-[9999] w-full mt-1 bg-gray-800 border border-green-500/50 rounded-md shadow-lg max-h-60 overflow-auto"
           onClick={(e) => e.stopPropagation()}
         >
           {loading ? (
-            <div className="px-4 py-2 text-sm text-gray-400 text-center">
+            <div className="px-4 py-2 text-sm text-gray-300 text-center">
               Cargando obras sociales...
             </div>
-          ) : obrasSociales.length === 0 ? (
-            <div className="px-4 py-2 text-sm text-gray-400 text-center">
-              No hay obras sociales disponibles
+          ) : obrasFiltradas.length === 0 ? (
+            <div className="px-4 py-2 text-sm text-gray-300 text-center">
+              {debouncedSearch.trim() ? (
+                <div>
+                  <div className="mb-2">No se encontraron resultados</div>
+                  <button
+                    type="button"
+                    onClick={() => handleSelect(searchTerm.trim())}
+                    className="text-xs text-green-400 hover:text-green-300 underline"
+                  >
+                    Usar "{searchTerm.trim()}" como valor
+                  </button>
+                </div>
+              ) : (
+                'No hay obras sociales disponibles'
+              )}
             </div>
           ) : (
             <div className="py-1">
-              {obrasSociales.map((obra) => (
+              {obrasFiltradas.map((obra) => (
                 <button
                   key={obra}
                   type="button"
@@ -168,7 +274,7 @@ export function ObraSocialDropdown({ value, onSelect, onCancel, className }: Obr
                     "w-full px-4 py-2 text-left text-sm transition-colors",
                     value === obra
                       ? "bg-green-500/30 text-white font-semibold"
-                      : "text-gray-300 hover:bg-green-500/20 hover:text-white"
+                      : "text-gray-200 hover:bg-green-500/20 hover:text-white"
                   )}
                 >
                   {obra}
