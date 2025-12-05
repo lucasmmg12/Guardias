@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { calcularResumenPorMedico, calcularResumenPorPrestador, calcularTotalGeneral, ResumenPorMedico, ResumenPorPrestador } from '@/lib/guardias-clinicas-resumenes'
-import { LiquidacionGuardia } from '@/lib/types'
+import { LiquidacionGuardia, DetalleHorasGuardia } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, FileDown, Download, History, Eye, FileSpreadsheet, Clock } from 'lucide-react'
 import { ExcelDataTable } from '@/components/custom/ExcelDataTable'
@@ -332,14 +332,16 @@ export default function ResumenesGuardiasClinicasPage() {
       // Guardar cada fila y recalcular valores
       const promesas = Array.from(cambiosPorFila.entries()).map(async ([filaExcel, campos]) => {
         // Obtener detalle actual para recalcular
-        const { data: detalleActual } = await supabase
+        const { data: detalleActualData, error: errorDetalle } = await supabase
           .from('detalle_horas_guardia')
           .select('*')
           .eq('liquidacion_id', liquidacionActual.id)
           .eq('fila_excel', filaExcel)
           .single()
 
-        if (!detalleActual) return
+        if (errorDetalle || !detalleActualData) return
+
+        const detalleActual = detalleActualData as DetalleHorasGuardia
 
         // Calcular nuevos valores
         const f816 = campos.get('franjas_8_16') ?? detalleActual.franjas_8_16 ?? 0
