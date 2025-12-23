@@ -430,8 +430,22 @@ export async function procesarExcelGuardiasClinicas(
 
     const valoresConsultas = todosLosValoresConsultas
     const valoresPorObraSocial = new Map<string, number>()
+    const valoresPorCodigoOS = new Map<string, number>()
+    const nombresPorCodigoOS = new Map<string, string>()
+
+    // Función auxiliar para extraer el código numérico (ej: "213" de "213 - UNIMED")
+    const extraerCodigo = (nombre: string): string | null => {
+      const match = nombre.match(/^(\d+)\s*-/);
+      return match ? match[1] : null;
+    }
+
     valoresConsultas.forEach(v => {
       valoresPorObraSocial.set(v.obra_social, v.valor)
+      const codigo = extraerCodigo(v.obra_social)
+      if (codigo) {
+        valoresPorCodigoOS.set(codigo, v.valor)
+        nombresPorCodigoOS.set(codigo, v.obra_social)
+      }
     })
 
     // Cargar valores de PARTICULARES al inicio para evitar consultas dentro del loop
@@ -721,7 +735,19 @@ export async function procesarExcelGuardiasClinicas(
         }
 
         // Obtener valor unitario de consulta desde la base de datos
+        // Primero intentamos búsqueda exacta, si falla buscamos por código numérico (ej: "213")
         let valorUnitario = valoresPorObraSocial.get(obraSocialFinal) || 0
+
+        if (valorUnitario === 0) {
+          const codigoExcel = extraerCodigo(obraSocialFinal)
+          if (codigoExcel) {
+            valorUnitario = valoresPorCodigoOS.get(codigoExcel) || 0
+            // Si lo encontramos por código, normalizamos el nombre al que tenemos en el sistema
+            if (valorUnitario > 0) {
+              obraSocialFinal = nombresPorCodigoOS.get(codigoExcel) || obraSocialFinal
+            }
+          }
+        }
 
         // Solo registrar advertencia si NO es PARTICULARES y no tiene valor
         if (valorUnitario === 0 && obraSocialFinal !== 'PARTICULARES' && obraSocialFinal !== '042 - PARTICULARES') {
