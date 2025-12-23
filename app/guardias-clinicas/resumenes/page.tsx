@@ -28,7 +28,7 @@ const MESES = [
 
 export default function ResumenesGuardiasClinicasPage() {
   const router = useRouter()
-  
+
   // Cargar mes y año desde localStorage al inicializar
   const [mes, setMes] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -37,7 +37,7 @@ export default function ResumenesGuardiasClinicasPage() {
     }
     return new Date().getMonth() + 1
   })
-  
+
   const [anio, setAnio] = useState(() => {
     if (typeof window !== 'undefined') {
       const savedAnio = localStorage.getItem('guardias_clinicas_resumenes_anio')
@@ -101,7 +101,7 @@ export default function ResumenesGuardiasClinicasPage() {
       if (liquidacion) {
         const liq = liquidacion as LiquidacionGuardia
         setLiquidacionActual(liq)
-        
+
         // Cargar ExcelData desde BD
         const excelDataCargado = await cargarExcelDataDesdeBD(liq.id, supabase)
         if (excelDataCargado) {
@@ -145,7 +145,7 @@ export default function ResumenesGuardiasClinicasPage() {
       if (liquidacion) {
         const liq = liquidacion as LiquidacionGuardia
         setLiquidacionActual(liq)
-        
+
         // Cargar ExcelData de horas desde BD
         const excelDataCargado = await cargarExcelDataHorasDesdeBD(liq.id, supabase)
         if (excelDataCargado) {
@@ -214,7 +214,7 @@ export default function ResumenesGuardiasClinicasPage() {
           cambiosPorFila.set(cambio.filaExcel, new Map())
         }
         const filaCambios = cambiosPorFila.get(cambio.filaExcel)!
-        
+
         // Mapear nombre de columna del Excel a campo de BD
         if (cambio.columna.toLowerCase().includes('cliente') || cambio.columna.toLowerCase().includes('obra')) {
           filaCambios.set('obra_social', cambio.valor)
@@ -315,7 +315,7 @@ export default function ResumenesGuardiasClinicasPage() {
           cambiosPorFila.set(cambio.filaExcel, new Map())
         }
         const filaCambios = cambiosPorFila.get(cambio.filaExcel)!
-        
+
         // Mapear nombre de columna del Excel a campo de BD
         const columnaLower = cambio.columna.toLowerCase()
         if (columnaLower.includes('8 a 16') || columnaLower.includes('8-16')) {
@@ -355,10 +355,10 @@ export default function ResumenesGuardiasClinicasPage() {
         const valorFranjas168 = f168 * valoresConfig.value_hour_weekly_16_8
         const valorHorasWeekend = hWeekend * valoresConfig.value_hour_weekend
         const valorHorasWeekendNight = hWeekendNight * valoresConfig.value_hour_weekend_night
-        
+
         const totalHorasTrabajadas = hWeekend + hWeekendNight
         let totalHoras = valorFranjas816 + valorFranjas168 + valorHorasWeekend + valorHorasWeekendNight
-        
+
         // Aplicar garantía mínima
         if (totalHorasTrabajadas > 0) {
           const valorPorHora = totalHoras / totalHorasTrabajadas
@@ -371,7 +371,7 @@ export default function ResumenesGuardiasClinicasPage() {
         campos.forEach((valor, campo) => {
           updateData[campo] = valor
         })
-        
+
         // Actualizar valores calculados
         updateData.valor_franjas_8_16 = valorFranjas816
         updateData.valor_franjas_16_8 = valorFranjas168
@@ -513,26 +513,26 @@ export default function ResumenesGuardiasClinicasPage() {
       }
 
       const liquidacionId = (liquidacion as any).id
-      
+
       // Calcular resumen por prestador
       const resumenPrestadores = await calcularResumenPorPrestador(mes, anio, liquidacionId)
       setResumenesPorPrestador(resumenPrestadores)
 
       // Calcular resumen por médico
       const resumenMedicos = await calcularResumenPorMedico(mes, anio, liquidacionId)
-      
+
       // Agrupar por médico
       const resumenesPorMedicoMap = new Map<string, ResumenPorMedico[]>()
       resumenMedicos.forEach(resumen => {
         const nombreNormalizado = resumen.medico_nombre.toLowerCase().trim().replace(/\s+/g, ' ')
         const clave = resumen.medico_id || `nombre-${nombreNormalizado}`
-        
+
         if (!resumenesPorMedicoMap.has(clave)) {
           resumenesPorMedicoMap.set(clave, [])
         }
         resumenesPorMedicoMap.get(clave)!.push(resumen)
       })
-      
+
       setResumenesPorMedico(resumenesPorMedicoMap)
     } catch (error) {
       console.error('Error cargando resúmenes:', error)
@@ -597,7 +597,7 @@ export default function ResumenesGuardiasClinicasPage() {
         </div>
 
         {/* Selector de Mes y Año */}
-        <div 
+        <div
           className="flex items-center gap-4 p-4 rounded-xl"
           style={{
             background: 'rgba(255, 255, 255, 0.05)',
@@ -632,53 +632,48 @@ export default function ResumenesGuardiasClinicasPage() {
         <div className="flex gap-2 border-b border-gray-700">
           <button
             onClick={() => setTabActiva('medicos')}
-            className={`px-4 py-2 font-semibold transition-colors ${
-              tabActiva === 'medicos'
-                ? 'text-pink-400 border-b-2 border-pink-400'
-                : 'text-gray-400 hover:text-gray-300'
-            }`}
+            className={`px-4 py-2 font-semibold transition-colors ${tabActiva === 'medicos'
+              ? 'text-pink-400 border-b-2 border-pink-400'
+              : 'text-gray-400 hover:text-gray-300'
+              }`}
           >
             Resumen por Médico
           </button>
           <button
             onClick={() => setTabActiva('prestadores')}
-            className={`px-4 py-2 font-semibold transition-colors ${
-              tabActiva === 'prestadores'
-                ? 'text-pink-400 border-b-2 border-pink-400'
-                : 'text-gray-400 hover:text-gray-300'
-            }`}
+            className={`px-4 py-2 font-semibold transition-colors ${tabActiva === 'prestadores'
+              ? 'text-pink-400 border-b-2 border-pink-400'
+              : 'text-gray-400 hover:text-gray-300'
+              }`}
           >
             Resumen por Prestador
           </button>
           <button
             onClick={() => setTabActiva('historial')}
-            className={`px-4 py-2 font-semibold transition-colors flex items-center gap-2 ${
-              tabActiva === 'historial'
-                ? 'text-pink-400 border-b-2 border-pink-400'
-                : 'text-gray-400 hover:text-gray-300'
-            }`}
+            className={`px-4 py-2 font-semibold transition-colors flex items-center gap-2 ${tabActiva === 'historial'
+              ? 'text-pink-400 border-b-2 border-pink-400'
+              : 'text-gray-400 hover:text-gray-300'
+              }`}
           >
             <History className="h-4 w-4" />
             Historial
           </button>
           <button
             onClick={() => setTabActiva('excel')}
-            className={`px-4 py-2 font-semibold transition-colors flex items-center gap-2 ${
-              tabActiva === 'excel'
-                ? 'text-pink-400 border-b-2 border-pink-400'
-                : 'text-gray-400 hover:text-gray-300'
-            }`}
+            className={`px-4 py-2 font-semibold transition-colors flex items-center gap-2 ${tabActiva === 'excel'
+              ? 'text-pink-400 border-b-2 border-pink-400'
+              : 'text-gray-400 hover:text-gray-300'
+              }`}
           >
             <FileSpreadsheet className="h-4 w-4" />
             Excel Consultas
           </button>
           <button
             onClick={() => setTabActiva('excelHoras')}
-            className={`px-4 py-2 font-semibold transition-colors flex items-center gap-2 ${
-              tabActiva === 'excelHoras'
-                ? 'text-pink-400 border-b-2 border-pink-400'
-                : 'text-gray-400 hover:text-gray-300'
-            }`}
+            className={`px-4 py-2 font-semibold transition-colors flex items-center gap-2 ${tabActiva === 'excelHoras'
+              ? 'text-pink-400 border-b-2 border-pink-400'
+              : 'text-gray-400 hover:text-gray-300'
+              }`}
           >
             <Clock className="h-4 w-4" />
             Excel Horas
@@ -692,7 +687,7 @@ export default function ResumenesGuardiasClinicasPage() {
             {loadingHistorial ? (
               <div className="text-center py-12 text-gray-400">Cargando historial...</div>
             ) : historial.length === 0 ? (
-              <div 
+              <div
                 className="rounded-xl p-8 text-center"
                 style={{
                   background: 'rgba(255, 255, 255, 0.05)',
@@ -723,7 +718,7 @@ export default function ResumenesGuardiasClinicasPage() {
                 }}
               >
                 <h2 className="text-2xl font-bold text-pink-400 mb-4">Historial de Liquidaciones</h2>
-                
+
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
@@ -741,16 +736,16 @@ export default function ResumenesGuardiasClinicasPage() {
                     </thead>
                     <tbody>
                       {historial.map((liquidacion) => {
-                        const fechaProcesamiento = liquidacion.created_at 
+                        const fechaProcesamiento = liquidacion.created_at
                           ? new Date(liquidacion.created_at).toLocaleDateString('es-AR', {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })
                           : 'N/A'
-                        
+
                         const nombreMes = MESES.find(m => m.value === liquidacion.mes)?.label || `Mes ${liquidacion.mes}`
                         const estaExpandida = liquidacionExpandida === liquidacion.id
 
@@ -769,15 +764,14 @@ export default function ResumenesGuardiasClinicasPage() {
                                 </div>
                               </td>
                               <td className="px-4 py-3 text-sm text-center">
-                                <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                                  liquidacion.estado === 'finalizada' 
-                                    ? 'bg-green-500/20 text-green-400'
-                                    : liquidacion.estado === 'procesando'
+                                <span className={`px-2 py-1 rounded text-xs font-semibold ${liquidacion.estado === 'finalizada'
+                                  ? 'bg-green-500/20 text-green-400'
+                                  : liquidacion.estado === 'procesando'
                                     ? 'bg-yellow-500/20 text-yellow-400'
                                     : liquidacion.estado === 'error'
-                                    ? 'bg-red-500/20 text-red-400'
-                                    : 'bg-gray-500/20 text-gray-400'
-                                }`}>
+                                      ? 'bg-red-500/20 text-red-400'
+                                      : 'bg-gray-500/20 text-gray-400'
+                                  }`}>
                                   {liquidacion.estado}
                                 </span>
                               </td>
@@ -829,7 +823,7 @@ export default function ResumenesGuardiasClinicasPage() {
             {loadingExcel ? (
               <div className="text-center py-12 text-gray-400">Cargando Excel...</div>
             ) : !liquidacionActual ? (
-              <div 
+              <div
                 className="rounded-xl p-8 text-center"
                 style={{
                   background: 'rgba(255, 255, 255, 0.05)',
@@ -853,7 +847,7 @@ export default function ResumenesGuardiasClinicasPage() {
             ) : !excelData ? (
               <div className="text-center py-12 text-gray-400">No se pudo cargar el Excel</div>
             ) : (
-              <div 
+              <div
                 className="rounded-xl p-6"
                 style={{
                   background: 'rgba(255, 255, 255, 0.05)',
@@ -885,7 +879,7 @@ export default function ResumenesGuardiasClinicasPage() {
             {loadingExcelHoras ? (
               <div className="text-center py-12 text-gray-400">Cargando Excel de Horas...</div>
             ) : !liquidacionActual ? (
-              <div 
+              <div
                 className="rounded-xl p-8 text-center"
                 style={{
                   background: 'rgba(255, 255, 255, 0.05)',
@@ -909,7 +903,7 @@ export default function ResumenesGuardiasClinicasPage() {
             ) : !excelDataHoras ? (
               <div className="text-center py-12 text-gray-400">No se pudo cargar el Excel de Horas</div>
             ) : (
-              <div 
+              <div
                 className="rounded-xl p-6"
                 style={{
                   background: 'rgba(255, 255, 255, 0.05)',
@@ -938,7 +932,7 @@ export default function ResumenesGuardiasClinicasPage() {
         ) : loading ? (
           <div className="text-center py-12 text-gray-400">Cargando resúmenes...</div>
         ) : resumenesPorMedico.size === 0 && resumenesPorPrestador.length === 0 ? (
-          <div 
+          <div
             className="rounded-xl p-8 text-center"
             style={{
               background: 'rgba(255, 255, 255, 0.05)',
@@ -1038,21 +1032,155 @@ export default function ResumenesGuardiasClinicasPage() {
               </div>
             ) : (
               <>
+                {/* Grupo 70% */}
+                {resumenesPorPrestador.filter(r => r.grupo_tipo === 'GRUPO_70').length > 0 && (
+                  <div
+                    className="rounded-xl p-6 mb-8"
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      backdropFilter: 'blur(20px)',
+                      border: '1px solid rgba(236, 72, 153, 0.3)',
+                    }}
+                  >
+                    <h2 className="text-2xl font-bold text-pink-400 mb-4">Grupo 70%</h2>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-gray-700">
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-pink-400">Prestador</th>
+                            <th className="px-4 py-3 text-right text-sm font-semibold text-pink-400">Cantidad</th>
+                            <th className="px-4 py-3 text-right text-sm font-semibold text-pink-400">Total Bruto</th>
+                            <th className="px-4 py-3 text-right text-sm font-semibold text-pink-400">Neto Consultas</th>
+                            <th className="px-4 py-3 text-right text-sm font-semibold text-pink-400">Total Horas</th>
+                            <th className="px-4 py-3 text-right text-sm font-semibold text-pink-400">Total Final</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {resumenesPorPrestador
+                            .filter(r => r.grupo_tipo === 'GRUPO_70')
+                            .map((resumen, idx) => (
+                              <tr key={idx} className="border-b border-gray-800 hover:bg-gray-800/50">
+                                <td className="px-4 py-3 text-sm text-gray-300 font-medium">{resumen.medico_nombre}</td>
+                                <td className="px-4 py-3 text-sm text-gray-300 text-right">{resumen.cantidad}</td>
+                                <td className="px-4 py-3 text-sm text-gray-300 text-right">{formatearMoneda(resumen.total_bruto)}</td>
+                                <td className="px-4 py-3 text-sm text-gray-300 text-right">{formatearMoneda(resumen.total_neto_consultas)}</td>
+                                <td className="px-4 py-3 text-sm text-gray-300 text-right">{formatearMoneda(resumen.total_horas)}</td>
+                                <td className="px-4 py-3 text-sm text-gray-300 text-right font-semibold">{formatearMoneda(resumen.total_final)}</td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Grupo 50% */}
+                {resumenesPorPrestador.filter(r => r.grupo_tipo === 'GRUPO_50' || (r.grupo_tipo as any) === 'GRUPO_40').length > 0 && (
+                  <div
+                    className="rounded-xl p-6 mb-8"
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      backdropFilter: 'blur(20px)',
+                      border: '1px solid rgba(236, 72, 153, 0.3)',
+                    }}
+                  >
+                    <h2 className="text-2xl font-bold text-pink-400 mb-4">Grupo 50%</h2>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-gray-700">
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-pink-400">Prestador</th>
+                            <th className="px-4 py-3 text-right text-sm font-semibold text-pink-400">Cantidad</th>
+                            <th className="px-4 py-3 text-right text-sm font-semibold text-pink-400">Total Bruto</th>
+                            <th className="px-4 py-3 text-right text-sm font-semibold text-pink-400">Neto Consultas</th>
+                            <th className="px-4 py-3 text-right text-sm font-semibold text-pink-400">Total Horas</th>
+                            <th className="px-4 py-3 text-right text-sm font-semibold text-pink-400">Total Final</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {resumenesPorPrestador
+                            .filter(r => r.grupo_tipo === 'GRUPO_50' || (r.grupo_tipo as any) === 'GRUPO_40')
+                            .map((resumen, idx) => (
+                              <tr key={idx} className="border-b border-gray-800 hover:bg-gray-800/50">
+                                <td className="px-4 py-3 text-sm text-gray-300 font-medium">{resumen.medico_nombre}</td>
+                                <td className="px-4 py-3 text-sm text-gray-300 text-right">{resumen.cantidad}</td>
+                                <td className="px-4 py-3 text-sm text-gray-300 text-right">{formatearMoneda(resumen.total_bruto)}</td>
+                                <td className="px-4 py-3 text-sm text-gray-300 text-right">{formatearMoneda(resumen.total_neto_consultas)}</td>
+                                <td className="px-4 py-3 text-sm text-gray-300 text-right">{formatearMoneda(resumen.total_horas)}</td>
+                                <td className="px-4 py-3 text-sm text-gray-300 text-right font-semibold">{formatearMoneda(resumen.total_final)}</td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Otros / Sin Grupo */}
+                {resumenesPorPrestador.filter(r => !r.grupo_tipo || (r.grupo_tipo as any) === 'GRUPO_40').length === 0 &&
+                  resumenesPorPrestador.filter(r => r.grupo_tipo === 'GRUPO_70').length === 0 &&
+                  resumenesPorPrestador.filter(r => r.grupo_tipo === 'GRUPO_50').length === 0 && (
+                    <div className="text-center py-4 text-gray-400">No hay datos agrupados disponibles</div>
+                  )}
+
+                {resumenesPorPrestador.filter(r => !r.grupo_tipo).length > 0 && (
+                  <div
+                    className="rounded-xl p-6 mb-8"
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      backdropFilter: 'blur(20px)',
+                      border: '1px solid rgba(255, 193, 7, 0.3)',
+                    }}
+                  >
+                    <h2 className="text-2xl font-bold text-yellow-500 mb-4">Sin Grupo Asignado</h2>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-gray-700">
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-yellow-500">Prestador</th>
+                            <th className="px-4 py-3 text-right text-sm font-semibold text-yellow-500">Cantidad</th>
+                            <th className="px-4 py-3 text-right text-sm font-semibold text-yellow-500">Total Bruto</th>
+                            <th className="px-4 py-3 text-right text-sm font-semibold text-yellow-500">Neto Consultas</th>
+                            <th className="px-4 py-3 text-right text-sm font-semibold text-yellow-500">Total Horas</th>
+                            <th className="px-4 py-3 text-right text-sm font-semibold text-yellow-500">Total Final</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {resumenesPorPrestador
+                            .filter(r => !r.grupo_tipo)
+                            .map((resumen, idx) => (
+                              <tr key={idx} className="border-b border-gray-800 hover:bg-gray-800/50">
+                                <td className="px-4 py-3 text-sm text-gray-300 font-medium">{resumen.medico_nombre}</td>
+                                <td className="px-4 py-3 text-sm text-gray-300 text-right">{resumen.cantidad}</td>
+                                <td className="px-4 py-3 text-sm text-gray-300 text-right">{formatearMoneda(resumen.total_bruto)}</td>
+                                <td className="px-4 py-3 text-sm text-gray-300 text-right">{formatearMoneda(resumen.total_neto_consultas)}</td>
+                                <td className="px-4 py-3 text-sm text-gray-300 text-right">{formatearMoneda(resumen.total_horas)}</td>
+                                <td className="px-4 py-3 text-sm text-gray-300 text-right font-semibold">{formatearMoneda(resumen.total_final)}</td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Total General */}
                 <div
-                  className="rounded-xl p-6"
+                  className="rounded-xl p-6 shadow-2xl"
                   style={{
-                    background: 'rgba(255, 255, 255, 0.05)',
+                    background: 'rgba(255, 255, 255, 0.1)',
                     backdropFilter: 'blur(20px)',
-                    border: '1px solid rgba(236, 72, 153, 0.3)',
+                    border: '1px solid rgba(236, 72, 153, 0.5)',
                   }}
                 >
-                  <h2 className="text-2xl font-bold text-pink-400 mb-4">Resumen por Prestador</h2>
-
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
                         <tr className="border-b border-gray-700">
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-pink-400">Prestador</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-pink-400">Resumen General</th>
                           <th className="px-4 py-3 text-right text-sm font-semibold text-pink-400">Cantidad</th>
                           <th className="px-4 py-3 text-right text-sm font-semibold text-pink-400">Total Bruto</th>
                           <th className="px-4 py-3 text-right text-sm font-semibold text-pink-400">Neto Consultas</th>
@@ -1061,31 +1189,21 @@ export default function ResumenesGuardiasClinicasPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {resumenesPorPrestador.map((resumen, idx) => (
-                          <tr key={idx} className="border-b border-gray-800 hover:bg-gray-800/50">
-                            <td className="px-4 py-3 text-sm text-gray-300 font-medium">{resumen.medico_nombre}</td>
-                            <td className="px-4 py-3 text-sm text-gray-300 text-right">{resumen.cantidad}</td>
-                            <td className="px-4 py-3 text-sm text-gray-300 text-right">{formatearMoneda(resumen.total_bruto)}</td>
-                            <td className="px-4 py-3 text-sm text-gray-300 text-right">{formatearMoneda(resumen.total_neto_consultas)}</td>
-                            <td className="px-4 py-3 text-sm text-gray-300 text-right">{formatearMoneda(resumen.total_horas)}</td>
-                            <td className="px-4 py-3 text-sm text-gray-300 text-right font-semibold">{formatearMoneda(resumen.total_final)}</td>
-                          </tr>
-                        ))}
-                        <tr className="bg-gray-800/50 font-bold">
-                          <td className="px-4 py-3 text-sm text-pink-400">Total general</td>
-                          <td className="px-4 py-3 text-sm text-pink-400 text-right">
+                        <tr className="font-bold">
+                          <td className="px-4 py-3 text-sm text-white text-lg">TOTAL LIQUIDACIÓN</td>
+                          <td className="px-4 py-3 text-sm text-white text-right">
                             {resumenesPorPrestador.reduce((sum, r) => sum + r.cantidad, 0)}
                           </td>
-                          <td className="px-4 py-3 text-sm text-pink-400 text-right">
+                          <td className="px-4 py-3 text-sm text-white text-right">
                             {formatearMoneda(resumenesPorPrestador.reduce((sum, r) => sum + r.total_bruto, 0))}
                           </td>
-                          <td className="px-4 py-3 text-sm text-pink-400 text-right">
+                          <td className="px-4 py-3 text-sm text-white text-right">
                             {formatearMoneda(resumenesPorPrestador.reduce((sum, r) => sum + r.total_neto_consultas, 0))}
                           </td>
-                          <td className="px-4 py-3 text-sm text-pink-400 text-right">
+                          <td className="px-4 py-3 text-sm text-white text-right">
                             {formatearMoneda(resumenesPorPrestador.reduce((sum, r) => sum + r.total_horas, 0))}
                           </td>
-                          <td className="px-4 py-3 text-sm text-pink-400 text-right">
+                          <td className="px-4 py-3 text-sm text-white text-right text-xl text-pink-400 font-black">
                             {formatearMoneda(resumenesPorPrestador.reduce((sum, r) => sum + r.total_final, 0))}
                           </td>
                         </tr>

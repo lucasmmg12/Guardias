@@ -18,6 +18,7 @@ export interface ResumenPorPrestador {
   total_neto_consultas: number
   total_horas: number
   total_final: number
+  grupo_tipo?: 'GRUPO_70' | 'GRUPO_50'
 }
 
 /**
@@ -285,7 +286,8 @@ export async function calcularResumenPorPrestador(
       total_bruto: 0,
       total_neto_consultas: 0,
       total_horas: 0,
-      total_final: 0
+      total_final: 0,
+      grupo_tipo: gruposPorMedico.get(detalle.medico_id) || undefined
     }
 
     resumen.cantidad++
@@ -332,7 +334,8 @@ export async function calcularResumenPorPrestador(
       total_bruto: 0,
       total_neto_consultas: 0,
       total_horas: 0,
-      total_final: 0
+      total_final: 0,
+      grupo_tipo: gruposPorMedico.get(detalleHora.medico_id) || undefined
     }
 
     resumen.total_horas += totalHorasRecalculado
