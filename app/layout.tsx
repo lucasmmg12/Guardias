@@ -7,6 +7,9 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
     title: 'Sistema de Liquidaciones de Guardias - Grow Labs',
     description: 'Sistema de procesamiento y gestión de liquidaciones de guardias médicas',
+    icons: {
+        icon: '/logogrow.png',
+    },
 }
 
 export default function RootLayout({
