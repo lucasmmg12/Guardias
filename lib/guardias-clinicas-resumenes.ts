@@ -299,7 +299,7 @@ export async function calcularResumenPorPrestador(
     const grupo = gruposPorMedico.get(medicoId)
     if (grupo === 'GRUPO_70') {
       resumen.total_neto_consultas = resumen.total_bruto * 0.70
-    } else if (grupo === 'GRUPO_50') {
+    } else if (grupo === 'GRUPO_50' || (grupo as unknown as string) === 'GRUPO_40') {
       resumen.total_neto_consultas = resumen.total_bruto * 0.50
     }
   }

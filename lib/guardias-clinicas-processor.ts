@@ -1015,7 +1015,7 @@ export async function procesarExcelGuardiasClinicas(
 
       if (grupo === 'GRUPO_70') {
         netoConsultas = totalBruto * 0.70
-      } else if (grupo === 'GRUPO_50') {
+      } else if (grupo === 'GRUPO_50' || (grupo as unknown as string) === 'GRUPO_40') {
         netoConsultas = totalBruto * 0.50
       } else {
         resultado.advertencias.push(`Médico ${medicoId} no tiene grupo asignado, se asume 0%`)
@@ -1115,7 +1115,7 @@ export async function procesarExcelGuardiasClinicas(
           ? detalle.monto_facturado / totalBruto
           : 0
         detalle.importe_calculado = totales.netoConsultas * proporcion
-      } else if (grupo === 'GRUPO_50') {
+      } else if (grupo === 'GRUPO_50' || (grupo as unknown as string) === 'GRUPO_40') {
         detalle.porcentaje_retencion = 50
         detalle.monto_retencion = detalle.monto_facturado ? detalle.monto_facturado * 0.50 : 0
         const proporcion = detalle.monto_facturado && totalBruto > 0
