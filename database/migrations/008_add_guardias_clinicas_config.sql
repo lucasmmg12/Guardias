@@ -4,14 +4,14 @@
 
 -- ============================================================================
 -- TABLA: clinical_groups_config
--- Configuración de grupos mensuales (GRUPO_70 o GRUPO_40)
+-- Configuración de grupos mensuales (GRUPO_70 o GRUPO_50)
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS clinical_groups_config (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   doctor_id UUID NOT NULL REFERENCES medicos(id) ON DELETE CASCADE,
   mes INTEGER NOT NULL CHECK (mes BETWEEN 1 AND 12),
   anio INTEGER NOT NULL CHECK (anio >= 2020),
-  group_type VARCHAR(20) NOT NULL CHECK (group_type IN ('GRUPO_70', 'GRUPO_40')),
+  group_type VARCHAR(20) NOT NULL CHECK (group_type IN ('GRUPO_70', 'GRUPO_50')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   
@@ -42,8 +42,8 @@ CREATE TRIGGER trigger_update_clinical_groups_updated_at
 -- Habilitar RLS
 ALTER TABLE clinical_groups_config ENABLE ROW LEVEL SECURITY;
 
-COMMENT ON TABLE clinical_groups_config IS 'Configuración de grupos mensuales para Guardias Clínicas (70% o 40% del bruto)';
-COMMENT ON COLUMN clinical_groups_config.group_type IS 'GRUPO_70 = 70% del bruto, GRUPO_40 = 40% del bruto';
+COMMENT ON TABLE clinical_groups_config IS 'Configuración de grupos mensuales para Guardias Clínicas (70% o 50% del bruto)';
+COMMENT ON COLUMN clinical_groups_config.group_type IS 'GRUPO_70 = 70% del bruto, GRUPO_50 = 50% del bruto';
 
 -- ============================================================================
 -- TABLA: clinical_values_config

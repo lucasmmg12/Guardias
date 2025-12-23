@@ -250,10 +250,10 @@ export async function calcularResumenPorPrestador(
     }
   }
 
-  const gruposPorMedico = new Map<string, 'GRUPO_70' | 'GRUPO_40'>()
+  const gruposPorMedico = new Map<string, 'GRUPO_70' | 'GRUPO_50'>()
   const gruposConfig = todosLosGrupos as ClinicalGroupsConfig[]
   for (const grupo of gruposConfig) {
-    gruposPorMedico.set(grupo.doctor_id, grupo.group_type as 'GRUPO_70' | 'GRUPO_40')
+    gruposPorMedico.set(grupo.doctor_id, grupo.group_type as 'GRUPO_70' | 'GRUPO_50')
   }
 
   // Obtener configuración de valores (horas) para recalcular total_horas correctamente
@@ -299,8 +299,8 @@ export async function calcularResumenPorPrestador(
     const grupo = gruposPorMedico.get(medicoId)
     if (grupo === 'GRUPO_70') {
       resumen.total_neto_consultas = resumen.total_bruto * 0.70
-    } else if (grupo === 'GRUPO_40') {
-      resumen.total_neto_consultas = resumen.total_bruto * 0.40
+    } else if (grupo === 'GRUPO_50') {
+      resumen.total_neto_consultas = resumen.total_bruto * 0.50
     }
   }
 
@@ -344,7 +344,7 @@ export async function calcularResumenPorPrestador(
     resumen.total_final = resumen.total_neto_consultas + resumen.total_horas
   }
 
-  return Array.from(resumenMap.values()).sort((a, b) => 
+  return Array.from(resumenMap.values()).sort((a, b) =>
     a.medico_nombre.localeCompare(b.medico_nombre)
   )
 }

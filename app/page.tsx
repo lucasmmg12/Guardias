@@ -13,9 +13,9 @@ export default function HomePage() {
                 {/* Logo y Título */}
                 <div className="text-center space-y-4">
                     <div className="flex justify-center mb-6">
-                        <img 
-                            src="/logogrow.png" 
-                            alt="Grow Labs" 
+                        <img
+                            src="/logogrow.png"
+                            alt="Grow Labs"
                             className="h-32 w-auto drop-shadow-2xl animate-float"
                             style={{
                                 filter: 'drop-shadow(0 0 20px rgba(34, 197, 94, 0.5))'
@@ -38,7 +38,7 @@ export default function HomePage() {
                 <div className="flex flex-col gap-6 mt-12">
                     {/* Módulo Pediatría */}
                     <Link href="/pediatria">
-                        <div 
+                        <div
                             className="relative rounded-2xl shadow-2xl overflow-hidden p-6 hover:scale-[1.02] transition-all duration-300 cursor-pointer group"
                             style={{
                                 background: 'rgba(255, 255, 255, 0.1)',
@@ -48,7 +48,7 @@ export default function HomePage() {
                             }}
                         >
                             {/* Borde brillante animado */}
-                            <div 
+                            <div
                                 className="absolute inset-0 rounded-2xl"
                                 style={{
                                     background: 'linear-gradient(45deg, transparent, rgba(34, 197, 94, 0.3), transparent)',
@@ -71,7 +71,7 @@ export default function HomePage() {
                                     </ul>
                                 </div>
                                 <div className="flex-shrink-0 text-green-400 group-hover:translate-x-2 transition-transform flex items-center gap-2">
-                                    Procesar liquidación 
+                                    Procesar liquidación
                                     <span className="group-hover:translate-x-1 transition-transform">→</span>
                                 </div>
                             </div>
@@ -80,7 +80,7 @@ export default function HomePage() {
 
                     {/* Módulo Ginecología */}
                     <Link href="/ginecologia">
-                        <div 
+                        <div
                             className="relative rounded-2xl shadow-2xl overflow-hidden p-6 hover:scale-[1.02] transition-all duration-300 cursor-pointer group"
                             style={{
                                 background: 'rgba(255, 255, 255, 0.1)',
@@ -90,7 +90,7 @@ export default function HomePage() {
                             }}
                         >
                             {/* Borde brillante animado */}
-                            <div 
+                            <div
                                 className="absolute inset-0 rounded-2xl"
                                 style={{
                                     background: 'linear-gradient(45deg, transparent, rgba(59, 130, 246, 0.3), transparent)',
@@ -113,7 +113,7 @@ export default function HomePage() {
                                     </ul>
                                 </div>
                                 <div className="flex-shrink-0 text-blue-400 group-hover:translate-x-2 transition-transform flex items-center gap-2">
-                                    Procesar liquidación 
+                                    Procesar liquidación
                                     <span className="group-hover:translate-x-1 transition-transform">→</span>
                                 </div>
                             </div>
@@ -122,7 +122,7 @@ export default function HomePage() {
 
                     {/* Módulo Admisiones Clínicas */}
                     <Link href="/admisiones">
-                        <div 
+                        <div
                             className="relative rounded-2xl shadow-2xl overflow-hidden p-6 hover:scale-[1.02] transition-all duration-300 cursor-pointer group"
                             style={{
                                 background: 'rgba(255, 255, 255, 0.1)',
@@ -132,7 +132,7 @@ export default function HomePage() {
                             }}
                         >
                             {/* Borde brillante animado */}
-                            <div 
+                            <div
                                 className="absolute inset-0 rounded-2xl"
                                 style={{
                                     background: 'linear-gradient(45deg, transparent, rgba(168, 85, 247, 0.3), transparent)',
@@ -155,7 +155,7 @@ export default function HomePage() {
                                     </ul>
                                 </div>
                                 <div className="flex-shrink-0 text-purple-400 group-hover:translate-x-2 transition-transform flex items-center gap-2">
-                                    Procesar liquidación 
+                                    Procesar liquidación
                                     <span className="group-hover:translate-x-1 transition-transform">→</span>
                                 </div>
                             </div>
@@ -164,7 +164,7 @@ export default function HomePage() {
 
                     {/* Módulo Guardias Clínicas */}
                     <Link href="/guardias-clinicas">
-                        <div 
+                        <div
                             className="relative rounded-2xl shadow-2xl overflow-hidden p-6 hover:scale-[1.02] transition-all duration-300 cursor-pointer group"
                             style={{
                                 background: 'rgba(255, 255, 255, 0.1)',
@@ -174,7 +174,7 @@ export default function HomePage() {
                             }}
                         >
                             {/* Borde brillante animado */}
-                            <div 
+                            <div
                                 className="absolute inset-0 rounded-2xl"
                                 style={{
                                     background: 'linear-gradient(45deg, transparent, rgba(236, 72, 153, 0.3), transparent)',
@@ -191,13 +191,13 @@ export default function HomePage() {
                                         Liquidación por consultas y horas trabajadas
                                     </p>
                                     <ul className="text-sm text-gray-400 space-y-1 flex flex-wrap gap-x-4">
-                                        <li>✓ Grupos 70% y 40%</li>
+                                        <li>✓ Grupos 70% y 50%</li>
                                         <li>✓ Cálculo por horas y consultas</li>
                                         <li>✓ Garantía mínima por hora</li>
                                     </ul>
                                 </div>
                                 <div className="flex-shrink-0 text-pink-400 group-hover:translate-x-2 transition-transform flex items-center gap-2">
-                                    Procesar liquidación 
+                                    Procesar liquidación
                                     <span className="group-hover:translate-x-1 transition-transform">→</span>
                                 </div>
                             </div>
@@ -205,12 +205,12 @@ export default function HomePage() {
                     </Link>
 
                     {/* Módulo Instrumentadores */}
-                    <a 
-                        href="https://liquidaciones-osde.vercel.app/" 
-                        target="_blank" 
+                    <a
+                        href="https://liquidaciones-osde.vercel.app/"
+                        target="_blank"
                         rel="noopener noreferrer"
                     >
-                        <div 
+                        <div
                             className="relative rounded-2xl shadow-2xl overflow-hidden p-6 hover:scale-[1.02] transition-all duration-300 cursor-pointer group"
                             style={{
                                 background: 'rgba(255, 255, 255, 0.1)',
@@ -220,7 +220,7 @@ export default function HomePage() {
                             }}
                         >
                             {/* Borde brillante animado */}
-                            <div 
+                            <div
                                 className="absolute inset-0 rounded-2xl"
                                 style={{
                                     background: 'linear-gradient(45deg, transparent, rgba(251, 146, 60, 0.3), transparent)',
@@ -243,7 +243,7 @@ export default function HomePage() {
                                     </ul>
                                 </div>
                                 <div className="flex-shrink-0 text-orange-400 group-hover:translate-x-2 transition-transform flex items-center gap-2">
-                                    Ir al módulo 
+                                    Ir al módulo
                                     <span className="group-hover:translate-x-1 transition-transform">→</span>
                                 </div>
                             </div>
@@ -252,7 +252,7 @@ export default function HomePage() {
                 </div>
 
                 {/* Manual de Usuario */}
-                <div 
+                <div
                     className="relative rounded-2xl shadow-2xl overflow-hidden p-6 mt-8"
                     style={{
                         background: 'rgba(34, 197, 94, 0.15)',
@@ -272,7 +272,7 @@ export default function HomePage() {
                             </div>
                         </div>
                         <Link href="/manual">
-                            <button 
+                            <button
                                 className="px-6 py-3 bg-green-600 hover:bg-green-500 text-white rounded-lg font-semibold transition-all duration-300 hover:scale-105 flex items-center gap-2"
                             >
                                 Abrir Manual
@@ -283,7 +283,7 @@ export default function HomePage() {
                 </div>
 
                 {/* Acceso Rápido */}
-                <div 
+                <div
                     className="relative rounded-2xl shadow-2xl overflow-hidden p-6 mt-8"
                     style={{
                         background: 'rgba(255, 255, 255, 0.1)',
@@ -294,8 +294,8 @@ export default function HomePage() {
                 >
                     <h3 className="text-lg font-semibold text-gray-200 mb-4">Acceso Rápido</h3>
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                        <Link 
-                            href="/admin/medicos" 
+                        <Link
+                            href="/admin/medicos"
                             className="text-center p-4 rounded-lg transition-all duration-300 hover:scale-105"
                             style={{
                                 background: 'rgba(0, 0, 0, 0.2)',
@@ -307,8 +307,8 @@ export default function HomePage() {
                             </div>
                             <div className="text-sm text-gray-300">Médicos</div>
                         </Link>
-                        <Link 
-                            href="/admin/tarifas" 
+                        <Link
+                            href="/admin/tarifas"
                             className="text-center p-4 rounded-lg transition-all duration-300 hover:scale-105"
                             style={{
                                 background: 'rgba(0, 0, 0, 0.2)',
@@ -320,8 +320,8 @@ export default function HomePage() {
                             </div>
                             <div className="text-sm text-gray-300">Tarifas</div>
                         </Link>
-                        <Link 
-                            href="/admin/adicionales" 
+                        <Link
+                            href="/admin/adicionales"
                             className="text-center p-4 rounded-lg transition-all duration-300 hover:scale-105"
                             style={{
                                 background: 'rgba(0, 0, 0, 0.2)',
@@ -333,8 +333,8 @@ export default function HomePage() {
                             </div>
                             <div className="text-sm text-gray-300">Adicionales</div>
                         </Link>
-                        <Link 
-                            href="/admin/valores-consultas" 
+                        <Link
+                            href="/admin/valores-consultas"
                             className="text-center p-4 rounded-lg transition-all duration-300 hover:scale-105"
                             style={{
                                 background: 'rgba(0, 0, 0, 0.2)',
@@ -346,8 +346,8 @@ export default function HomePage() {
                             </div>
                             <div className="text-sm text-gray-300">Valores Consultas</div>
                         </Link>
-                        <Link 
-                            href="/liquidaciones" 
+                        <Link
+                            href="/liquidaciones"
                             className="text-center p-4 rounded-lg transition-all duration-300 hover:scale-105"
                             style={{
                                 background: 'rgba(0, 0, 0, 0.2)',
@@ -404,7 +404,7 @@ export default function HomePage() {
                                 <Globe className="h-5 w-5 text-green-400" />
                             </a>
                         </div>
-                        
+
                         {/* Texto del Footer */}
                         <div className="text-center md:text-right text-gray-300 text-sm">
                             <p>

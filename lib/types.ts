@@ -509,7 +509,7 @@ export interface ClinicalGroupsConfig {
   doctor_id: string
   mes: number
   anio: number
-  group_type: 'GRUPO_70' | 'GRUPO_40'
+  group_type: 'GRUPO_70' | 'GRUPO_50'
   created_at: string
   updated_at: string
 }
@@ -519,7 +519,7 @@ export interface ClinicalGroupsConfigInsert {
   doctor_id: string
   mes: number
   anio: number
-  group_type: 'GRUPO_70' | 'GRUPO_40'
+  group_type: 'GRUPO_70' | 'GRUPO_50'
   created_at?: string
   updated_at?: string
 }
@@ -529,7 +529,7 @@ export interface ClinicalGroupsConfigUpdate {
   doctor_id?: string
   mes?: number
   anio?: number
-  group_type?: 'GRUPO_70' | 'GRUPO_40'
+  group_type?: 'GRUPO_70' | 'GRUPO_50'
   created_at?: string
   updated_at?: string
 }

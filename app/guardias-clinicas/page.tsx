@@ -8,12 +8,12 @@ import { MesSelectorModal } from '@/components/custom/MesSelectorModal'
 import { NotificationModal, NotificationType } from '@/components/custom/NotificationModal'
 import { readExcelFileGinecologia, readExcelFileHorasGuardiasClinicas, ExcelData } from '@/lib/excel-reader'
 import { procesarExcelGuardiasClinicas } from '@/lib/guardias-clinicas-processor'
-import { 
-    ClinicalGroupsConfig, 
-    ClinicalGroupsConfigInsert, 
-    ClinicalValuesConfig, 
+import {
+    ClinicalGroupsConfig,
+    ClinicalGroupsConfigInsert,
+    ClinicalValuesConfig,
     ClinicalValuesConfigInsert,
-    Medico 
+    Medico
 } from '@/lib/types'
 import { AlertTriangle, XCircle, AlertCircle, Sparkles, ArrowLeft, X, Upload, FileText, Clock, FileSpreadsheet, Settings, Users, DollarSign, Copy, Search, Plus, Trash2 } from 'lucide-react'
 import Link from 'next/link'
@@ -37,22 +37,22 @@ const MESES = [
 
 export default function GuardiasClinicasPage() {
     const router = useRouter()
-    
+
     // Estados de pestañas
     const [activeTab, setActiveTab] = useState<'configuracion' | 'procesamiento'>('configuracion')
-    
+
     // Estados de configuración
     const [mesConfig, setMesConfig] = useState(new Date().getMonth() + 1)
     const [anioConfig, setAnioConfig] = useState(new Date().getFullYear())
     const [grupos70, setGrupos70] = useState<ClinicalGroupsConfig[]>([])
-    const [grupos40, setGrupos40] = useState<ClinicalGroupsConfig[]>([])
+    const [grupos50, setGrupos50] = useState<ClinicalGroupsConfig[]>([])
     const [valoresConfig, setValoresConfig] = useState<ClinicalValuesConfig | null>(null)
     const [medicos, setMedicos] = useState<Medico[]>([])
     const [loadingConfig, setLoadingConfig] = useState(false)
     const [showMedicoSelector, setShowMedicoSelector] = useState(false)
-    const [grupoSeleccionado, setGrupoSeleccionado] = useState<'GRUPO_70' | 'GRUPO_40' | null>(null)
+    const [grupoSeleccionado, setGrupoSeleccionado] = useState<'GRUPO_70' | 'GRUPO_50' | null>(null)
     const [searchMedico, setSearchMedico] = useState('')
-    
+
     // Estados de procesamiento
     const [isProcessingConsultas, setIsProcessingConsultas] = useState(false)
     const [isProcessingHoras, setIsProcessingHoras] = useState(false)
@@ -133,7 +133,7 @@ export default function GuardiasClinicasPage() {
 
             const grupos = (gruposData || []) as ClinicalGroupsConfig[]
             setGrupos70(grupos.filter(g => g.group_type === 'GRUPO_70'))
-            setGrupos40(grupos.filter(g => g.group_type === 'GRUPO_40'))
+            setGrupos50(grupos.filter(g => g.group_type === 'GRUPO_50'))
 
             // Cargar valores
             const { data: valoresData, error: valoresError } = await supabase
@@ -412,8 +412,8 @@ export default function GuardiasClinicasPage() {
         }
 
         // Si no hay período, buscar en las fechas de las filas
-        const fechaColumn = data.headers.find(h => 
-            h.toLowerCase().includes('fecha') || 
+        const fechaColumn = data.headers.find(h =>
+            h.toLowerCase().includes('fecha') ||
             h.toLowerCase().includes('date')
         )
 
@@ -464,7 +464,7 @@ export default function GuardiasClinicasPage() {
         try {
             const data = await readExcelFileGinecologia(file)
             setExcelDataConsultas(data)
-            
+
             // Detectar mes y año automáticamente
             const { mes, anio } = detectarMesAnio(data)
             if (mes && anio) {
@@ -517,9 +517,9 @@ export default function GuardiasClinicasPage() {
 
                 // Guardar resultado del procesamiento
                 setResultadoProcesamiento(resultado)
-                
+
                 if (resultado.errores.length > 0) {
-                    const mensajeError = resultado.errores.length > 0 
+                    const mensajeError = resultado.errores.length > 0
                         ? `Se procesaron ${resultado.procesadas} filas. Errores: ${resultado.errores.slice(0, 3).join('; ')}${resultado.errores.length > 3 ? '...' : ''}`
                         : `Se procesaron ${resultado.procesadas} filas. Errores: ${resultado.errores.length}`
                     showNotification(
@@ -575,7 +575,7 @@ export default function GuardiasClinicasPage() {
     const puedeProcesar = excelDataConsultas && excelDataHoras && archivoConsultas && archivoHoras
 
     // Filtrar médicos para el selector
-    const medicosFiltrados = medicos.filter(m => 
+    const medicosFiltrados = medicos.filter(m =>
         m.nombre.toLowerCase().includes(searchMedico.toLowerCase())
     )
 
@@ -607,9 +607,9 @@ export default function GuardiasClinicasPage() {
                     <div>
                         <div className="flex items-center gap-4 mb-4">
                             <Link href="/" className="hover:opacity-80 transition-opacity">
-                                <img 
-                                    src="/logogrow.png" 
-                                    alt="Grow Labs" 
+                                <img
+                                    src="/logogrow.png"
+                                    alt="Grow Labs"
                                     className="h-16 w-auto drop-shadow-2xl"
                                     style={{
                                         filter: 'drop-shadow(0 0 20px rgba(236, 72, 153, 0.5))'
@@ -635,22 +635,20 @@ export default function GuardiasClinicasPage() {
                 <div className="flex gap-4 mb-6">
                     <button
                         onClick={() => setActiveTab('configuracion')}
-                        className={`px-6 py-3 rounded-lg font-semibold transition-all flex items-center gap-2 ${
-                            activeTab === 'configuracion'
-                                ? 'bg-pink-600 text-white shadow-lg'
-                                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                        }`}
+                        className={`px-6 py-3 rounded-lg font-semibold transition-all flex items-center gap-2 ${activeTab === 'configuracion'
+                            ? 'bg-pink-600 text-white shadow-lg'
+                            : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                            }`}
                     >
                         <Settings className="h-5 w-5" />
                         Configuración Mensual
                     </button>
                     <button
                         onClick={() => setActiveTab('procesamiento')}
-                        className={`px-6 py-3 rounded-lg font-semibold transition-all flex items-center gap-2 ${
-                            activeTab === 'procesamiento'
-                                ? 'bg-pink-600 text-white shadow-lg'
-                                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                        }`}
+                        className={`px-6 py-3 rounded-lg font-semibold transition-all flex items-center gap-2 ${activeTab === 'procesamiento'
+                            ? 'bg-pink-600 text-white shadow-lg'
+                            : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                            }`}
                     >
                         <Upload className="h-5 w-5" />
                         Procesar Liquidación
@@ -669,7 +667,7 @@ export default function GuardiasClinicasPage() {
                 {activeTab === 'configuracion' && (
                     <div className="space-y-6">
                         {/* Selector de Mes y Año */}
-                        <div 
+                        <div
                             className="p-6 rounded-xl"
                             style={{
                                 background: 'rgba(255, 255, 255, 0.1)',
@@ -703,7 +701,7 @@ export default function GuardiasClinicasPage() {
                         </div>
 
                         {/* Sección de Grupos */}
-                        <div 
+                        <div
                             className="p-6 rounded-xl"
                             style={{
                                 background: 'rgba(255, 255, 255, 0.1)',
@@ -774,18 +772,18 @@ export default function GuardiasClinicasPage() {
                                     </div>
                                 </div>
 
-                                {/* Grupo 40% */}
+                                {/* Grupo 50% */}
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
-                                            <h3 className="text-lg font-semibold text-pink-300">Grupo 40%</h3>
+                                            <h3 className="text-lg font-semibold text-pink-300">Grupo 50%</h3>
                                             <span className="px-3 py-1 rounded-full bg-pink-500/20 border border-pink-500/50 text-pink-300 text-sm font-semibold">
-                                                {grupos40.length} médico{grupos40.length !== 1 ? 's' : ''}
+                                                {grupos50.length} médico{grupos50.length !== 1 ? 's' : ''}
                                             </span>
                                         </div>
                                         <Button
                                             onClick={() => {
-                                                setGrupoSeleccionado('GRUPO_40')
+                                                setGrupoSeleccionado('GRUPO_50')
                                                 setShowMedicoSelector(true)
                                             }}
                                             size="sm"
@@ -796,10 +794,10 @@ export default function GuardiasClinicasPage() {
                                         </Button>
                                     </div>
                                     <div className="space-y-2 max-h-96 overflow-y-auto">
-                                        {grupos40.length === 0 ? (
+                                        {grupos50.length === 0 ? (
                                             <p className="text-gray-400 text-sm">No hay médicos en este grupo</p>
                                         ) : (
-                                            grupos40.map(grupo => {
+                                            grupos50.map(grupo => {
                                                 const medico = medicos.find(m => m.id === grupo.doctor_id)
                                                 return (
                                                     <div
@@ -823,7 +821,7 @@ export default function GuardiasClinicasPage() {
                         </div>
 
                         {/* Sección de Valores */}
-                        <div 
+                        <div
                             className="p-6 rounded-xl"
                             style={{
                                 background: 'rgba(255, 255, 255, 0.1)',
@@ -1007,7 +1005,7 @@ export default function GuardiasClinicasPage() {
                         {/* Upload Excel Cards */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {/* Card Consultas */}
-                            <div 
+                            <div
                                 className="relative rounded-2xl shadow-2xl overflow-hidden p-8"
                                 style={{
                                     background: 'rgba(255, 255, 255, 0.1)',
@@ -1027,15 +1025,15 @@ export default function GuardiasClinicasPage() {
                                         )}
                                     </div>
 
-                                    <UploadExcel 
-                                        onUpload={handleUploadConsultas} 
-                                        isProcessing={isProcessingConsultas} 
+                                    <UploadExcel
+                                        onUpload={handleUploadConsultas}
+                                        isProcessing={isProcessingConsultas}
                                     />
                                 </div>
                             </div>
 
                             {/* Card Horas */}
-                            <div 
+                            <div
                                 className="relative rounded-2xl shadow-2xl overflow-hidden p-8"
                                 style={{
                                     background: 'rgba(255, 255, 255, 0.1)',
@@ -1055,9 +1053,9 @@ export default function GuardiasClinicasPage() {
                                         )}
                                     </div>
 
-                                    <UploadExcel 
-                                        onUpload={handleUploadHoras} 
-                                        isProcessing={isProcessingHoras} 
+                                    <UploadExcel
+                                        onUpload={handleUploadHoras}
+                                        isProcessing={isProcessingHoras}
                                     />
                                 </div>
                             </div>
@@ -1098,7 +1096,7 @@ export default function GuardiasClinicasPage() {
                         )}
 
                         {/* Reglas de Negocio */}
-                        <div 
+                        <div
                             className="p-6 rounded-xl"
                             style={{
                                 background: 'rgba(255, 255, 255, 0.1)',
@@ -1114,8 +1112,8 @@ export default function GuardiasClinicasPage() {
                             <div className="space-y-4 text-sm text-gray-300">
                                 <div className="p-3 bg-white/5 rounded-lg border border-white/5">
                                     <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Cálculo por Consultas</div>
-                                    <div className="font-semibold text-white">Grupos 70% y 40%</div>
-                                    <div className="text-xs text-gray-400">GRUPO_70: 70% del bruto | GRUPO_40: 40% del bruto</div>
+                                    <div className="font-semibold text-white">Grupos 70% y 50%</div>
+                                    <div className="text-xs text-gray-400">GRUPO_70: 70% del bruto | GRUPO_50: 50% del bruto</div>
                                 </div>
 
                                 <div className="p-3 bg-white/5 rounded-lg border border-white/5">
@@ -1159,7 +1157,7 @@ export default function GuardiasClinicasPage() {
                         {/* Sección de filas excluidas */}
                         {resultadoProcesamiento && resultadoProcesamiento.filasExcluidas && resultadoProcesamiento.filasExcluidas.length > 0 && excelDataConsultas && (
                             <div className="max-w-6xl mx-auto mt-8 relative z-10">
-                                <div 
+                                <div
                                     className="rounded-2xl shadow-2xl overflow-hidden p-6 mb-6"
                                     style={{
                                         background: 'rgba(239, 68, 68, 0.15)',
@@ -1180,7 +1178,7 @@ export default function GuardiasClinicasPage() {
                                             </div>
                                         </div>
                                     </div>
-                                    
+
                                     <div className="overflow-x-auto">
                                         <table className="w-full text-sm border-collapse">
                                             <thead>
@@ -1261,7 +1259,7 @@ export default function GuardiasClinicasPage() {
 
             {/* Modal de selección de médico */}
             {showMedicoSelector && grupoSeleccionado && (
-                <div 
+                <div
                     className="fixed inset-0 z-50 flex items-center justify-center p-4"
                     style={{ background: 'rgba(0, 0, 0, 0.8)' }}
                     onClick={() => {
@@ -1270,7 +1268,7 @@ export default function GuardiasClinicasPage() {
                         setSearchMedico('')
                     }}
                 >
-                    <div 
+                    <div
                         className="relative rounded-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
                         style={{
                             background: 'rgba(255, 255, 255, 0.1)',
@@ -1282,7 +1280,7 @@ export default function GuardiasClinicasPage() {
                     >
                         <div className="flex items-center justify-between mb-6">
                             <h2 className="text-2xl font-bold text-pink-400">
-                                Agregar Médico a {grupoSeleccionado === 'GRUPO_70' ? 'Grupo 70%' : 'Grupo 40%'}
+                                Agregar Médico a {grupoSeleccionado === 'GRUPO_70' ? 'Grupo 70%' : 'Grupo 50%'}
                             </h2>
                             <button
                                 onClick={() => {
@@ -1315,19 +1313,18 @@ export default function GuardiasClinicasPage() {
                             ) : (
                                 medicosFiltrados.map(medico => {
                                     const yaEnGrupo70 = grupos70.some(g => g.doctor_id === medico.id)
-                                    const yaEnGrupo40 = grupos40.some(g => g.doctor_id === medico.id)
-                                    const puedeAgregar = grupoSeleccionado === 'GRUPO_70' ? !yaEnGrupo70 : !yaEnGrupo40
+                                    const yaEnGrupo50 = grupos50.some(g => g.doctor_id === medico.id)
+                                    const puedeAgregar = grupoSeleccionado === 'GRUPO_70' ? !yaEnGrupo70 : !yaEnGrupo50
 
                                     return (
                                         <button
                                             key={medico.id}
                                             onClick={() => puedeAgregar && handleAgregarMedicoAGrupo(medico.id)}
                                             disabled={!puedeAgregar}
-                                            className={`w-full text-left p-3 rounded-lg border transition-all ${
-                                                puedeAgregar
-                                                    ? 'bg-gray-800/50 border-gray-700 hover:bg-pink-500/20 hover:border-pink-500/50 text-gray-300 hover:text-white cursor-pointer'
-                                                    : 'bg-gray-800/30 border-gray-800 text-gray-500 cursor-not-allowed'
-                                            }`}
+                                            className={`w-full text-left p-3 rounded-lg border transition-all ${puedeAgregar
+                                                ? 'bg-gray-800/50 border-gray-700 hover:bg-pink-500/20 hover:border-pink-500/50 text-gray-300 hover:text-white cursor-pointer'
+                                                : 'bg-gray-800/30 border-gray-800 text-gray-500 cursor-not-allowed'
+                                                }`}
                                         >
                                             <div className="flex items-center justify-between">
                                                 <span>{medico.nombre}</span>

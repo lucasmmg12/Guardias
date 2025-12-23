@@ -20,7 +20,7 @@ interface ProcesamientoResult {
 
 interface ConfiguracionGrupo {
   doctor_id: string
-  group_type: 'GRUPO_70' | 'GRUPO_40'
+  group_type: 'GRUPO_70' | 'GRUPO_50'
 }
 
 interface ConfiguracionValores {
@@ -55,9 +55,9 @@ function normalizarColumna(nombre: string): string {
  */
 function buscarValor(row: ExcelRow, variaciones: string[]): any {
   const keys = Object.keys(row)
-  
+
   if (keys.length === 0) return null
-  
+
   // Buscar coincidencia exacta (case-insensitive)
   for (const variacion of variaciones) {
     for (const key of keys) {
@@ -70,7 +70,7 @@ function buscarValor(row: ExcelRow, variaciones: string[]): any {
       }
     }
   }
-  
+
   // Buscar coincidencia normalizada (sin acentos, espacios)
   const normalizadas = variaciones.map(normalizarColumna)
   for (const key of keys) {
@@ -83,12 +83,12 @@ function buscarValor(row: ExcelRow, variaciones: string[]): any {
       }
     }
   }
-  
+
   // Buscar coincidencia parcial (contiene palabras clave)
   for (const variacion of variaciones) {
     const palabras = normalizarColumna(variacion).split(/\s+/).filter(p => p.length > 2)
     if (palabras.length === 0) continue
-    
+
     for (const key of keys) {
       const keyNormalizada = normalizarColumna(key)
       const todasPalabrasPresentes = palabras.every(p => keyNormalizada.includes(p))
@@ -101,7 +101,7 @@ function buscarValor(row: ExcelRow, variaciones: string[]): any {
       }
     }
   }
-  
+
   return null
 }
 
@@ -123,20 +123,20 @@ function normalizarNombre(nombre: string): string {
  */
 function buscarMedico(nombre: string | null, medicos: Medico[]): Medico | null {
   if (!nombre || typeof nombre !== 'string') return null
-  
+
   const nombreTrimmed = nombre.trim()
   if (nombreTrimmed === '') return null
-  
+
   // ESTRATEGIA 0: Coincidencia exacta SIN normalizar (prioridad máxima)
   for (const medico of medicos) {
     if (medico.nombre.trim() === nombreTrimmed) {
       return medico
     }
   }
-  
+
   const nombreNormalizado = normalizarNombre(nombre)
   if (nombreNormalizado === '') return null
-  
+
   // Estrategia 1: Coincidencia exacta (después de normalizar)
   for (const medico of medicos) {
     const medicoNombreNormalizado = normalizarNombre(medico.nombre)
@@ -144,100 +144,100 @@ function buscarMedico(nombre: string | null, medicos: Medico[]): Medico | null {
       return medico
     }
   }
-  
+
   // Estrategia 2: Coincidencia exacta sin considerar orden
   const partesNombre = nombreNormalizado.split(',').map(p => p.trim())
   const palabrasNombre = nombreNormalizado.split(/\s+/).filter(p => p.length > 2)
-  
+
   for (const medico of medicos) {
     const medicoNombreNormalizado = normalizarNombre(medico.nombre)
     const partesMedico = medicoNombreNormalizado.split(',').map(p => p.trim())
     const palabrasMedico = medicoNombreNormalizado.split(/\s+/).filter(p => p.length > 2)
-    
+
     if (palabrasNombre.length > 0 && palabrasMedico.length > 0) {
       const palabrasNombreSet = new Set(palabrasNombre)
       const palabrasMedicoSet = new Set(palabrasMedico)
-      
+
       if (palabrasNombreSet.size === palabrasMedicoSet.size &&
-          Array.from(palabrasNombreSet).every(p => palabrasMedicoSet.has(p))) {
+        Array.from(palabrasNombreSet).every(p => palabrasMedicoSet.has(p))) {
         return medico
       }
     }
   }
-  
+
   // Estrategia 3: Buscar por apellido
-  const apellidoNombre = partesNombre.length > 1 
+  const apellidoNombre = partesNombre.length > 1
     ? partesNombre[0].trim()
     : (palabrasNombre.length > 0 ? palabrasNombre[0] : nombreNormalizado)
-  
+
   let mejorCoincidenciaApellido: Medico | null = null
   let mejorPuntuacionApellido = 0
-  
+
   for (const medico of medicos) {
     const medicoNombreNormalizado = normalizarNombre(medico.nombre)
     const partesMedico = medicoNombreNormalizado.split(',').map(p => p.trim())
     const palabrasMedico = medicoNombreNormalizado.split(/\s+/).filter(p => p.length > 2)
-    
+
     const apellidoMedico = partesMedico.length > 1
       ? partesMedico[0].trim()
       : (palabrasMedico.length > 0 ? palabrasMedico[0] : medicoNombreNormalizado)
-    
+
     if (apellidoNombre === apellidoMedico && apellidoNombre.length > 2) {
-      const palabrasCoincidentes = palabrasNombre.filter(p => 
+      const palabrasCoincidentes = palabrasNombre.filter(p =>
         palabrasMedico.some(m => m === p || m.includes(p) || p.includes(m))
       ).length
-      
+
       if (palabrasCoincidentes > mejorPuntuacionApellido) {
         mejorPuntuacionApellido = palabrasCoincidentes
         mejorCoincidenciaApellido = medico
       }
     }
   }
-  
+
   if (mejorCoincidenciaApellido && mejorPuntuacionApellido > 0) {
     return mejorCoincidenciaApellido
   }
-  
+
   // Estrategia 4: Buscar por todas las palabras importantes
   if (palabrasNombre.length > 0) {
     for (const medico of medicos) {
       const medicoNombreNormalizado = normalizarNombre(medico.nombre)
       const palabrasMedico = medicoNombreNormalizado.split(/\s+/).filter(p => p.length > 2)
-      
+
       if (palabrasNombre.every(p => medicoNombreNormalizado.includes(p))) {
         return medico
       }
-      
+
       if (palabrasMedico.length > 0 && palabrasMedico.every(p => nombreNormalizado.includes(p))) {
         return medico
       }
     }
   }
-  
+
   // Estrategia 5: Búsqueda por similitud (al menos 2 palabras coinciden)
   if (palabrasNombre.length >= 2) {
     let mejorCoincidencia: Medico | null = null
     let mejorPuntuacion = 0
-    
+
     for (const medico of medicos) {
       const medicoNombreNormalizado = normalizarNombre(medico.nombre)
       const palabrasMedico = medicoNombreNormalizado.split(/\s+/).filter(p => p.length > 2)
-      
-      const palabrasCoincidentes = palabrasNombre.filter(p => 
+
+      const palabrasCoincidentes = palabrasNombre.filter(p =>
         palabrasMedico.some(m => m.includes(p) || p.includes(m))
       ).length
-      
+
       if (palabrasCoincidentes >= 2 && palabrasCoincidentes > mejorPuntuacion) {
         mejorPuntuacion = palabrasCoincidentes
         mejorCoincidencia = medico
       }
     }
-    
+
     if (mejorCoincidencia) {
       return mejorCoincidencia
     }
   }
-  
+
   return null
 }
 
@@ -246,10 +246,10 @@ function buscarMedico(nombre: string | null, medicos: Medico[]): Medico | null {
  */
 function convertirFechaISO(fecha: string | null | undefined): string | null {
   if (!fecha) return null
-  
+
   const fechaStr = String(fecha).trim()
   if (fechaStr === '') return null
-  
+
   // Intentar formato DD/MM/YYYY
   const matchDDMMYYYY = fechaStr.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/)
   if (matchDDMMYYYY) {
@@ -258,7 +258,7 @@ function convertirFechaISO(fecha: string | null | undefined): string | null {
     const anio = matchDDMMYYYY[3]
     return `${anio}-${mes}-${dia}`
   }
-  
+
   // Intentar formato YYYY-MM-DD (ya está en ISO)
   const matchISO = fechaStr.match(/(\d{4})-(\d{1,2})-(\d{1,2})/)
   if (matchISO) {
@@ -267,7 +267,7 @@ function convertirFechaISO(fecha: string | null | undefined): string | null {
     const dia = matchISO[3].padStart(2, '0')
     return `${anio}-${mes}-${dia}`
   }
-  
+
   // Intentar parsear como Date object
   try {
     const dateObj = new Date(fechaStr)
@@ -280,7 +280,7 @@ function convertirFechaISO(fecha: string | null | undefined): string | null {
   } catch {
     // Ignorar error
   }
-  
+
   return null
 }
 
@@ -289,7 +289,7 @@ function convertirFechaISO(fecha: string | null | undefined): string | null {
  */
 function convertirHora(hora: any): string | null {
   if (!hora) return null
-  
+
   if (typeof hora === 'string') {
     const match = hora.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/)
     if (match) {
@@ -305,7 +305,7 @@ function convertirHora(hora: any): string | null {
     const segundos = totalSegundos % 60
     return `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`
   }
-  
+
   return null
 }
 
@@ -365,14 +365,14 @@ export async function procesarExcelGuardiasClinicas(
     const medicos = todosLosMedicos
     console.log(`[Guardias Clínicas] Médicos cargados: ${medicos.length}`)
 
-    // 2. Cargar configuración de grupos (70% o 40%)
+    // 2. Cargar configuración de grupos (70% o 50%)
     const { data: gruposData } = await supabase
       .from('clinical_groups_config')
       .select('*')
       .eq('mes', mes)
       .eq('anio', anio) as { data: ConfiguracionGrupo[] | null }
 
-    const gruposPorMedico = new Map<string, 'GRUPO_70' | 'GRUPO_40'>()
+    const gruposPorMedico = new Map<string, 'GRUPO_70' | 'GRUPO_50'>()
     if (gruposData) {
       gruposData.forEach(g => {
         gruposPorMedico.set(g.doctor_id, g.group_type)
@@ -433,7 +433,7 @@ export async function procesarExcelGuardiasClinicas(
     valoresConsultas.forEach(v => {
       valoresPorObraSocial.set(v.obra_social, v.valor)
     })
-    
+
     // Cargar valores de PARTICULARES al inicio para evitar consultas dentro del loop
     const { data: valorParticularData } = await supabase
       .from('valores_consultas_obra_social')
@@ -443,9 +443,9 @@ export async function procesarExcelGuardiasClinicas(
       .eq('mes', mes)
       .eq('anio', anio)
       .single()
-    
+
     const valorParticular = valorParticularData ? (valorParticularData as any).valor : null
-    
+
     // Si no se encontró con 'PARTICULARES', intentar con '042 - PARTICULARES'
     let valorParticular042 = null
     if (!valorParticular) {
@@ -457,10 +457,10 @@ export async function procesarExcelGuardiasClinicas(
         .eq('mes', mes)
         .eq('anio', anio)
         .single()
-      
+
       valorParticular042 = valorParticular042Data ? (valorParticular042Data as any).valor : null
     }
-    
+
     // Agregar valores de PARTICULARES al mapa si se encontraron
     if (valorParticular) {
       valoresPorObraSocial.set('PARTICULARES', valorParticular)
@@ -472,7 +472,7 @@ export async function procesarExcelGuardiasClinicas(
 
     // 4. Crear o obtener liquidación
     const numeroLiquidacion = calcularNumeroLiquidacion(mes, anio)
-    
+
     const { data: liquidacionExistente } = await supabase
       .from('liquidaciones_guardia')
       .select('id')
@@ -529,17 +529,17 @@ export async function procesarExcelGuardiasClinicas(
     // 5. Mapeo de nombres de médicos (COMBINADO: consultas + horas)
     // Esto asegura que los médicos se mapeen correctamente en ambos archivos
     console.log(`Extrayendo nombres únicos de consultas y horas`)
-    
+
     const nombresUnicos = new Set<string>()
     const nombresOriginales = new Map<string, string>()
-    
+
     // Extraer nombres de CONSULTAS
     for (const row of excelDataConsultas.rows) {
       const medicoNombre = buscarValor(row, [
         'Responsable', 'Médico', 'Medico', 'Profesional',
         'Médico responsable', 'Médico Responsable'
       ])
-      
+
       if (medicoNombre && typeof medicoNombre === 'string' && medicoNombre.trim() !== '') {
         const nombreNormalizado = normalizarNombre(medicoNombre.trim())
         if (nombreNormalizado !== '') {
@@ -550,13 +550,13 @@ export async function procesarExcelGuardiasClinicas(
         }
       }
     }
-    
+
     // Extraer nombres de HORAS (importante para mapear correctamente)
     for (const row of excelDataHoras.rows) {
       const medicoNombre = buscarValor(row, [
         'Médico', 'Medico', 'Responsable', 'Profesional'
       ])
-      
+
       if (medicoNombre && typeof medicoNombre === 'string' && medicoNombre.trim() !== '') {
         const nombreNormalizado = normalizarNombre(medicoNombre.trim())
         if (nombreNormalizado !== '') {
@@ -567,7 +567,7 @@ export async function procesarExcelGuardiasClinicas(
         }
       }
     }
-    
+
     // Crear mapa de nombres normalizados -> médicos
     const mapaNombresMedicos = new Map<string, Medico>()
     for (const nombreNormalizado of nombresUnicos) {
@@ -576,26 +576,26 @@ export async function procesarExcelGuardiasClinicas(
         mapaNombresMedicos.set(nombreNormalizado, medico)
       }
     }
-    
+
     console.log(`[Mapeo] Médicos encontrados: ${mapaNombresMedicos.size}/${nombresUnicos.size}`)
     const nombresNoEncontrados = Array.from(nombresUnicos).filter(n => !mapaNombresMedicos.has(n))
     if (nombresNoEncontrados.length > 0) {
       resultado.advertencias.push(`Médicos no encontrados en BD (${nombresNoEncontrados.length}): ${nombresNoEncontrados.slice(0, 5).map(n => nombresOriginales.get(n) || n).join(', ')}${nombresNoEncontrados.length > 5 ? '...' : ''}`)
     }
-    
+
     // 6. Procesar archivo de CONSULTAS
     console.log(`Procesando ${excelDataConsultas.rows.length} filas de consultas`)
 
     // Procesar consultas
     const detallesConsultas: DetalleGuardiaInsert[] = []
     const totalBrutoPorMedico = new Map<string, number>()
-    
+
     // Detectar duplicados (mismo paciente/médico/hora)
     const duplicados = new Set<string>()
-    
+
     for (let i = 0; i < excelDataConsultas.rows.length; i++) {
       const row = excelDataConsultas.rows[i]
-      
+
       try {
         const fechaStr = buscarValor(row, [
           'Fecha', 'Fecha Visita', 'Fecha de visita', 'Fecha de atención'
@@ -624,7 +624,7 @@ export async function procesarExcelGuardiasClinicas(
         if (fechaStr) {
           fecha = convertirFechaISO(fechaStr)
         }
-        
+
         // Si no hay fecha válida, usar fecha por defecto del mes/año seleccionado
         if (!fecha) {
           resultado.filasExcluidas.push({
@@ -652,7 +652,7 @@ export async function procesarExcelGuardiasClinicas(
         // Validar duración = 0 o sin hora - PROCESAR IGUAL
         const duracionNum = duracion ? (typeof duracion === 'number' ? duracion : parseFloat(String(duracion))) : null
         const horaFormato = convertirHora(hora)
-        
+
         if (duracionNum === 0 || !horaFormato) {
           resultado.filasExcluidas.push({
             numeroFila: i + 1,
@@ -722,7 +722,7 @@ export async function procesarExcelGuardiasClinicas(
 
         // Obtener valor unitario de consulta desde la base de datos
         let valorUnitario = valoresPorObraSocial.get(obraSocialFinal) || 0
-        
+
         // Solo registrar advertencia si NO es PARTICULARES y no tiene valor
         if (valorUnitario === 0 && obraSocialFinal !== 'PARTICULARES' && obraSocialFinal !== '042 - PARTICULARES') {
           resultado.advertencias.push(`Fila ${i + 1}: No hay valor configurado para obra social: ${obraSocialFinal}`)
@@ -770,18 +770,18 @@ export async function procesarExcelGuardiasClinicas(
 
     // 7. Procesar archivo de HORAS y guardar en BD
     console.log(`Procesando ${excelDataHoras.rows.length} filas de horas`)
-    
+
     const detallesHoras: DetalleHorasGuardiaInsert[] = []
     const horasPorMedico = new Map<string, HorasMedico>()
-    
+
     for (let i = 0; i < excelDataHoras.rows.length; i++) {
       const row = excelDataHoras.rows[i]
-      
+
       try {
         const medicoNombre = buscarValor(row, [
           'Médico', 'Medico', 'Responsable', 'Profesional'
         ])
-        
+
         // Buscar columnas de horas con variaciones: incluir nombres exactos del archivo
         const franjas816 = buscarValor(row, [
           'Horas semanales de 8 a 16 hs', 'Horas semanales de 8 a 16',
@@ -796,7 +796,7 @@ export async function procesarExcelGuardiasClinicas(
         ])
         const horasWeekend = buscarValor(row, [
           'Horas fin de semana / feriados', 'Horas fin de semana /',
-          'Horas fin de semana', 'Fin de semana', 'Fin de Semana', 
+          'Horas fin de semana', 'Fin de semana', 'Fin de Semana',
           'Weekend', 'Finde', 'Horas Weekend'
         ])
         const horasWeekendNight = buscarValor(row, [
@@ -815,7 +815,7 @@ export async function procesarExcelGuardiasClinicas(
         if (typeof medicoNombre === 'string' && medicoNombre.trim() !== '') {
           const nombreNormalizado = normalizarNombre(medicoNombre.trim())
           medico = mapaNombresMedicos.get(nombreNormalizado) || null
-          
+
           // Si no está en el mapa, intentar búsqueda directa como fallback
           if (!medico) {
             medico = buscarMedico(medicoNombre.trim(), medicos)
@@ -825,29 +825,29 @@ export async function procesarExcelGuardiasClinicas(
               console.log(`[Mapeo Horas] Médico encontrado por búsqueda directa: "${medicoNombre}" -> "${medico.nombre}"`)
             }
           }
-          
+
           // Si aún no se encuentra, intentar búsqueda más flexible por apellido
           if (!medico) {
             const nombreLower = medicoNombre.trim().toLowerCase()
             const partesNombre = nombreLower.split(/[\s,]+/).filter(p => p.length > 2)
-            
+
             if (partesNombre.length > 0) {
               // Buscar por apellido (primera parte del nombre)
               const apellidoBuscado = partesNombre[0]
-              
+
               for (const m of medicos) {
                 const medicoNombreLower = m.nombre.toLowerCase()
                 const partesMedico = medicoNombreLower.split(/[\s,]+/).filter(p => p.length > 2)
-                
+
                 // Si el apellido (primera parte) coincide y tiene más de 3 caracteres
-                if (partesMedico.length > 0 && 
-                    partesMedico[0] === apellidoBuscado && 
-                    apellidoBuscado.length > 3) {
+                if (partesMedico.length > 0 &&
+                  partesMedico[0] === apellidoBuscado &&
+                  apellidoBuscado.length > 3) {
                   // Verificar que haya al menos otra coincidencia (nombre o segundo apellido)
-                  const coincidencias = partesNombre.filter(pn => 
+                  const coincidencias = partesNombre.filter(pn =>
                     partesMedico.some(pm => pm === pn || pm.includes(pn) || pn.includes(pm))
                   )
-                  
+
                   if (coincidencias.length >= 2 || (coincidencias.length === 1 && apellidoBuscado.length > 5)) {
                     medico = m
                     mapaNombresMedicos.set(nombreNormalizado, medico)
@@ -859,7 +859,7 @@ export async function procesarExcelGuardiasClinicas(
             }
           }
         }
-        
+
         if (!medico) {
           resultado.advertencias.push(`Fila ${i + 1} (horas): Médico no encontrado: ${medicoNombre} - SE OMITEN LAS HORAS`)
           continue
@@ -878,13 +878,13 @@ export async function procesarExcelGuardiasClinicas(
           const num = parseFloat(str)
           return isNaN(num) ? 0 : num
         }
-        
+
         // Obtener valores (convertir a número) - MEJORADO para manejar diferentes formatos
         const f816 = convertirANumero(franjas816)
         const f168 = convertirANumero(franjas168)
         const hWeekend = convertirANumero(horasWeekend)
         const hWeekendNight = convertirANumero(horasWeekendNight)
-        
+
         // Validar y loggear si hay valores que no se pudieron convertir correctamente
         if (franjas816 && f816 === 0 && String(franjas816).trim() !== '0' && String(franjas816).trim() !== '') {
           resultado.advertencias.push(`Fila ${i + 1} (horas): Valor "8-16" no se pudo convertir a número: ${franjas816} (usando 0)`)
@@ -905,7 +905,7 @@ export async function procesarExcelGuardiasClinicas(
         const valorHoras168 = f168 * valores.value_hour_weekly_16_8
         const valorHorasWeekend = hWeekend * valores.value_hour_weekend
         const valorHorasWeekendNight = hWeekendNight * valores.value_hour_weekend_night
-        
+
         // Total de horas: suma simple de los 4 valores (SIN aplicar garantía mínima aquí)
         // La garantía mínima solo se usa para calcular el mínimo acordado al final
         const totalHoras = valorHoras816 + valorHoras168 + valorHorasWeekend + valorHorasWeekendNight
@@ -965,7 +965,7 @@ export async function procesarExcelGuardiasClinicas(
           .from('detalle_horas_guardia')
           // @ts-ignore
           .insert(batch)
-        
+
         if (errorHoras) {
           resultado.errores.push(`Error guardando horas (batch ${Math.floor(i / batchSize) + 1}): ${errorHoras.message}`)
         }
@@ -989,8 +989,8 @@ export async function procesarExcelGuardiasClinicas(
 
       if (grupo === 'GRUPO_70') {
         netoConsultas = totalBruto * 0.70
-      } else if (grupo === 'GRUPO_40') {
-        netoConsultas = totalBruto * 0.40
+      } else if (grupo === 'GRUPO_50') {
+        netoConsultas = totalBruto * 0.50
       } else {
         resultado.advertencias.push(`Médico ${medicoId} no tiene grupo asignado, se asume 0%`)
       }
@@ -1012,10 +1012,10 @@ export async function procesarExcelGuardiasClinicas(
       const valorHoras168 = horas.franjas_16_8 * valores.value_hour_weekly_16_8
       const valorHorasWeekend = horas.horas_weekend * valores.value_hour_weekend
       const valorHorasWeekendNight = horas.horas_weekend_night * valores.value_hour_weekend_night
-      
+
       // Total de horas trabajadas (solo weekend + weekend_night, para calcular mínimo acordado)
       const totalHorasTrabajadas = horas.horas_weekend + horas.horas_weekend_night
-      
+
       // Total de horas: suma simple (SIN aplicar garantía mínima aquí)
       // La garantía mínima solo se usa para calcular el mínimo acordado al final
       const totalHoras = valorHoras816 + valorHoras168 + valorHorasWeekend + valorHorasWeekendNight
@@ -1031,21 +1031,21 @@ export async function procesarExcelGuardiasClinicas(
 
       totales.totalHoras = totalHoras
       totales.totalHorasTrabajadas = totalHorasTrabajadas
-      
+
       // Calcular mínimo acordado = value_guaranteed_min × total_horas_trabajadas
       const minimoAcordado = totalHorasTrabajadas * valores.value_guaranteed_min
       totales.minimoAcordado = minimoAcordado
-      
+
       // Calcular total sin mínimo (consultas + horas)
       const totalSinMinimo = totales.netoConsultas + totalHoras
-      
+
       // Aplicar regla del mínimo acordado
       // Si (total_horas + total_consultas) < mínimo_acordado, el sanatorio paga la diferencia
       if (minimoAcordado > 0 && totalSinMinimo < minimoAcordado) {
         const diferencia = minimoAcordado - totalSinMinimo
         totales.diferenciaSanatorio = diferencia
         totales.totalFinal = minimoAcordado
-        
+
         // Buscar nombre del médico para el mensaje
         const medico = medicos.find(m => m.id === medicoId)
         const nombreMedico = medico?.nombre || medicoId
@@ -1085,15 +1085,15 @@ export async function procesarExcelGuardiasClinicas(
       if (grupo === 'GRUPO_70') {
         detalle.porcentaje_retencion = 30
         detalle.monto_retencion = detalle.monto_facturado ? detalle.monto_facturado * 0.30 : 0
-        const proporcion = detalle.monto_facturado && totalBruto > 0 
-          ? detalle.monto_facturado / totalBruto 
+        const proporcion = detalle.monto_facturado && totalBruto > 0
+          ? detalle.monto_facturado / totalBruto
           : 0
         detalle.importe_calculado = totales.netoConsultas * proporcion
-      } else if (grupo === 'GRUPO_40') {
-        detalle.porcentaje_retencion = 60
-        detalle.monto_retencion = detalle.monto_facturado ? detalle.monto_facturado * 0.60 : 0
-        const proporcion = detalle.monto_facturado && totalBruto > 0 
-          ? detalle.monto_facturado / totalBruto 
+      } else if (grupo === 'GRUPO_50') {
+        detalle.porcentaje_retencion = 50
+        detalle.monto_retencion = detalle.monto_facturado ? detalle.monto_facturado * 0.50 : 0
+        const proporcion = detalle.monto_facturado && totalBruto > 0
+          ? detalle.monto_facturado / totalBruto
           : 0
         detalle.importe_calculado = totales.netoConsultas * proporcion
       }
@@ -1106,7 +1106,7 @@ export async function procesarExcelGuardiasClinicas(
     }
 
     console.log(`Guardando ${detallesConsultas.length} detalles en la base de datos`)
-    
+
     const batchSize = 100
     for (let i = 0; i < detallesConsultas.length; i += batchSize) {
       const batch = detallesConsultas.slice(i, i + batchSize)
