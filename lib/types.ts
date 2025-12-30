@@ -64,6 +64,11 @@ export interface Database {
         Insert: ClinicalValuesConfigInsert
         Update: ClinicalValuesConfigUpdate
       }
+      pediatric_groups_config: {
+        Row: PediatricGroupsConfig
+        Insert: PediatricGroupsConfigInsert
+        Update: PediatricGroupsConfigUpdate
+      }
     }
     Views: {
       v_resumen_liquidaciones_guardia: {
@@ -569,6 +574,37 @@ export interface ClinicalValuesConfigUpdate {
   value_hour_weekend?: number
   value_hour_weekend_night?: number
   value_guaranteed_min?: number
+  created_at?: string
+  updated_at?: string
+}
+
+// Interfaces para Pediatría
+export interface PediatricGroupsConfig {
+  id: string
+  doctor_id: string
+  mes: number
+  anio: number
+  group_type: 'GUARDIA_ESTANDAR' | 'ESPECIALISTA'
+  created_at: string
+  updated_at: string
+}
+
+export interface PediatricGroupsConfigInsert {
+  id?: string
+  doctor_id: string
+  mes: number
+  anio: number
+  group_type: 'GUARDIA_ESTANDAR' | 'ESPECIALISTA'
+  created_at?: string
+  updated_at?: string
+}
+
+export interface PediatricGroupsConfigUpdate {
+  id?: string
+  doctor_id?: string
+  mes?: number
+  anio?: number
+  group_type?: 'GUARDIA_ESTANDAR' | 'ESPECIALISTA'
   created_at?: string
   updated_at?: string
 }

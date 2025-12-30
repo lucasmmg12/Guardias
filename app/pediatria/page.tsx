@@ -7,9 +7,27 @@ import { MesSelectorModal } from '@/components/custom/MesSelectorModal'
 import { NotificationModal, NotificationType } from '@/components/custom/NotificationModal'
 import { readExcelFile, ExcelData } from '@/lib/excel-reader'
 import { procesarExcelPediatria } from '@/lib/pediatria-processor'
-import { AlertCircle, Sparkles, ArrowLeft, XCircle, X, AlertTriangle, Upload, FileText } from 'lucide-react'
+import { AlertCircle, Sparkles, ArrowLeft, XCircle, X, AlertTriangle, Upload, FileText, Settings, Users, Plus, Trash2, Copy, Search } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { supabase } from '@/lib/supabase/client'
+import { useEffect } from 'react'
+import { PediatricGroupsConfig, PediatricGroupsConfigInsert, Medico } from '@/lib/types'
+
+const MESES = [
+    { value: 1, label: 'Enero' },
+    { value: 2, label: 'Febrero' },
+    { value: 3, label: 'Marzo' },
+    { value: 4, label: 'Abril' },
+    { value: 5, label: 'Mayo' },
+    { value: 6, label: 'Junio' },
+    { value: 7, label: 'Julio' },
+    { value: 8, label: 'Agosto' },
+    { value: 9, label: 'Septiembre' },
+    { value: 10, label: 'Octubre' },
+    { value: 11, label: 'Noviembre' },
+    { value: 12, label: 'Diciembre' },
+]
 
 export default function PediatriaPage() {
     const router = useRouter()
@@ -34,6 +52,190 @@ export default function PediatriaPage() {
         type: 'info',
         message: ''
     })
+
+    // Estados de pestañas
+    const [activeTab, setActiveTab] = useState<'configuracion' | 'procesamiento'>('configuracion')
+
+    // Estados de configuración de grupos
+    const [mesConfig, setMesConfig] = useState(new Date().getMonth() + 1)
+    const [anioConfig, setAnioConfig] = useState(new Date().getFullYear())
+    const [grupoEstandar, setGrupoEstandar] = useState<PediatricGroupsConfig[]>([])
+    const [grupoEspecialista, setGrupoEspecialista] = useState<PediatricGroupsConfig[]>([])
+    const [medicos, setMedicos] = useState<Medico[]>([])
+    const [loadingConfig, setLoadingConfig] = useState(false)
+    const [showMedicoSelector, setShowMedicoSelector] = useState(false)
+    const [grupoSeleccionado, setGrupoSeleccionado] = useState<'GUARDIA_ESTANDAR' | 'ESPECIALISTA' | null>(null)
+    const [searchMedico, setSearchMedico] = useState('')
+
+    // Cargar médicos al iniciar
+    useEffect(() => {
+        cargarMedicos()
+    }, [])
+
+    // Cargar configuración cuando cambia mes/año
+    useEffect(() => {
+        if (activeTab === 'configuracion') {
+            cargarConfiguracion()
+        }
+    }, [mesConfig, anioConfig, activeTab])
+
+    async function cargarMedicos() {
+        try {
+            const { data, error } = await supabase
+                .from('medicos')
+                .select('*')
+                .eq('activo', true)
+                .order('nombre', { ascending: true })
+
+            if (error) throw error
+            setMedicos(data || [])
+        } catch (error) {
+            console.error('Error cargando médicos:', error)
+        }
+    }
+
+    async function cargarConfiguracion() {
+        try {
+            setLoadingConfig(true)
+            const { data, error } = await supabase
+                .from('pediatric_groups_config')
+                .select('*')
+                .eq('mes', mesConfig)
+                .eq('anio', anioConfig)
+
+            if (error) throw error
+
+            const grupos = (data || []) as PediatricGroupsConfig[]
+            setGrupoEstandar(grupos.filter(g => g.group_type === 'GUARDIA_ESTANDAR'))
+            setGrupoEspecialista(grupos.filter(g => g.group_type === 'ESPECIALISTA'))
+        } catch (error) {
+            console.error('Error cargando configuración:', error)
+            showNotification('error', 'Error al cargar configuración', 'Error')
+        } finally {
+            setLoadingConfig(false)
+        }
+    }
+
+    async function handleAgregarMedicoAGrupo(medicoId: string) {
+        if (!grupoSeleccionado) return
+
+        try {
+            setLoadingConfig(true)
+
+            // Verificar si ya existe en este mes
+            const { data: existente } = await supabase
+                .from('pediatric_groups_config')
+                .select('*')
+                .eq('doctor_id', medicoId)
+                .eq('mes', mesConfig)
+                .eq('anio', anioConfig)
+                .single()
+
+            if (existente) {
+                // Actualizar
+                const { error } = await (supabase
+                    .from('pediatric_groups_config') as any)
+                    .update({ group_type: grupoSeleccionado })
+                    .eq('id', (existente as any).id)
+                if (error) throw error
+            } else {
+                // Insertar
+                const nuevo = {
+                    doctor_id: medicoId,
+                    mes: mesConfig,
+                    anio: anioConfig,
+                    group_type: grupoSeleccionado
+                }
+                const { error } = await (supabase
+                    .from('pediatric_groups_config') as any)
+                    .insert(nuevo)
+                if (error) throw error
+            }
+
+            await cargarConfiguracion()
+            setShowMedicoSelector(false)
+            setGrupoSeleccionado(null)
+            setSearchMedico('')
+            showNotification('success', 'Médico asignado al grupo correctamente')
+        } catch (error) {
+            console.error('Error asignando médico:', error)
+            showNotification('error', 'No se pudo asignar el médico')
+        } finally {
+            setLoadingConfig(false)
+        }
+    }
+
+    async function handleEliminarDeGrupo(id: string) {
+        try {
+            setLoadingConfig(true)
+            const { error } = await supabase
+                .from('pediatric_groups_config')
+                .delete()
+                .eq('id', id)
+            if (error) throw error
+            await cargarConfiguracion()
+            showNotification('success', 'Médico eliminado del grupo')
+        } catch (error) {
+            console.error('Error eliminando médico:', error)
+            showNotification('error', 'No se pudo eliminar el médico')
+        } finally {
+            setLoadingConfig(false)
+        }
+    }
+
+    async function handleCopiarMesAnterior() {
+        try {
+            setLoadingConfig(true)
+            let mesAnt = mesConfig - 1
+            let anioAnt = anioConfig
+            if (mesAnt === 0) {
+                mesAnt = 12
+                anioAnt -= 1
+            }
+
+            const { data: anteriores } = await supabase
+                .from('pediatric_groups_config')
+                .select('*')
+                .eq('mes', mesAnt)
+                .eq('anio', anioAnt)
+
+            if (!anteriores || anteriores.length === 0) {
+                showNotification('warning', 'No hay datos del mes anterior para copiar')
+                return
+            }
+
+            // Eliminar actuales primero
+            await supabase
+                .from('pediatric_groups_config')
+                .delete()
+                .eq('mes', mesConfig)
+                .eq('anio', anioConfig)
+
+            const nuevos = anteriores.map(a => ({
+                doctor_id: (a as any).doctor_id,
+                mes: mesConfig,
+                anio: anioConfig,
+                group_type: (a as any).group_type
+            }))
+
+            const { error } = await (supabase
+                .from('pediatric_groups_config') as any)
+                .insert(nuevos)
+
+            if (error) throw error
+            await cargarConfiguracion()
+            showNotification('success', `Se copiaron ${nuevos.length} asignaciones correctamente`)
+        } catch (error) {
+            console.error('Error copiando:', error)
+            showNotification('error', 'Error al copiar datos del mes anterior')
+        } finally {
+            setLoadingConfig(false)
+        }
+    }
+
+    const medicosFiltrados = medicos.filter(m =>
+        m.nombre.toLowerCase().includes(searchMedico.toLowerCase())
+    )
 
     function showNotification(type: NotificationType, message: string, title?: string) {
         setNotification({
@@ -62,8 +264,8 @@ export default function PediatriaPage() {
         }
 
         // Si no hay período, buscar en las fechas de las filas
-        const fechaColumn = data.headers.find(h => 
-            h.toLowerCase().includes('fecha') || 
+        const fechaColumn = data.headers.find(h =>
+            h.toLowerCase().includes('fecha') ||
             h.toLowerCase().includes('date')
         )
 
@@ -117,7 +319,7 @@ export default function PediatriaPage() {
         try {
             const data = await readExcelFile(file)
             setExcelData(data)
-            
+
             // Detectar mes y año automáticamente
             const { mes, anio } = detectarMesAnio(data)
             if (mes && anio) {
@@ -157,9 +359,9 @@ export default function PediatriaPage() {
 
                 // Guardar resultado del procesamiento para mostrar filas excluidas
                 setResultadoProcesamiento(resultado)
-                
+
                 if (resultado.errores.length > 0) {
-                    const mensajeError = resultado.errores.length > 0 
+                    const mensajeError = resultado.errores.length > 0
                         ? `Se procesaron ${resultado.procesadas} filas. Errores: ${resultado.errores.slice(0, 3).join('; ')}${resultado.errores.length > 3 ? '...' : ''}`
                         : `Se procesaron ${resultado.procesadas} filas. Errores: ${resultado.errores.length}`
                     showNotification(
@@ -226,9 +428,9 @@ export default function PediatriaPage() {
                     <div>
                         <div className="flex items-center gap-4 mb-4">
                             <Link href="/" className="hover:opacity-80 transition-opacity">
-                                <img 
-                                    src="/logogrow.png" 
-                                    alt="Grow Labs" 
+                                <img
+                                    src="/logogrow.png"
+                                    alt="Grow Labs"
                                     className="h-16 w-auto drop-shadow-2xl"
                                     style={{
                                         filter: 'drop-shadow(0 0 20px rgba(34, 197, 94, 0.5))'
@@ -250,213 +452,459 @@ export default function PediatriaPage() {
                     </div>
                 </div>
 
-                {/* Upload Excel Card */}
-                <div 
-                    className="relative rounded-2xl shadow-2xl overflow-hidden p-8"
-                    style={{
-                        background: 'rgba(255, 255, 255, 0.1)',
-                        backdropFilter: 'blur(20px)',
-                        border: '1px solid rgba(34, 197, 94, 0.3)',
-                        boxShadow: '0 8px 32px 0 rgba(34, 197, 94, 0.3)',
-                    }}
-                >
-                    {/* Borde brillante animado */}
-                    <div 
-                        className="absolute inset-0 rounded-2xl"
-                        style={{
-                            background: 'linear-gradient(45deg, transparent, rgba(34, 197, 94, 0.3), transparent)',
-                            animation: 'borderGlow 3s ease-in-out infinite',
-                        }}
-                    ></div>
-                    <div className="relative">
-                        <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-2xl font-bold text-green-400 flex items-center gap-2">
-                                <Upload className="h-6 w-6" />
-                                Cargar Liquidación
-                            </h2>
-                            <Button
-                                onClick={() => router.push('/pediatria/resumenes')}
-                                variant="outline"
-                                className="border-green-500/50 text-green-400 hover:bg-green-500/20"
-                            >
-                                Ver Resúmenes
-                            </Button>
-                        </div>
-
-                    <UploadExcel onUpload={handleUpload} isProcessing={isProcessing} />
-
-                    {/* Mensaje de error */}
-                    {error && (
-                        <div className="mt-6 bg-red-500/10 border border-red-500/30 rounded-lg p-4 flex items-start gap-3 text-red-400">
-                            <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" />
-                            <div>
-                                <h3 className="font-semibold">Error de Procesamiento</h3>
-                                <p className="text-sm opacity-90">{error}</p>
-                            </div>
-                        </div>
-                    )}
-                    </div>
-                </div>
-
-
-                {/* Reglas de Negocio */}
-                <div 
-                    className="p-6 rounded-xl"
-                    style={{
-                        background: 'rgba(255, 255, 255, 0.1)',
-                        backdropFilter: 'blur(20px)',
-                        border: '1px solid rgba(255, 255, 255, 0.2)',
-                        boxShadow: '0 8px 32px 0 rgba(34, 197, 94, 0.2)',
-                    }}
-                >
-                        <h3 className="text-xl font-semibold text-gray-200 mb-4 flex items-center gap-2">
-                            <FileText className="h-5 w-5" />
-                            Reglas Vigentes
-                        </h3>
-                        <div className="space-y-4 text-sm text-gray-300">
-                            <div className="p-3 bg-white/5 rounded-lg border border-white/5">
-                                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Retención</div>
-                                <div className="font-semibold text-white">30%</div>
-                                <div className="text-xs text-gray-400">Sobre monto facturado</div>
-                            </div>
-
-                            <div className="p-3 bg-white/5 rounded-lg border border-white/5">
-                                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Adicionales</div>
-                                <div className="text-xs text-gray-400 mb-2">
-                                    DAMSU y PROVINCIA tienen adicional configurable
-                                </div>
-                                <div className="text-xs text-gray-400">
-                                    Monto = (Monto Base × % Pago Médico) / 100
-                                </div>
-                                <div className="text-xs text-gray-400 mt-1">
-                                    Configurar en: <span className="text-green-400">Admin → Adicionales</span>
-                                </div>
-                            </div>
-
-                            <div className="p-3 bg-white/5 rounded-lg border border-white/5">
-                                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Fórmula</div>
-                                <div className="font-mono text-xs text-gray-400">
-                                    (Monto - 30%) + Adicional
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-            </div>
-
-            {/* Modal de selección de mes */}
-            <MesSelectorModal
-                isOpen={showMesSelector}
-                onClose={() => setShowMesSelector(false)}
-                onConfirm={handleMesConfirmado}
-                mesDetectado={mesDetectado}
-                anioDetectado={anioDetectado}
-                mesActual={new Date().getMonth() + 1}
-                anioActual={new Date().getFullYear()}
-            />
-
-            {/* Notificación */}
-            <NotificationModal
-                isOpen={notification.isOpen}
-                onClose={() => setNotification(prev => ({ ...prev, isOpen: false }))}
-                type={notification.type}
-                title={notification.title}
-                message={notification.message}
-            />
-
-            {/* Indicador de guardado */}
-            {isGuardando && (
-                <div className="fixed bottom-4 right-4 p-4 rounded-lg bg-green-500/20 border border-green-500/50 text-green-400">
-                    Guardando datos en la base de datos...
-                </div>
-            )}
-
-            {/* Sección de filas excluidas */}
-            {resultadoProcesamiento && resultadoProcesamiento.filasExcluidas && resultadoProcesamiento.filasExcluidas.length > 0 && excelData && (
-                <div className="max-w-6xl mx-auto mt-8 relative z-10">
-                    <div 
-                        className="rounded-2xl shadow-2xl overflow-hidden p-6 mb-6"
-                        style={{
-                            background: 'rgba(239, 68, 68, 0.15)',
-                            backdropFilter: 'blur(20px)',
-                            border: '1px solid rgba(239, 68, 68, 0.5)',
-                        }}
+                {/* Pestañas */}
+                <div className="flex gap-4 mb-6">
+                    <button
+                        onClick={() => setActiveTab('configuracion')}
+                        className={`px-6 py-3 rounded-lg font-semibold transition-all flex items-center gap-2 ${activeTab === 'configuracion'
+                            ? 'bg-green-600 text-white shadow-lg'
+                            : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                            }`}
                     >
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-3">
-                                <XCircle className="h-6 w-6 text-red-400 flex-shrink-0" />
-                                <div>
-                                    <h3 className="text-xl font-bold text-red-400">
-                                        {resultadoProcesamiento.filasExcluidas.length} fila{resultadoProcesamiento.filasExcluidas.length > 1 ? 's' : ''} excluida{resultadoProcesamiento.filasExcluidas.length > 1 ? 's' : ''} del procesamiento
-                                    </h3>
-                                    <p className="text-sm text-gray-400 mt-1">
-                                        Estas filas fueron excluidas por: sin fecha, fecha inválida, no pediatría o duplicados.
-                                    </p>
+                        <Settings className="h-5 w-5" />
+                        Configuración Mensual
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('procesamiento')}
+                        className={`px-6 py-3 rounded-lg font-semibold transition-all flex items-center gap-2 ${activeTab === 'procesamiento'
+                            ? 'bg-green-600 text-white shadow-lg'
+                            : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                            }`}
+                    >
+                        <Upload className="h-5 w-5" />
+                        Procesar Liquidación
+                    </button>
+                    <Button
+                        onClick={() => router.push('/pediatria/resumenes')}
+                        variant="outline"
+                        className="border-green-500/50 text-green-400 hover:bg-green-500/20 flex items-center gap-2"
+                    >
+                        <FileText className="h-5 w-5" />
+                        Ver Resúmenes
+                    </Button>
+                </div>
+
+                {/* Contenido según Pestaña */}
+                {activeTab === 'configuracion' ? (
+                    <div className="space-y-6 animate-in fade-in duration-500">
+                        {/* Selector de Mes/Año de Configuración */}
+                        <div
+                            className="p-6 rounded-xl"
+                            style={{
+                                background: 'rgba(255, 255, 255, 0.1)',
+                                backdropFilter: 'blur(20px)',
+                                border: '1px solid rgba(34, 197, 94, 0.3)',
+                            }}
+                        >
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                                <div className="flex items-center gap-2">
+                                    <label className="text-sm text-gray-300 font-semibold">Mes a gestionar:</label>
+                                    <select
+                                        value={mesConfig}
+                                        onChange={(e) => setMesConfig(Number(e.target.value))}
+                                        className="px-3 py-2 bg-gray-800 border border-green-500/50 rounded-lg text-white focus:border-green-400 focus:outline-none"
+                                    >
+                                        {MESES.map(m => (
+                                            <option key={m.value} value={m.value}>{m.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <label className="text-sm text-gray-300 font-semibold">Año:</label>
+                                    <input
+                                        type="number"
+                                        value={anioConfig}
+                                        onChange={(e) => setAnioConfig(Number(e.target.value))}
+                                        className="px-3 py-2 bg-gray-800 border border-green-500/50 rounded-lg text-white w-24 focus:border-green-400 focus:outline-none"
+                                    />
+                                </div>
+                                <div className="sm:ml-auto">
+                                    <Button
+                                        onClick={handleCopiarMesAnterior}
+                                        disabled={loadingConfig}
+                                        variant="outline"
+                                        className="border-green-500/50 text-green-400 hover:bg-green-500/20 flex items-center gap-2"
+                                    >
+                                        <Copy className="h-4 w-4" />
+                                        Copiar mes anterior
+                                    </Button>
                                 </div>
                             </div>
                         </div>
-                        
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm border-collapse">
-                                <thead>
-                                    <tr className="border-b border-white/10">
-                                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-400 sticky left-0 bg-gray-900/95 z-10" style={{ minWidth: '80px' }}>
-                                            Fila Excel
-                                        </th>
-                                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-400" style={{ minWidth: '150px' }}>
-                                            Razón
-                                        </th>
-                                        {excelData.headers.map((header, idx) => (
-                                            <th key={idx} className="px-3 py-2 text-left text-xs font-semibold text-gray-400" style={{ minWidth: '120px' }}>
-                                                {header}
+
+                        {/* Paneles de Grupos */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Panel Guardia Estándar */}
+                            <div
+                                className="p-6 rounded-xl space-y-4"
+                                style={{
+                                    background: 'rgba(255, 255, 255, 0.1)',
+                                    backdropFilter: 'blur(20px)',
+                                    border: '1px solid rgba(34, 197, 94, 0.3)',
+                                }}
+                            >
+                                <div className="flex items-center justify-between font-bold">
+                                    <div className="flex items-center gap-2 text-green-400">
+                                        <h3 className="text-lg">Guardia Estándar</h3>
+                                        <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 border border-green-500/30">
+                                            {grupoEstandar.length}
+                                        </span>
+                                    </div>
+                                    <Button
+                                        size="sm"
+                                        onClick={() => {
+                                            setGrupoSeleccionado('GUARDIA_ESTANDAR')
+                                            setShowMedicoSelector(true)
+                                        }}
+                                        className="bg-green-600 hover:bg-green-500 text-white"
+                                    >
+                                        <Plus className="h-4 w-4 mr-1" /> Agregar
+                                    </Button>
+                                </div>
+                                <p className="text-xs text-gray-400">Médicos que cobran el valor base de consulta de guardia.</p>
+                                <div className="space-y-2 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
+                                    {grupoEstandar.length === 0 ? (
+                                        <div className="text-center py-8 text-gray-500 text-sm italic">Sin médicos asignados</div>
+                                    ) : (
+                                        grupoEstandar.map(g => {
+                                            const m = medicos.find(med => med.id === g.doctor_id)
+                                            return (
+                                                <div key={g.id} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 group animate-in slide-in-from-left duration-300">
+                                                    <span className="text-sm font-medium text-gray-200">{m?.nombre || 'Desconocido'}</span>
+                                                    <button
+                                                        onClick={() => handleEliminarDeGrupo(g.id)}
+                                                        className="p-1 hover:bg-red-500/20 rounded text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
+                                                </div>
+                                            )
+                                        })
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Panel Especialista / Neonatal */}
+                            <div
+                                className="p-6 rounded-xl space-y-4"
+                                style={{
+                                    background: 'rgba(255, 255, 255, 0.1)',
+                                    backdropFilter: 'blur(20px)',
+                                    border: '1px solid rgba(34, 197, 94, 0.3)',
+                                }}
+                            >
+                                <div className="flex items-center justify-between font-bold">
+                                    <div className="flex items-center gap-2 text-green-400">
+                                        <h3 className="text-lg">Especialista / Neonatal</h3>
+                                        <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 border border-green-500/30">
+                                            {grupoEspecialista.length}
+                                        </span>
+                                    </div>
+                                    <Button
+                                        size="sm"
+                                        onClick={() => {
+                                            setGrupoSeleccionado('ESPECIALISTA')
+                                            setShowMedicoSelector(true)
+                                        }}
+                                        className="bg-green-600 hover:bg-green-500 text-white"
+                                    >
+                                        <Plus className="h-4 w-4 mr-1" /> Agregar
+                                    </Button>
+                                </div>
+                                <p className="text-xs text-gray-400">Médicos que cobran el valor diferenciado de neonatología/especialista.</p>
+                                <div className="space-y-2 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
+                                    {grupoEspecialista.length === 0 ? (
+                                        <div className="text-center py-8 text-gray-500 text-sm italic">Sin médicos asignados</div>
+                                    ) : (
+                                        grupoEspecialista.map(g => {
+                                            const m = medicos.find(med => med.id === g.doctor_id)
+                                            return (
+                                                <div key={g.id} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 group animate-in slide-in-from-right duration-300">
+                                                    <span className="text-sm font-medium text-gray-200">{m?.nombre || 'Desconocido'}</span>
+                                                    <button
+                                                        onClick={() => handleEliminarDeGrupo(g.id)}
+                                                        className="p-1 hover:bg-red-500/20 rounded text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
+                                                </div>
+                                            )
+                                        })
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Modal selector de médicos */}
+                        {showMedicoSelector && (
+                            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                                <div className="bg-gray-900 border border-green-500/30 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+                                    <div className="p-4 border-b border-white/10 flex items-center justify-between">
+                                        <h3 className="font-bold text-white flex items-center gap-2">
+                                            <Users className="h-4 w-4 text-green-400" />
+                                            Asignar a {grupoSeleccionado === 'ESPECIALISTA' ? 'Especialistas' : 'Guardia Estándar'}
+                                        </h3>
+                                        <button onClick={() => setShowMedicoSelector(false)} className="p-1 hover:bg-white/10 rounded">
+                                            <X className="h-5 w-5 text-gray-400" />
+                                        </button>
+                                    </div>
+                                    <div className="p-4 space-y-4">
+                                        <div className="relative">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                                            <input
+                                                type="text"
+                                                placeholder="Buscar médico..."
+                                                value={searchMedico}
+                                                onChange={(e) => setSearchMedico(e.target.value)}
+                                                className="w-full bg-black/40 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm text-white focus:border-green-500/50 outline-none transition-all"
+                                                autoFocus
+                                            />
+                                        </div>
+                                        <div className="max-h-[300px] overflow-y-auto space-y-1 pr-2 custom-scrollbar">
+                                            {medicosFiltrados.length === 0 ? (
+                                                <div className="text-center py-8 text-gray-500 text-sm">No se encontraron médicos</div>
+                                            ) : (
+                                                medicosFiltrados.map(m => {
+                                                    const yaEstaEnEstandar = grupoEstandar.some(g => g.doctor_id === m.id)
+                                                    const yaEstaEnEspecialista = grupoEspecialista.some(g => g.doctor_id === m.id)
+
+                                                    return (
+                                                        <button
+                                                            key={m.id}
+                                                            onClick={() => handleAgregarMedicoAGrupo(m.id)}
+                                                            className="w-full flex items-center justify-between p-3 hover:bg-green-500/10 rounded-xl transition-all text-left group"
+                                                        >
+                                                            <div className="flex flex-col">
+                                                                <span className="text-sm font-medium text-gray-200 group-hover:text-green-400">{m.nombre}</span>
+                                                                <span className="text-xs text-gray-500">M: {m.matricula}</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-1">
+                                                                {yaEstaEnEstandar && (
+                                                                    <span className="text-[10px] uppercase font-bold text-gray-500 bg-gray-500/10 px-2 py-0.5 rounded">Estándar</span>
+                                                                )}
+                                                                {yaEstaEnEspecialista && (
+                                                                    <span className="text-[10px] uppercase font-bold text-green-500 bg-green-500/10 px-2 py-0.5 rounded">Especialista</span>
+                                                                )}
+                                                                <Plus className="h-4 w-4 text-green-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                            </div>
+                                                        </button>
+                                                    )
+                                                })
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <div className="space-y-8 animate-in fade-in duration-500">
+                        {/* Upload Excel Card */}
+                        <div
+                            className="relative rounded-2xl shadow-2xl overflow-hidden p-8"
+                            style={{
+                                background: 'rgba(255, 255, 255, 0.1)',
+                                backdropFilter: 'blur(20px)',
+                                border: '1px solid rgba(34, 197, 94, 0.3)',
+                                boxShadow: '0 8px 32px 0 rgba(34, 197, 94, 0.3)',
+                            }}
+                        >
+                            <div
+                                className="absolute inset-0 rounded-2xl"
+                                style={{
+                                    background: 'linear-gradient(45deg, transparent, rgba(34, 197, 94, 0.3), transparent)',
+                                    animation: 'borderGlow 3s ease-in-out infinite',
+                                }}
+                            ></div>
+                            <div className="relative">
+                                <div className="flex items-center justify-between mb-6">
+                                    <h2 className="text-2xl font-bold text-green-400 flex items-center gap-2">
+                                        <Upload className="h-6 w-6" />
+                                        Cargar Liquidación
+                                    </h2>
+                                </div>
+
+                                <UploadExcel onUpload={handleUpload} isProcessing={isProcessing} />
+
+                                {error && (
+                                    <div className="mt-6 bg-red-500/10 border border-red-500/30 rounded-lg p-4 flex items-start gap-3 text-red-400">
+                                        <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" />
+                                        <div>
+                                            <h3 className="font-semibold">Error de Procesamiento</h3>
+                                            <p className="text-sm opacity-90">{error}</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Reglas de Negocio */}
+                        <div
+                            className="p-6 rounded-xl"
+                            style={{
+                                background: 'rgba(255, 255, 255, 0.1)',
+                                backdropFilter: 'blur(20px)',
+                                border: '1px solid rgba(255, 255, 255, 0.2)',
+                                boxShadow: '0 8px 32px 0 rgba(34, 197, 94, 0.2)',
+                            }}
+                        >
+                            <h3 className="text-xl font-semibold text-gray-200 mb-4 flex items-center gap-2">
+                                <FileText className="h-5 w-5" />
+                                Reglas Vigentes
+                            </h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-300">
+                                <div className="p-3 bg-white/5 rounded-lg border border-white/5">
+                                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Retención</div>
+                                    <div className="font-semibold text-white">30%</div>
+                                    <div className="text-xs text-gray-400">Sobre monto facturado</div>
+                                </div>
+
+                                <div className="p-3 bg-white/5 rounded-lg border border-white/5">
+                                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Diferenciación</div>
+                                    <div className="text-xs text-gray-400 mb-2">
+                                        Consulta Guardia vs Especialista
+                                    </div>
+                                    <div className="text-xs text-green-400">
+                                        Configurable por grupo mensual
+                                    </div>
+                                </div>
+
+                                <div className="p-3 bg-white/5 rounded-lg border border-white/5">
+                                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Adicionales</div>
+                                    <div className="text-xs text-gray-400 mb-2">
+                                        DAMSU y PROVINCIA configurables
+                                    </div>
+                                    <div className="text-xs text-gray-400">
+                                        Admin → Adicionales
+                                    </div>
+                                </div>
+
+                                <div className="p-3 bg-white/5 rounded-lg border border-white/5">
+                                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Fórmula</div>
+                                    <div className="font-mono text-[10px] text-gray-400">
+                                        (Valor Grupo - 30%) + Adícl.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Modal de selección de mes */}
+                <MesSelectorModal
+                    isOpen={showMesSelector}
+                    onClose={() => setShowMesSelector(false)}
+                    onConfirm={handleMesConfirmado}
+                    mesDetectado={mesDetectado}
+                    anioDetectado={anioDetectado}
+                    mesActual={new Date().getMonth() + 1}
+                    anioActual={new Date().getFullYear()}
+                />
+
+                {/* Notificación */}
+                <NotificationModal
+                    isOpen={notification.isOpen}
+                    onClose={() => setNotification(prev => ({ ...prev, isOpen: false }))}
+                    type={notification.type}
+                    title={notification.title}
+                    message={notification.message}
+                />
+
+                {/* Indicador de guardado */}
+                {isGuardando && (
+                    <div className="fixed bottom-4 right-4 p-4 rounded-lg bg-green-500/20 border border-green-500/50 text-green-400">
+                        Guardando datos en la base de datos...
+                    </div>
+                )}
+
+                {/* Sección de filas excluidas */}
+                {resultadoProcesamiento && resultadoProcesamiento.filasExcluidas && resultadoProcesamiento.filasExcluidas.length > 0 && excelData && (
+                    <div className="max-w-6xl mx-auto mt-8 relative z-10">
+                        <div
+                            className="rounded-2xl shadow-2xl overflow-hidden p-6 mb-6"
+                            style={{
+                                background: 'rgba(239, 68, 68, 0.15)',
+                                backdropFilter: 'blur(20px)',
+                                border: '1px solid rgba(239, 68, 68, 0.5)',
+                            }}
+                        >
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-3">
+                                    <XCircle className="h-6 w-6 text-red-400 flex-shrink-0" />
+                                    <div>
+                                        <h3 className="text-xl font-bold text-red-400">
+                                            {resultadoProcesamiento.filasExcluidas.length} fila{resultadoProcesamiento.filasExcluidas.length > 1 ? 's' : ''} excluida{resultadoProcesamiento.filasExcluidas.length > 1 ? 's' : ''} del procesamiento
+                                        </h3>
+                                        <p className="text-sm text-gray-400 mt-1">
+                                            Estas filas fueron excluidas por: sin fecha, fecha inválida, no pediatría o duplicados.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm border-collapse">
+                                    <thead>
+                                        <tr className="border-b border-white/10">
+                                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-400 sticky left-0 bg-gray-900/95 z-10" style={{ minWidth: '80px' }}>
+                                                Fila Excel
                                             </th>
-                                        ))}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {resultadoProcesamiento.filasExcluidas.map((filaExcluida: any, idx: number) => (
-                                        <tr key={idx} className="border-b border-white/5 hover:bg-white/5">
-                                            <td className="px-3 py-2 text-xs text-gray-300 sticky left-0 bg-gray-900/95 z-10">
-                                                {filaExcluida.numeroFila}
-                                            </td>
-                                            <td className="px-3 py-2 text-xs text-red-400">
-                                                {filaExcluida.razon === 'sin_fecha' && (
-                                                    <span className="flex items-center gap-1">
-                                                        <X className="h-3 w-3" />
-                                                        Sin fecha válida
-                                                    </span>
-                                                )}
-                                                {filaExcluida.razon === 'fecha_invalida' && (
-                                                    <span className="flex items-center gap-1">
-                                                        <AlertTriangle className="h-3 w-3" />
-                                                        Fecha fuera de rango
-                                                    </span>
-                                                )}
-                                                {filaExcluida.razon === 'no_pediatria' && (
-                                                    <span className="flex items-center gap-1">
-                                                        <X className="h-3 w-3" />
-                                                        No es pediatría
-                                                    </span>
-                                                )}
-                                                {filaExcluida.razon === 'duplicado' && (
-                                                    <span className="flex items-center gap-1">
-                                                        <AlertCircle className="h-3 w-3" />
-                                                        Duplicado
-                                                    </span>
-                                                )}
-                                            </td>
-                                            {excelData.headers.map((header, colIdx) => (
-                                                <td key={colIdx} className="px-3 py-2 text-xs text-gray-300">
-                                                    {filaExcluida.datos[header] || '-'}
-                                                </td>
+                                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-400" style={{ minWidth: '150px' }}>
+                                                Razón
+                                            </th>
+                                            {excelData && excelData.headers.map((header: string, idx: number) => (
+                                                <th key={idx} className="px-3 py-2 text-left text-xs font-semibold text-gray-400" style={{ minWidth: '120px' }}>
+                                                    {header}
+                                                </th>
                                             ))}
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        {resultadoProcesamiento.filasExcluidas.map((filaExcluida: any, idx: number) => (
+                                            <tr key={idx} className="border-b border-white/5 hover:bg-white/5">
+                                                <td className="px-3 py-2 text-xs text-gray-300 sticky left-0 bg-gray-900/95 z-10">
+                                                    {filaExcluida.numeroFila}
+                                                </td>
+                                                <td className="px-3 py-2 text-xs text-red-400">
+                                                    {filaExcluida.razon === 'sin_fecha' && (
+                                                        <span className="flex items-center gap-1">
+                                                            <X className="h-3 w-3" />
+                                                            Sin fecha válida
+                                                        </span>
+                                                    )}
+                                                    {filaExcluida.razon === 'fecha_invalida' && (
+                                                        <span className="flex items-center gap-1">
+                                                            <AlertTriangle className="h-3 w-3" />
+                                                            Fecha fuera de rango
+                                                        </span>
+                                                    )}
+                                                    {filaExcluida.razon === 'no_pediatria' && (
+                                                        <span className="flex items-center gap-1">
+                                                            <X className="h-3 w-3" />
+                                                            No es pediatría
+                                                        </span>
+                                                    )}
+                                                    {filaExcluida.razon === 'duplicado' && (
+                                                        <span className="flex items-center gap-1">
+                                                            <AlertCircle className="h-3 w-3" />
+                                                            Duplicado
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                {excelData && excelData.headers.map((header: string, colIdx: number) => (
+                                                    <td key={colIdx} className="px-3 py-2 text-xs text-gray-300">
+                                                        {filaExcluida.datos[header] || '-'}
+                                                    </td>
+                                                ))}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+            </div>
         </div>
     )
 }
