@@ -44,7 +44,7 @@ const TIPOS_CONSULTA = [
 // Función para normalizar nombres de tipos de consulta (maneja variaciones)
 function normalizarTipoConsulta(header: string): string {
   const headerUpper = header.toUpperCase().trim()
-  
+
   // Mapeo de variaciones a nombres estándar
   const mapeo: { [key: string]: string } = {
     'CONSULTA': 'CONSULTA',
@@ -62,19 +62,19 @@ function normalizarTipoConsulta(header: string): string {
     'E.C.G.': 'E.C.G.',
     'ECG': 'E.C.G.',
   }
-  
+
   // Buscar coincidencia exacta
   if (mapeo[headerUpper]) {
     return mapeo[headerUpper]
   }
-  
+
   // Buscar coincidencia parcial (contiene)
   for (const [variacion, estandar] of Object.entries(mapeo)) {
     if (headerUpper.includes(variacion) || variacion.includes(headerUpper)) {
       return estandar
     }
   }
-  
+
   // Si no encuentra coincidencia, normalizar y buscar por palabras clave
   if (headerUpper.includes('GUARDIA') && headerUpper.includes('CLINIC')) {
     return 'CONSULTA DE GUARDIA CLINICA'
@@ -106,7 +106,7 @@ function normalizarTipoConsulta(header: string): string {
   if (headerUpper === 'CONSULTA' || headerUpper.includes('CONSULTA') && !headerUpper.includes('GUARDIA')) {
     return 'CONSULTA'
   }
-  
+
   // Si no se encuentra ninguna coincidencia, devolver el header original normalizado
   return headerUpper
 }
@@ -164,7 +164,7 @@ export default function ValoresConsultasPage() {
 
       const valoresData = (data || []) as ValorConsultaObraSocial[]
       setValores(valoresData)
-      
+
       // Extraer obras sociales únicas
       const obrasUnicas = [...new Set(valoresData.map(v => v.obra_social))]
       setObrasSociales(obrasUnicas)
@@ -186,7 +186,7 @@ export default function ValoresConsultasPage() {
       // Leer fila 2 (índice 1) para headers
       const headers: string[] = []
       const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1')
-      
+
       for (let col = 0; col <= range.e.c; col++) {
         const cellAddress = XLSX.utils.encode_cell({ r: 1, c: col })
         const cell = worksheet[cellAddress]
@@ -196,10 +196,10 @@ export default function ValoresConsultasPage() {
       }
 
       // Encontrar índices de columnas importantes
-      const obraSocialIndex = headers.findIndex(h => 
+      const obraSocialIndex = headers.findIndex(h =>
         h.toLowerCase().includes('obra social') || h.toLowerCase().includes('prepaga')
       )
-      const vigenciaIndex = headers.findIndex(h => 
+      const vigenciaIndex = headers.findIndex(h =>
         h.toLowerCase().includes('vigencia')
       )
 
@@ -210,11 +210,11 @@ export default function ValoresConsultasPage() {
 
       // Leer datos desde fila 3 (índice 2)
       const nuevosValores: any[] = []
-      
+
       for (let row = 2; row <= range.e.r; row++) {
         const obraSocialCell = XLSX.utils.encode_cell({ r: row, c: obraSocialIndex })
         const obraSocial = worksheet[obraSocialCell]?.v
-        
+
         if (!obraSocial) continue
 
         const vigenciaCell = XLSX.utils.encode_cell({ r: row, c: vigenciaIndex })
@@ -241,14 +241,14 @@ export default function ValoresConsultasPage() {
         // Leer valores de cada tipo de consulta
         headers.forEach((header, colIndex) => {
           if (colIndex === obraSocialIndex || colIndex === vigenciaIndex) return
-          
+
           const cell = XLSX.utils.encode_cell({ r: row, c: colIndex })
           const cellData = worksheet[cell]
-          
+
           if (!cellData) return
-          
+
           let valor: number | null = null
-          
+
           // Procesar el valor según el tipo
           if (typeof cellData.v === 'number') {
             valor = cellData.v
@@ -260,11 +260,11 @@ export default function ValoresConsultasPage() {
               valor = parsed
             }
           }
-          
+
           if (valor !== null && valor > 0) {
             // Normalizar el nombre del tipo de consulta
             const tipoConsultaNormalizado = normalizarTipoConsulta(header)
-            
+
             nuevosValores.push({
               obra_social: String(obraSocial).trim(),
               tipo_consulta: tipoConsultaNormalizado,
@@ -308,7 +308,7 @@ export default function ValoresConsultasPage() {
   async function handleCopiarDesdeMesAnterior() {
     try {
       setLoading(true)
-      
+
       // Calcular mes anterior
       let mesAnterior = mes - 1
       let anioAnterior = anio
@@ -344,7 +344,7 @@ export default function ValoresConsultasPage() {
       const nuevosValores = valoresAnterioresData.map(v => ({
         obra_social: v.obra_social,
         tipo_consulta: v.tipo_consulta,
-        valor: copiarConAumento 
+        valor: copiarConAumento
           ? Number((v.valor * (1 + porcentajeAumento / 100)).toFixed(2))
           : v.valor,
         vigencia: v.vigencia,
@@ -461,7 +461,7 @@ export default function ValoresConsultasPage() {
 
   // Crear matriz de datos para la tabla
   const tablaData = obrasSociales.map(obraSocial => {
-    const fila: { obra_social: string; [key: string]: any } = { obra_social: obraSocial }
+    const fila: { obra_social: string;[key: string]: any } = { obra_social: obraSocial }
     TIPOS_CONSULTA.forEach(tipo => {
       const valor = valores.find(
         v => v.obra_social === obraSocial && v.tipo_consulta === tipo
@@ -504,7 +504,7 @@ export default function ValoresConsultasPage() {
         </div>
 
         {/* Sección de Instrucciones */}
-        <div 
+        <div
           className="p-4 rounded-xl"
           style={{
             background: 'rgba(255, 255, 255, 0.05)',
@@ -535,12 +535,26 @@ export default function ValoresConsultasPage() {
                   <strong>Edición:</strong> Puede editar valores haciendo clic en la celda
                 </li>
               </ul>
+
+              <div className="mt-6 pt-4 border-t border-white/5 space-y-3">
+                <p className="text-xs text-gray-400 font-medium uppercase tracking-wider flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                  Formato de Excel requerido (Fila 2: Encabezados, Fila 3: Datos)
+                </p>
+                <div className="relative rounded-lg overflow-hidden border border-white/10 bg-black/20 p-1">
+                  <img
+                    src="/Excel.png"
+                    alt="Ejemplo formato Excel"
+                    className="w-full max-w-3xl rounded shadow-2xl opacity-90 hover:opacity-100 transition-opacity"
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Selector de Mes y Año */}
-        <div 
+        <div
           className="flex items-center gap-4 p-4 rounded-xl"
           style={{
             background: 'rgba(255, 255, 255, 0.05)',
@@ -593,9 +607,8 @@ export default function ValoresConsultasPage() {
           <Button
             onClick={handleCopiarDesdeMesAnterior}
             variant="outline"
-            className={`border-purple-500/50 text-purple-400 hover:bg-purple-500/20 ${
-              !copiarConAumento ? 'bg-purple-500/20' : ''
-            }`}
+            className={`border-purple-500/50 text-purple-400 hover:bg-purple-500/20 ${!copiarConAumento ? 'bg-purple-500/20' : ''
+              }`}
             disabled={loading}
           >
             <Copy className="h-4 w-4 mr-2" />
@@ -616,9 +629,8 @@ export default function ValoresConsultasPage() {
                 }
               }}
               variant="outline"
-              className={`border-purple-500/50 text-purple-400 hover:bg-purple-500/20 ${
-                copiarConAumento ? 'bg-purple-500/20' : ''
-              }`}
+              className={`border-purple-500/50 text-purple-400 hover:bg-purple-500/20 ${copiarConAumento ? 'bg-purple-500/20' : ''
+                }`}
               disabled={loading}
             >
               {copiarConAumento ? (
@@ -656,8 +668,8 @@ export default function ValoresConsultasPage() {
 
         {/* Upload Excel */}
         {showUpload && (
-          <div 
-            className="p-4 rounded-xl" 
+          <div
+            className="p-4 rounded-xl"
             style={{
               background: 'rgba(255, 255, 255, 0.05)',
               backdropFilter: 'blur(20px)',
@@ -677,7 +689,7 @@ export default function ValoresConsultasPage() {
         </div>
 
         {/* Tabla de Datos */}
-        <div 
+        <div
           className="rounded-xl overflow-hidden"
           style={{
             background: 'rgba(255, 255, 255, 0.05)',
@@ -689,9 +701,9 @@ export default function ValoresConsultasPage() {
             <table className="w-full border-collapse">
               <thead>
                 <tr>
-                  <th 
+                  <th
                     className="px-4 py-3 text-left text-sm font-semibold text-green-400 border-b border-green-500/30 sticky left-0 z-20"
-                    style={{ 
+                    style={{
                       minWidth: '200px',
                       background: 'rgba(34, 197, 94, 0.2)',
                       backdropFilter: 'blur(10px)'
@@ -708,9 +720,9 @@ export default function ValoresConsultasPage() {
                       {tipo}
                     </th>
                   ))}
-                  <th 
+                  <th
                     className="px-4 py-3 text-center text-sm font-semibold text-green-400 border-b border-green-500/30 sticky right-0 z-20"
-                    style={{ 
+                    style={{
                       minWidth: '80px',
                       background: 'rgba(34, 197, 94, 0.2)',
                       backdropFilter: 'blur(10px)'
@@ -723,7 +735,7 @@ export default function ValoresConsultasPage() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td 
+                    <td
                       colSpan={TIPOS_CONSULTA.length + 2}
                       className="px-4 py-8 text-center text-gray-400"
                     >
@@ -732,7 +744,7 @@ export default function ValoresConsultasPage() {
                   </tr>
                 ) : tablaData.length === 0 ? (
                   <tr>
-                    <td 
+                    <td
                       colSpan={TIPOS_CONSULTA.length + 2}
                       className="px-4 py-8 text-center text-gray-400"
                     >
@@ -743,59 +755,60 @@ export default function ValoresConsultasPage() {
                   tablaData.map((fila, index) => {
                     const esPar = index % 2 === 0
                     return (
-                    <tr
-                      key={fila.obra_social}
-                      className="border-b border-white/5 hover:bg-white/5"
-                    >
-                      <td 
-                        className="px-4 py-3 text-sm text-gray-300 font-medium sticky left-0 z-10"
-                        style={{ 
-                          minWidth: '200px',
-                          background: esPar 
-                            ? 'rgba(17, 24, 39, 0.95)' 
-                            : 'rgba(17, 24, 39, 0.98)',
-                          backdropFilter: 'blur(10px)'
-                        }}
+                      <tr
+                        key={fila.obra_social}
+                        className="border-b border-white/5 hover:bg-white/5"
                       >
-                        {fila.obra_social}
-                      </td>
-                      {TIPOS_CONSULTA.map(tipo => (
-                        <td key={tipo} className="px-4 py-3">
-                          <InlineEditCell
-                            value={fila[tipo]}
-                            type="number"
-                            onSave={async (newValue) => {
-                              await handleCellUpdate(
-                                fila.obra_social,
-                                tipo,
-                                Number(newValue)
-                              )
-                            }}
-                            isEditable={true}
-                          />
-                        </td>
-                      ))}
-                      <td 
-                        className="px-4 py-3 text-center sticky right-0 z-10"
-                        style={{ 
-                          minWidth: '80px',
-                          background: esPar 
-                            ? 'rgba(17, 24, 39, 0.95)' 
-                            : 'rgba(17, 24, 39, 0.98)',
-                          backdropFilter: 'blur(10px)'
-                        }}
-                      >
-                        <button
-                          onClick={() => handleEliminarObraSocial(fila.obra_social)}
-                          className="p-2 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors"
-                          title="Eliminar obra social"
-                          disabled={loading}
+                        <td
+                          className="px-4 py-3 text-sm text-gray-300 font-medium sticky left-0 z-10"
+                          style={{
+                            minWidth: '200px',
+                            background: esPar
+                              ? 'rgba(17, 24, 39, 0.95)'
+                              : 'rgba(17, 24, 39, 0.98)',
+                            backdropFilter: 'blur(10px)'
+                          }}
                         >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  )})
+                          {fila.obra_social}
+                        </td>
+                        {TIPOS_CONSULTA.map(tipo => (
+                          <td key={tipo} className="px-4 py-3">
+                            <InlineEditCell
+                              value={fila[tipo]}
+                              type="number"
+                              onSave={async (newValue) => {
+                                await handleCellUpdate(
+                                  fila.obra_social,
+                                  tipo,
+                                  Number(newValue)
+                                )
+                              }}
+                              isEditable={true}
+                            />
+                          </td>
+                        ))}
+                        <td
+                          className="px-4 py-3 text-center sticky right-0 z-10"
+                          style={{
+                            minWidth: '80px',
+                            background: esPar
+                              ? 'rgba(17, 24, 39, 0.95)'
+                              : 'rgba(17, 24, 39, 0.98)',
+                            backdropFilter: 'blur(10px)'
+                          }}
+                        >
+                          <button
+                            onClick={() => handleEliminarObraSocial(fila.obra_social)}
+                            className="p-2 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors"
+                            title="Eliminar obra social"
+                            disabled={loading}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })
                 )}
               </tbody>
             </table>
@@ -821,7 +834,7 @@ export default function ValoresConsultasPage() {
           anio={anio}
         />
       </div>
-    </div>
+    </div >
   )
 }
 

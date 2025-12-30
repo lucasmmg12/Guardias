@@ -86,7 +86,8 @@ function buscarValor(row: ExcelRow, variaciones: string[]): any {
 
   // Buscar coincidencia parcial (contiene palabras clave)
   for (const variacion of variaciones) {
-    const palabras = normalizarColumna(variacion).split(/\s+/).filter(p => p.length > 2)
+    // IMPORTANTE: No filtrar por longitud >= 2 para no perder números (8, 16, etc)
+    const palabras = normalizarColumna(variacion).split(/\s+/).filter(p => p.length >= 1)
     if (palabras.length === 0) continue
 
     for (const key of keys) {

@@ -1,24 +1,45 @@
 {
   "app": {
-    "[project]/Desktop/Osde/Liquidaciones/Guardias/app/_not-found/page": [
+    "[project]/Desktop/Proyectos/Osde/Liquidaciones/Guardias/app/_not-found/page": [
       "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
     ],
-    "[project]/Desktop/Osde/Liquidaciones/Guardias/app/admin/medicos/page": [
+    "[project]/Desktop/Proyectos/Osde/Liquidaciones/Guardias/app/admin/adicionales/page": [
       "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
     ],
-    "[project]/Desktop/Osde/Liquidaciones/Guardias/app/admin/valores-consultas/page": [
+    "[project]/Desktop/Proyectos/Osde/Liquidaciones/Guardias/app/admin/medicos/page": [
       "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
     ],
-    "[project]/Desktop/Osde/Liquidaciones/Guardias/app/ginecologia/page": [
+    "[project]/Desktop/Proyectos/Osde/Liquidaciones/Guardias/app/admin/valores-consultas/page": [
       "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
     ],
-    "[project]/Desktop/Osde/Liquidaciones/Guardias/app/ginecologia/resumenes/page": [
+    "[project]/Desktop/Proyectos/Osde/Liquidaciones/Guardias/app/admisiones/page": [
       "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
     ],
-    "[project]/Desktop/Osde/Liquidaciones/Guardias/app/page": [
+    "[project]/Desktop/Proyectos/Osde/Liquidaciones/Guardias/app/admisiones/resumenes/page": [
       "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
     ],
-    "[project]/Desktop/Osde/Liquidaciones/Guardias/app/pediatria/page": [
+    "[project]/Desktop/Proyectos/Osde/Liquidaciones/Guardias/app/ginecologia/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/Desktop/Proyectos/Osde/Liquidaciones/Guardias/app/ginecologia/resumenes/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/Desktop/Proyectos/Osde/Liquidaciones/Guardias/app/guardias-clinicas/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/Desktop/Proyectos/Osde/Liquidaciones/Guardias/app/guardias-clinicas/resumenes/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/Desktop/Proyectos/Osde/Liquidaciones/Guardias/app/manual/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/Desktop/Proyectos/Osde/Liquidaciones/Guardias/app/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/Desktop/Proyectos/Osde/Liquidaciones/Guardias/app/pediatria/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/Desktop/Proyectos/Osde/Liquidaciones/Guardias/app/pediatria/resumenes/page": [
       "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
     ]
   },

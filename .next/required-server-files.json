@@ -293,8 +293,8 @@
     },
     "distDirRoot": ".next"
   },
-  "appDir": "C:\\Users\\lucas\\Desktop\\Osde\\Liquidaciones\\Guardias",
-  "relativeAppDir": "Desktop\\Osde\\Liquidaciones\\Guardias",
+  "appDir": "C:\\Users\\lucas\\Desktop\\Proyectos\\Osde\\Liquidaciones\\Guardias",
+  "relativeAppDir": "Desktop\\Proyectos\\Osde\\Liquidaciones\\Guardias",
   "files": [
     ".next\\routes-manifest.json",
     ".next\\server\\pages-manifest.json",

@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/admisiones/layout,_N_T_/admisiones/resumenes/layout,_N_T_/admisiones/resumenes/page,_N_T_/admisiones/resumenes"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/admisiones/resumenes/__PAGE__",
+    "/admisiones/resumenes",
+    "/admisiones",
+    "/_index",
+    "/_head"
+  ]
+}

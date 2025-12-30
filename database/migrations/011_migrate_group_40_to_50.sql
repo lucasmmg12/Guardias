@@ -23,4 +23,3 @@ CHECK (group_type IN ('GRUPO_70', 'GRUPO_50'));
 
 -- 4. Actualizar comentario
 COMMENT ON COLUMN clinical_groups_config.group_type IS 'GRUPO_70 = 70% del bruto, GRUPO_50 = 50% del bruto (anteriormente GRUPO_40)';
-

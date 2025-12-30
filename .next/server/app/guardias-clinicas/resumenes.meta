@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/guardias-clinicas/layout,_N_T_/guardias-clinicas/resumenes/layout,_N_T_/guardias-clinicas/resumenes/page,_N_T_/guardias-clinicas/resumenes"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/guardias-clinicas/resumenes/__PAGE__",
+    "/guardias-clinicas/resumenes",
+    "/guardias-clinicas",
+    "/_index",
+    "/_head"
+  ]
+}

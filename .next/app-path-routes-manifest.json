@@ -1,10 +1,17 @@
 {
   "/_global-error/page": "/_global-error",
   "/_not-found/page": "/_not-found",
+  "/admin/adicionales/page": "/admin/adicionales",
   "/admin/medicos/page": "/admin/medicos",
   "/admin/valores-consultas/page": "/admin/valores-consultas",
+  "/admisiones/page": "/admisiones",
+  "/admisiones/resumenes/page": "/admisiones/resumenes",
   "/ginecologia/page": "/ginecologia",
   "/ginecologia/resumenes/page": "/ginecologia/resumenes",
+  "/guardias-clinicas/page": "/guardias-clinicas",
+  "/guardias-clinicas/resumenes/page": "/guardias-clinicas/resumenes",
+  "/manual/page": "/manual",
   "/page": "/",
-  "/pediatria/page": "/pediatria"
+  "/pediatria/page": "/pediatria",
+  "/pediatria/resumenes/page": "/pediatria/resumenes"
 }

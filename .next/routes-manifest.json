@@ -40,6 +40,12 @@
       "namedRegex": "^/_not\\-found(?:/)?$"
     },
     {
+      "page": "/admin/adicionales",
+      "regex": "^/admin/adicionales(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/adicionales(?:/)?$"
+    },
+    {
       "page": "/admin/medicos",
       "regex": "^/admin/medicos(?:/)?$",
       "routeKeys": {},
@@ -50,6 +56,18 @@
       "regex": "^/admin/valores\\-consultas(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/admin/valores\\-consultas(?:/)?$"
+    },
+    {
+      "page": "/admisiones",
+      "regex": "^/admisiones(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admisiones(?:/)?$"
+    },
+    {
+      "page": "/admisiones/resumenes",
+      "regex": "^/admisiones/resumenes(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admisiones/resumenes(?:/)?$"
     },
     {
       "page": "/ginecologia",
@@ -64,10 +82,34 @@
       "namedRegex": "^/ginecologia/resumenes(?:/)?$"
     },
     {
+      "page": "/guardias-clinicas",
+      "regex": "^/guardias\\-clinicas(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/guardias\\-clinicas(?:/)?$"
+    },
+    {
+      "page": "/guardias-clinicas/resumenes",
+      "regex": "^/guardias\\-clinicas/resumenes(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/guardias\\-clinicas/resumenes(?:/)?$"
+    },
+    {
+      "page": "/manual",
+      "regex": "^/manual(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/manual(?:/)?$"
+    },
+    {
       "page": "/pediatria",
       "regex": "^/pediatria(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/pediatria(?:/)?$"
+    },
+    {
+      "page": "/pediatria/resumenes",
+      "regex": "^/pediatria/resumenes(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/pediatria/resumenes(?:/)?$"
     }
   ],
   "dataRoutes": [],

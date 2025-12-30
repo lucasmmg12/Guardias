@@ -1,10 +1,17 @@
 {
   "/_global-error/page": "app/_global-error/page.js",
   "/_not-found/page": "app/_not-found/page.js",
+  "/admin/adicionales/page": "app/admin/adicionales/page.js",
   "/admin/medicos/page": "app/admin/medicos/page.js",
   "/admin/valores-consultas/page": "app/admin/valores-consultas/page.js",
+  "/admisiones/page": "app/admisiones/page.js",
+  "/admisiones/resumenes/page": "app/admisiones/resumenes/page.js",
   "/ginecologia/page": "app/ginecologia/page.js",
   "/ginecologia/resumenes/page": "app/ginecologia/resumenes/page.js",
+  "/guardias-clinicas/page": "app/guardias-clinicas/page.js",
+  "/guardias-clinicas/resumenes/page": "app/guardias-clinicas/resumenes/page.js",
+  "/manual/page": "app/manual/page.js",
   "/page": "app/page.js",
-  "/pediatria/page": "app/pediatria/page.js"
+  "/pediatria/page": "app/pediatria/page.js",
+  "/pediatria/resumenes/page": "app/pediatria/resumenes/page.js"
 }
