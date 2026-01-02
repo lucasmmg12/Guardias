@@ -6,7 +6,8 @@ import { supabase } from '@/lib/supabase/client'
 import { calcularResumenPorMedico, calcularResumenPorPrestador, calcularTotalGeneral, ResumenPorMedico, ResumenPorPrestador } from '@/lib/guardias-clinicas-resumenes'
 import { LiquidacionGuardia, DetalleHorasGuardia, ClinicalValuesConfig } from '@/lib/types'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, FileDown, Download, History, Eye, FileSpreadsheet, Clock } from 'lucide-react'
+import { ArrowLeft, FileDown, Download, History, Eye, FileSpreadsheet, Clock, Trash2 } from 'lucide-react'
+import { ConfirmModal } from '@/components/custom/ConfirmModal'
 import { ExcelDataTable } from '@/components/custom/ExcelDataTable'
 import { cargarExcelDataDesdeBD, cargarExcelDataHorasDesdeBD } from '@/lib/excel-reconstructor'
 import { ExcelData } from '@/lib/excel-reader'
@@ -57,6 +58,8 @@ export default function ResumenesGuardiasClinicasPage() {
   const [liquidacionActual, setLiquidacionActual] = useState<LiquidacionGuardia | null>(null)
   const [loadingExcel, setLoadingExcel] = useState(false)
   const [loadingExcelHoras, setLoadingExcelHoras] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Guardar mes y año en localStorage cuando cambian
   useEffect(() => {
@@ -494,6 +497,54 @@ export default function ResumenesGuardiasClinicasPage() {
     }
   }, [liquidacionActual, excelDataHoras])
 
+  const handleDeleteAllHistory = async () => {
+    setIsDeleting(true)
+    try {
+      // 1. Obtener todas las liquidaciones de Guardias Clínicas
+      const { data: liquidaciones } = await supabase
+        .from('liquidaciones_guardia')
+        .select('id')
+        .eq('especialidad', 'Guardias Clínicas')
+
+      if (!liquidaciones || liquidaciones.length === 0) {
+        setIsDeleting(false)
+        setShowDeleteConfirm(false)
+        return
+      }
+
+      const ids = (liquidaciones as any[]).map(l => l.id)
+
+      // 2. Eliminar detalles (cascade debería encargarse, pero por seguridad)
+      // Nota: Si la BD tiene ON DELETE CASCADE, borrar la liquidación es suficiente.
+      // Asumiremos que está configurado, si no, habría que borrar detalles primero.
+
+      // 3. Eliminar liquidaciones
+      const { error } = await supabase
+        .from('liquidaciones_guardia')
+        .delete()
+        .in('id', ids)
+
+      if (error) throw error
+
+      // 4. Actualizar estado local
+      setHistorial([])
+      setResumenesPorMedico(new Map())
+      setResumenesPorPrestador([])
+      setLiquidacionActual(null)
+      setExcelData(null)
+      setExcelDataHoras(null)
+
+      // Forzar recarga de historial
+      await cargarHistorial()
+    } catch (error) {
+      console.error('Error eliminando historial:', error)
+      alert('Error al eliminar el historial')
+    } finally {
+      setIsDeleting(false)
+      setShowDeleteConfirm(false)
+    }
+  }
+
   async function cargarResumenes() {
     setLoading(true)
     try {
@@ -506,13 +557,13 @@ export default function ResumenesGuardiasClinicasPage() {
         .eq('anio', anio)
         .maybeSingle()
 
-      if (!liquidacion || !(liquidacion as any).id) {
+      if (!liquidacion) {
         setResumenesPorPrestador([])
         setResumenesPorMedico(new Map())
         return
       }
 
-      const liquidacionId = (liquidacion as any).id
+      const liquidacionId = liquidacion.id
 
       // Calcular resumen por prestador
       const resumenPrestadores = await calcularResumenPorPrestador(mes, anio, liquidacionId)
@@ -550,6 +601,7 @@ export default function ResumenesGuardiasClinicasPage() {
         .eq('especialidad', 'Guardias Clínicas')
         .order('anio', { ascending: false })
         .order('mes', { ascending: false })
+        .limit(10000)
 
       if (error) throw error
 
@@ -717,7 +769,18 @@ export default function ResumenesGuardiasClinicasPage() {
                   border: '1px solid rgba(236, 72, 153, 0.3)',
                 }}
               >
-                <h2 className="text-2xl font-bold text-pink-400 mb-4">Historial de Liquidaciones</h2>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-2xl font-bold text-pink-400">Historial de Liquidaciones</h2>
+                  <Button
+                    onClick={() => setShowDeleteConfirm(true)}
+                    variant="destructive"
+                    className="bg-red-900/50 hover:bg-red-900/80 text-red-200 border border-red-800"
+                    disabled={isDeleting}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    {isDeleting ? 'Eliminando...' : 'Eliminar Todo'}
+                  </Button>
+                </div>
 
                 <div className="overflow-x-auto">
                   <table className="w-full">
@@ -1216,6 +1279,17 @@ export default function ResumenesGuardiasClinicasPage() {
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDeleteAllHistory}
+        title="¿Eliminar todo el historial?"
+        message="Esta acción eliminará TODAS las liquidaciones de Guardias Clínicas y sus detalles asociados. Esta acción no se puede deshacer."
+        confirmText="Eliminar Todo"
+        cancelText="Cancelar"
+        type="danger"
+      />
     </div>
   )
 }

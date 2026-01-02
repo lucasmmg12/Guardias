@@ -380,10 +380,14 @@ export default function PediatriaPage() {
                     const nombreMes = meses[mes - 1]
 
                     if (resultado.advertencias.length > 0 || (resultado.filasExcluidas && resultado.filasExcluidas.length > 0)) {
+                        const warningSample = resultado.advertencias.length > 0
+                            ? ` (${resultado.advertencias.slice(0, 2).join('; ')}${resultado.advertencias.length > 2 ? '...' : ''})`
+                            : '';
+
                         showNotification(
                             'warning',
-                            `Se procesaron ${resultado.procesadas} de ${resultado.totalFilas} filas. ${resultado.advertencias.length} advertencias. ${resultado.filasExcluidas?.length || 0} filas excluidas. Para editar los datos, ve a "Ver Resumen", selecciona el mes ${nombreMes} ${anio} y edita desde ahí.`,
-                            'Procesamiento completado'
+                            `Se procesaron ${resultado.procesadas} de ${resultado.totalFilas} filas. ${resultado.advertencias.length} advertencias${warningSample}. ${resultado.filasExcluidas?.length || 0} filas excluidas. Revisa "Ver Resumen" para detalles.`,
+                            'Procesamiento con observaciones'
                         )
                     } else {
                         showNotification(

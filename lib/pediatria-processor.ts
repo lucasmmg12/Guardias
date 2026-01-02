@@ -396,22 +396,43 @@ export async function procesarExcelPediatria(
 
     const valoresConsultas = valoresData || []
 
-    // Mapa: map[tipo_consulta][obra_social] = valor
-    const valoresPorTipoYOS = new Map<string, Map<string, number>>()
+    // Mapa mejorado: map[tipo_consulta] -> { byCode: Map, byName: Map }
+    // Esto nos permite buscar por código (ej: "065") o por nombre normalizado
+    const valoresMaps = new Map<string, { byCode: Map<string, number>, byName: Map<string, number> }>()
 
     valoresConsultas.forEach(v => {
-      if (!valoresPorTipoYOS.has(v.tipo_consulta)) {
-        valoresPorTipoYOS.set(v.tipo_consulta, new Map<string, number>())
+      if (!valoresMaps.has(v.tipo_consulta)) {
+        valoresMaps.set(v.tipo_consulta, {
+          byCode: new Map<string, number>(),
+          byName: new Map<string, number>()
+        })
       }
-      valoresPorTipoYOS.get(v.tipo_consulta)!.set(v.obra_social, v.valor)
+
+      const maps = valoresMaps.get(v.tipo_consulta)!
+
+      // 1. Guardar por código si existe (ej: "065")
+      const matchCodigo = v.obra_social.match(/^(\d+)/)
+      if (matchCodigo) {
+        maps.byCode.set(matchCodigo[1], v.valor)
+      }
+
+      // 2. Guardar por nombre normalizado (para búsqueda fuzzy)
+      const nombreNorm = normalizarNombre(v.obra_social)
+      maps.byName.set(nombreNorm, v.valor)
+
+      // 3. Guardar también por nombre exacto trimmeado (legacy)
+      maps.byName.set(v.obra_social.trim(), v.valor)
     })
 
-    // Cargar valores de PARTICULARES para ambos tipos
-    const valorParticularEstandar = valoresPorTipoYOS.get('CONSULTA DE GUARDIA PEDIATRICA')?.get('PARTICULARES') ||
-      valoresPorTipoYOS.get('CONSULTA DE GUARDIA PEDIATRICA')?.get('042 - PARTICULARES') || 0
+    // Cargar valores de PARTICULARES para ambos tipos (buscando por código 042 o nombre)
+    const getValorParticular = (tipo: string) => {
+      const maps = valoresMaps.get(tipo)
+      if (!maps) return 0
+      return maps.byCode.get('042') || maps.byName.get('particulares') || maps.byName.get('042 particulares') || 0
+    }
 
-    const valorParticularEspecialista = valoresPorTipoYOS.get('CONSULTA PEDIATRICA Y NEONATAL')?.get('PARTICULARES') ||
-      valoresPorTipoYOS.get('CONSULTA PEDIATRICA Y NEONATAL')?.get('042 - PARTICULARES') || 0
+    const valorParticularEstandar = getValorParticular('CONSULTA DE GUARDIA PEDIATRICA')
+    const valorParticularEspecialista = getValorParticular('CONSULTA PEDIATRICA Y NEONATAL')
 
     // 2b. Cargar grupos de pediatría para este mes
     const { data: gruposData } = await supabase
@@ -645,22 +666,26 @@ export async function procesarExcelPediatria(
           'Tipo de visita'
         ])
 
-        // FILTRO 1: Verificar que sea PEDIATRÍA (solo si el campo existe)
-        // Si el archivo ya viene filtrado, este filtro es opcional
-        // Solo excluir si el campo existe Y tiene un valor que NO es pediatría
-        let esPediatria = true // Por defecto, asumir que es pediatría (archivo ya filtrado)
+        // FILTRO 1: Verificar que sea PEDIATRÍA (lógica inclusiva)
+        // Se considera pediatría si AL MENOS UNO de los campos contiene claves pediátricas
+        // O si ambos campos están vacíos (se asume archivo ya filtrado)
+        let esPediatria = false
+        const keywordsPediatria = ['pediatría', 'pediatria', 'pediatric', 'neonatal', 'niño', 'infantil']
 
-        if (grupoAgenda && typeof grupoAgenda === 'string' && grupoAgenda.trim() !== '') {
-          const grupoAgendaLower = grupoAgenda.toLowerCase()
-          if (!grupoAgendaLower.includes('pediatría') && !grupoAgendaLower.includes('pediatria') && !grupoAgendaLower.includes('pediatric')) {
-            esPediatria = false
+        const tieneKeyword = (texto: string | null) => {
+          if (!texto) return false
+          const t = texto.toLowerCase()
+          return keywordsPediatria.some(k => t.includes(k))
+        }
+
+        // Si tenemos info de grupo o tipo, verificamos
+        if ((grupoAgenda && grupoAgenda.trim() !== '') || (tipoConsulta && tipoConsulta.trim() !== '')) {
+          if (tieneKeyword(grupoAgenda) || tieneKeyword(tipoConsulta)) {
+            esPediatria = true
           }
-        } else if (tipoConsulta && typeof tipoConsulta === 'string' && tipoConsulta.trim() !== '') {
-          // Si no hay Grupo agenda, verificar Tipo de Consulta como respaldo
-          const tipoConsultaLower = tipoConsulta.toLowerCase()
-          if (!tipoConsultaLower.includes('pediatr') && !tipoConsultaLower.includes('pediatric')) {
-            esPediatria = false
-          }
+        } else {
+          // Si no hay info, asumimos que es correcto (fallback)
+          esPediatria = true
         }
         // Si no hay ninguno de los dos campos, asumir que es pediatría (archivo ya filtrado)
 
@@ -768,17 +793,42 @@ export async function procesarExcelPediatria(
           ? 'CONSULTA PEDIATRICA Y NEONATAL'
           : 'CONSULTA DE GUARDIA PEDIATRICA'
 
-        // Buscar valor en el Map correspondiente al tipo
-        let valorUnitario = valoresPorTipoYOS.get(tipoConsultaUsar)?.get(obraSocialFinal) || 0
+        // Buscar valor usando el sistema mejorado
+        let valorUnitario = 0
+        const mapsTipo = valoresMaps.get(tipoConsultaUsar)
+
+        if (mapsTipo) {
+          // 1. Intentar por código (ej: "065")
+          const matchCodigo = obraSocialFinal.match(/^(\d+)/)
+          if (matchCodigo) {
+            valorUnitario = mapsTipo.byCode.get(matchCodigo[1]) || 0
+          }
+
+          // 2. Si no, intentar por nombre normalizado
+          if (valorUnitario === 0) {
+            const osNorm = normalizarNombre(obraSocialFinal)
+            valorUnitario = mapsTipo.byName.get(osNorm) || 0
+          }
+        }
 
         // Si no tiene valor para el tipo específico pero es especialista, intentar con el estándar como backup
         if (valorUnitario === 0 && tipoConsultaUsar === 'CONSULTA PEDIATRICA Y NEONATAL') {
-          valorUnitario = valoresPorTipoYOS.get('CONSULTA DE GUARDIA PEDIATRICA')?.get(obraSocialFinal) || 0
+          const mapsEstandar = valoresMaps.get('CONSULTA DE GUARDIA PEDIATRICA')
+          if (mapsEstandar) {
+            const matchCodigo = obraSocialFinal.match(/^(\d+)/)
+            if (matchCodigo) {
+              valorUnitario = mapsEstandar.byCode.get(matchCodigo[1]) || 0
+            }
+            if (valorUnitario === 0) {
+              valorUnitario = mapsEstandar.byName.get(normalizarNombre(obraSocialFinal)) || 0
+            }
+          }
         }
 
         // Solo registrar advertencia si NO es PARTICULARES y no tiene valor
         if (valorUnitario === 0 && obraSocialFinal !== 'PARTICULARES' && obraSocialFinal !== '042 - PARTICULARES') {
-          resultado.advertencias.push(`Fila ${i + 1}: No hay valor configurado para (${tipoConsultaUsar}) en: ${obraSocialFinal}`)
+          // Intentar una vez más con un log detallado
+          resultado.advertencias.push(`Fila ${i + 1}: No valor para "${obraSocialFinal}" (${tipoConsultaUsar}). Cod: ${obraSocialFinal.match(/^(\d+)/)?.[1] || 'N/A'}`)
         }
 
         // Calcular montos
