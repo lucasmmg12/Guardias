@@ -563,7 +563,7 @@ export default function ResumenesGuardiasClinicasPage() {
         return
       }
 
-      const liquidacionId = liquidacion.id
+      const liquidacionId = (liquidacion as any).id
 
       // Calcular resumen por prestador
       const resumenPrestadores = await calcularResumenPorPrestador(mes, anio, liquidacionId)
