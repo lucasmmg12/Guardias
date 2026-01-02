@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase/client'
 import { calcularResumenPorMedico, calcularResumenPorPrestador, calcularTotalGeneral, ResumenPorMedico, ResumenPorPrestador } from '@/lib/guardias-clinicas-resumenes'
 import { LiquidacionGuardia, DetalleHorasGuardia, ClinicalValuesConfig } from '@/lib/types'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, FileDown, Download, History, Eye, FileSpreadsheet, Clock, Trash2 } from 'lucide-react'
+import { ArrowLeft, FileDown, Download, History, Eye, FileSpreadsheet, Clock, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
 import { ConfirmModal } from '@/components/custom/ConfirmModal'
 import { ExcelDataTable } from '@/components/custom/ExcelDataTable'
 import { cargarExcelDataDesdeBD, cargarExcelDataHorasDesdeBD } from '@/lib/excel-reconstructor'
@@ -1036,52 +1036,13 @@ export default function ResumenesGuardiasClinicasPage() {
                   return resumenes[0]?.medico_nombre === medicoNombre
                 })
                 const resumenes = medicoId ? resumenesPorMedico.get(medicoId) || [] : []
-                const total = resumenes.reduce((sum, r) => sum + r.total, 0)
-                const totalCantidad = resumenes.reduce((sum, r) => sum + r.cantidad, 0)
 
                 return (
-                  <div
+                  <MedicoItem
                     key={medicoNombre}
-                    className="rounded-xl p-6"
-                    style={{
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      backdropFilter: 'blur(20px)',
-                      border: '1px solid rgba(236, 72, 153, 0.3)',
-                    }}
-                  >
-                    <div className="flex items-center justify-between mb-4">
-                      <h2 className="text-2xl font-bold text-pink-400">{medicoNombre}</h2>
-                    </div>
-
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b border-gray-700">
-                            <th className="px-4 py-3 text-left text-sm font-semibold text-pink-400">Obra social</th>
-                            <th className="px-4 py-3 text-right text-sm font-semibold text-pink-400">Cantidad</th>
-                            <th className="px-4 py-3 text-right text-sm font-semibold text-pink-400">Valor unitario</th>
-                            <th className="px-4 py-3 text-right text-sm font-semibold text-pink-400">Total</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {resumenes.map((resumen, idx) => (
-                            <tr key={idx} className="border-b border-gray-800 hover:bg-gray-800/50">
-                              <td className="px-4 py-3 text-sm text-gray-300">{resumen.obra_social}</td>
-                              <td className="px-4 py-3 text-sm text-gray-300 text-right">{resumen.cantidad}</td>
-                              <td className="px-4 py-3 text-sm text-gray-300 text-right">{formatearMoneda(resumen.valor_unitario)}</td>
-                              <td className="px-4 py-3 text-sm text-gray-300 text-right font-semibold">{formatearMoneda(resumen.total)}</td>
-                            </tr>
-                          ))}
-                          <tr className="bg-gray-800/50 font-bold">
-                            <td className="px-4 py-3 text-sm text-pink-400">TOTAL</td>
-                            <td className="px-4 py-3 text-sm text-pink-400 text-right">{totalCantidad}</td>
-                            <td className="px-4 py-3 text-sm text-pink-400 text-right"></td>
-                            <td className="px-4 py-3 text-sm text-pink-400 text-right">{formatearMoneda(total)}</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
+                    medicoNombre={medicoNombre}
+                    resumenes={resumenes}
+                  />
                 )
               })
             )}
@@ -1401,6 +1362,85 @@ function DetalleLiquidacion({ liquidacionId }: { liquidacionId: string }) {
           </tbody>
         </table>
       </div>
+    </div>
+  )
+}
+
+function MedicoItem({ medicoNombre, resumenes }: { medicoNombre: string, resumenes: ResumenPorMedico[] }) {
+  const [isOpen, setIsOpen] = useState(false)
+  const total = resumenes.reduce((sum, r) => sum + r.total, 0)
+  const totalCantidad = resumenes.reduce((sum, r) => sum + r.cantidad, 0)
+
+  function formatearMoneda(valor: number): string {
+    return new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(valor)
+  }
+
+  return (
+    <div
+      className={`rounded-xl transition-all duration-200 ${isOpen ? 'p-6' : 'p-4 hover:bg-white/5'}`}
+      style={{
+        background: 'rgba(255, 255, 255, 0.05)',
+        backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(236, 72, 153, 0.3)',
+        marginBottom: '1rem'
+      }}
+    >
+      <div
+        className="flex items-center justify-between cursor-pointer select-none"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <div className="flex items-center gap-3">
+          {isOpen ? <ChevronUp className="h-5 w-5 text-pink-400" /> : <ChevronDown className="h-5 w-5 text-pink-400" />}
+          <h2 className="text-xl font-bold text-pink-400">{medicoNombre}</h2>
+        </div>
+
+        {!isOpen && (
+          <div className="flex items-center gap-4 text-sm">
+            <div className="text-gray-300">
+              <span className="font-semibold">{totalCantidad}</span> órdenes
+            </div>
+            <div className="font-bold text-pink-400">
+              {formatearMoneda(total)}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {isOpen && (
+        <div className="mt-6 overflow-x-auto animate-in fade-in slide-in-from-top-2 duration-200">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-700">
+                <th className="px-4 py-3 text-left text-sm font-semibold text-pink-400">Obra social</th>
+                <th className="px-4 py-3 text-right text-sm font-semibold text-pink-400">Cantidad</th>
+                <th className="px-4 py-3 text-right text-sm font-semibold text-pink-400">Valor unitario</th>
+                <th className="px-4 py-3 text-right text-sm font-semibold text-pink-400">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {resumenes.map((resumen, idx) => (
+                <tr key={idx} className="border-b border-gray-800 hover:bg-gray-800/50">
+                  <td className="px-4 py-3 text-sm text-gray-300">{resumen.obra_social}</td>
+                  <td className="px-4 py-3 text-sm text-gray-300 text-right">{resumen.cantidad}</td>
+                  <td className="px-4 py-3 text-sm text-gray-300 text-right">{formatearMoneda(resumen.valor_unitario)}</td>
+                  <td className="px-4 py-3 text-sm text-gray-300 text-right font-semibold">{formatearMoneda(resumen.total)}</td>
+                </tr>
+              ))}
+              <tr className="bg-gray-800/50 font-bold">
+                <td className="px-4 py-3 text-sm text-pink-400">TOTAL</td>
+                <td className="px-4 py-3 text-sm text-pink-400 text-right">{totalCantidad}</td>
+                <td className="px-4 py-3 text-sm text-pink-400 text-right"></td>
+                <td className="px-4 py-3 text-sm text-pink-400 text-right">{formatearMoneda(total)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }
