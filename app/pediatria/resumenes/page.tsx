@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase/client'
 import { calcularResumenPorMedico, calcularResumenPorPrestador, ResumenPorMedico, ResumenPorPrestador } from '@/lib/pediatria-resumenes'
 import { LiquidacionGuardia } from '@/lib/types'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, FileDown, Download, History, Eye, FileSpreadsheet } from 'lucide-react'
+import { ArrowLeft, FileDown, Download, History, Eye, FileSpreadsheet, ChevronDown, ChevronUp } from 'lucide-react'
 import { ExcelDataTable } from '@/components/custom/ExcelDataTable'
 import { cargarExcelDataDesdeBD } from '@/lib/excel-reconstructor'
 import { ExcelData } from '@/lib/excel-reader'
@@ -29,7 +29,7 @@ const MESES = [
 
 export default function ResumenesPediatriaPage() {
   const router = useRouter()
-  
+
   const [mes, setMes] = useState(() => {
     if (typeof window !== 'undefined') {
       const savedMes = localStorage.getItem('pediatria_resumenes_mes')
@@ -37,7 +37,7 @@ export default function ResumenesPediatriaPage() {
     }
     return new Date().getMonth() + 1
   })
-  
+
   const [anio, setAnio] = useState(() => {
     if (typeof window !== 'undefined') {
       const savedAnio = localStorage.getItem('pediatria_resumenes_anio')
@@ -97,7 +97,7 @@ export default function ResumenesPediatriaPage() {
       if (liquidacion) {
         const liq = liquidacion as LiquidacionGuardia
         setLiquidacionActual(liq)
-        
+
         // Cargar ExcelData desde BD
         const excelDataCargado = await cargarExcelDataDesdeBD(liq.id, supabase)
         if (excelDataCargado) {
@@ -166,7 +166,7 @@ export default function ResumenesPediatriaPage() {
           cambiosPorFila.set(cambio.filaExcel, new Map())
         }
         const filaCambios = cambiosPorFila.get(cambio.filaExcel)!
-        
+
         // Mapear nombre de columna del Excel a campo de BD
         if (cambio.columna.toLowerCase().includes('cliente') || cambio.columna.toLowerCase().includes('obra')) {
           filaCambios.set('obra_social', cambio.valor)
@@ -199,11 +199,11 @@ export default function ResumenesPediatriaPage() {
         campos.forEach((valor, campo) => {
           updateData[campo] = valor
         })
-        
+
         // ✅ Si se cambió la obra social, recalcular importes y adicionales
         if (campos.has('obra_social')) {
           const nuevaObraSocial = String(campos.get('obra_social')).trim()
-          
+
           try {
             // Cargar valor de consulta para la nueva obra social
             const { data: valorConsultaData } = await supabase
@@ -214,15 +214,15 @@ export default function ResumenesPediatriaPage() {
               .eq('anio', anio)
               .eq('obra_social', nuevaObraSocial)
               .maybeSingle()
-            
+
             const valorConsulta = valorConsultaData as { valor: number } | null
             const montoFacturado = valorConsulta?.valor || 0
-            
+
             // Calcular retención del 30%
             const porcentajeRetencion = 30
             const montoRetencion = montoFacturado * (porcentajeRetencion / 100)
             const montoNeto = montoFacturado - montoRetencion
-            
+
             // Buscar adicional para la nueva obra social
             const { data: adicionalData } = await supabase
               .from('configuracion_adicionales')
@@ -233,18 +233,18 @@ export default function ResumenesPediatriaPage() {
               .eq('obra_social', nuevaObraSocial)
               .eq('aplica_adicional', true)
               .maybeSingle()
-            
+
             const adicional = adicionalData as { monto_adicional: number } | null
             const montoAdicional = adicional?.monto_adicional || 0
             const importeCalculado = montoNeto + montoAdicional
-            
+
             // Actualizar campos calculados
             updateData.monto_facturado = montoFacturado
             updateData.monto_retencion = montoRetencion
             updateData.monto_adicional = montoAdicional
             updateData.importe_calculado = importeCalculado
             updateData.porcentaje_retencion = porcentajeRetencion
-            
+
             // También actualizar ExcelData local para reflejar los cambios
             if (excelData && excelData.rows[filaExcel - 1]) {
               excelData.rows[filaExcel - 1]['Importe'] = montoFacturado
@@ -254,7 +254,7 @@ export default function ResumenesPediatriaPage() {
             console.error(`Error recalculando importes para fila ${filaExcel}:`, error)
           }
         }
-        
+
         updateData.updated_at = new Date().toISOString()
 
         const { error } = await supabase
@@ -275,7 +275,7 @@ export default function ResumenesPediatriaPage() {
         if (excelData) {
           setExcelData({ ...excelData })
         }
-        
+
         // Actualizar totales de liquidación
         const actualizarTotales = async () => {
           const { data: detalles } = await supabase
@@ -392,7 +392,7 @@ export default function ResumenesPediatriaPage() {
     setLoading(true)
     try {
       console.log(`[Pediatría Resúmenes] Cargando resúmenes para ${mes}/${anio}`)
-      
+
       // Obtener liquidación específica de Pediatría para trabajar solo con ese archivo
       const { data: liquidacion } = await supabase
         .from('liquidaciones_guardia')
@@ -411,7 +411,7 @@ export default function ResumenesPediatriaPage() {
 
       const liquidacionId = (liquidacion as any).id
       console.log(`[Pediatría Resúmenes] Liquidación ID: ${liquidacionId}`)
-      
+
       // Calcular resumen por prestador pasando liquidacionId específico
       const resumenPrestadores = await calcularResumenPorPrestador(mes, anio, liquidacionId)
       console.log(`[Pediatría Resúmenes] Resúmenes por prestador: ${resumenPrestadores.length}`)
@@ -424,20 +424,20 @@ export default function ResumenesPediatriaPage() {
       console.log(`[Pediatría Resúmenes] Resúmenes por médico: ${resumenMedicos.length}`)
       const totalConsultasMedicos = resumenMedicos.reduce((sum, r) => sum + r.cantidad, 0)
       console.log(`[Pediatría Resúmenes] Total de consultas en médicos: ${totalConsultasMedicos}`)
-      
+
       // Agrupar por médico - usar nombre normalizado si no hay ID para evitar agrupar médicos diferentes
       const resumenesPorMedicoMap = new Map<string, ResumenPorMedico[]>()
       resumenMedicos.forEach(resumen => {
         // Usar ID si existe, sino usar nombre normalizado como clave única
         const nombreNormalizado = resumen.medico_nombre.toLowerCase().trim().replace(/\s+/g, ' ')
         const clave = resumen.medico_id || `nombre-${nombreNormalizado}`
-        
+
         if (!resumenesPorMedicoMap.has(clave)) {
           resumenesPorMedicoMap.set(clave, [])
         }
         resumenesPorMedicoMap.get(clave)!.push(resumen)
       })
-      
+
       console.log(`[Pediatría Resúmenes] Médicos únicos: ${resumenesPorMedicoMap.size}`)
       setResumenesPorMedico(resumenesPorMedicoMap)
     } catch (error) {
@@ -530,7 +530,7 @@ export default function ResumenesPediatriaPage() {
         </div>
 
         {/* Selectores de mes/año */}
-        <div 
+        <div
           className="p-6 rounded-xl"
           style={{
             background: 'rgba(255, 255, 255, 0.1)',
@@ -568,42 +568,38 @@ export default function ResumenesPediatriaPage() {
         <div className="flex gap-2 border-b border-white/10">
           <button
             onClick={() => setTabActiva('medicos')}
-            className={`px-4 py-2 font-semibold transition-colors ${
-              tabActiva === 'medicos'
-                ? 'text-green-400 border-b-2 border-green-400'
-                : 'text-gray-400 hover:text-gray-300'
-            }`}
+            className={`px-4 py-2 font-semibold transition-colors ${tabActiva === 'medicos'
+              ? 'text-green-400 border-b-2 border-green-400'
+              : 'text-gray-400 hover:text-gray-300'
+              }`}
           >
             Por Médico y Obra Social
           </button>
           <button
             onClick={() => setTabActiva('prestadores')}
-            className={`px-4 py-2 font-semibold transition-colors ${
-              tabActiva === 'prestadores'
-                ? 'text-green-400 border-b-2 border-green-400'
-                : 'text-gray-400 hover:text-gray-300'
-            }`}
+            className={`px-4 py-2 font-semibold transition-colors ${tabActiva === 'prestadores'
+              ? 'text-green-400 border-b-2 border-green-400'
+              : 'text-gray-400 hover:text-gray-300'
+              }`}
           >
             Por Prestador
           </button>
           <button
             onClick={() => setTabActiva('historial')}
-            className={`px-4 py-2 font-semibold transition-colors flex items-center gap-2 ${
-              tabActiva === 'historial'
-                ? 'text-green-400 border-b-2 border-green-400'
-                : 'text-gray-400 hover:text-gray-300'
-            }`}
+            className={`px-4 py-2 font-semibold transition-colors flex items-center gap-2 ${tabActiva === 'historial'
+              ? 'text-green-400 border-b-2 border-green-400'
+              : 'text-gray-400 hover:text-gray-300'
+              }`}
           >
             <History className="h-4 w-4" />
             Historial
           </button>
           <button
             onClick={() => setTabActiva('excel')}
-            className={`px-4 py-2 font-semibold transition-colors flex items-center gap-2 ${
-              tabActiva === 'excel'
-                ? 'text-green-400 border-b-2 border-green-400'
-                : 'text-gray-400 hover:text-gray-300'
-            }`}
+            className={`px-4 py-2 font-semibold transition-colors flex items-center gap-2 ${tabActiva === 'excel'
+              ? 'text-green-400 border-b-2 border-green-400'
+              : 'text-gray-400 hover:text-gray-300'
+              }`}
           >
             <FileSpreadsheet className="h-4 w-4" />
             Excel
@@ -617,7 +613,7 @@ export default function ResumenesPediatriaPage() {
             {loadingHistorial ? (
               <div className="text-center py-12 text-gray-400">Cargando historial...</div>
             ) : historial.length === 0 ? (
-              <div 
+              <div
                 className="rounded-xl p-8 text-center"
                 style={{
                   background: 'rgba(255, 255, 255, 0.05)',
@@ -648,7 +644,7 @@ export default function ResumenesPediatriaPage() {
                 }}
               >
                 <h2 className="text-2xl font-bold text-green-400 mb-4">Historial de Liquidaciones</h2>
-                
+
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
@@ -666,16 +662,16 @@ export default function ResumenesPediatriaPage() {
                     </thead>
                     <tbody>
                       {historial.map((liquidacion) => {
-                        const fechaProcesamiento = liquidacion.created_at 
+                        const fechaProcesamiento = liquidacion.created_at
                           ? new Date(liquidacion.created_at).toLocaleDateString('es-AR', {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })
                           : 'N/A'
-                        
+
                         const nombreMes = MESES.find(m => m.value === liquidacion.mes)?.label || `Mes ${liquidacion.mes}`
                         const estaExpandida = liquidacionExpandida === liquidacion.id
 
@@ -694,15 +690,14 @@ export default function ResumenesPediatriaPage() {
                                 </div>
                               </td>
                               <td className="px-4 py-3 text-sm text-center">
-                                <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                                  liquidacion.estado === 'finalizada' 
-                                    ? 'bg-green-500/20 text-green-400'
-                                    : liquidacion.estado === 'procesando'
+                                <span className={`px-2 py-1 rounded text-xs font-semibold ${liquidacion.estado === 'finalizada'
+                                  ? 'bg-green-500/20 text-green-400'
+                                  : liquidacion.estado === 'procesando'
                                     ? 'bg-yellow-500/20 text-yellow-400'
                                     : liquidacion.estado === 'error'
-                                    ? 'bg-red-500/20 text-red-400'
-                                    : 'bg-gray-500/20 text-gray-400'
-                                }`}>
+                                      ? 'bg-red-500/20 text-red-400'
+                                      : 'bg-gray-500/20 text-gray-400'
+                                  }`}>
                                   {liquidacion.estado}
                                 </span>
                               </td>
@@ -754,7 +749,7 @@ export default function ResumenesPediatriaPage() {
             {loadingExcel ? (
               <div className="text-center py-12 text-gray-400">Cargando Excel...</div>
             ) : !liquidacionActual ? (
-              <div 
+              <div
                 className="rounded-xl p-8 text-center"
                 style={{
                   background: 'rgba(255, 255, 255, 0.05)',
@@ -778,7 +773,7 @@ export default function ResumenesPediatriaPage() {
             ) : !excelData ? (
               <div className="text-center py-12 text-gray-400">No se pudo cargar el Excel</div>
             ) : (
-              <div 
+              <div
                 className="rounded-xl p-6"
                 style={{
                   background: 'rgba(255, 255, 255, 0.05)',
@@ -807,7 +802,7 @@ export default function ResumenesPediatriaPage() {
         ) : loading ? (
           <div className="text-center py-12 text-gray-400">Cargando resúmenes...</div>
         ) : resumenesPorMedico.size === 0 && resumenesPorPrestador.length === 0 ? (
-          <div 
+          <div
             className="rounded-xl p-8 text-center"
             style={{
               background: 'rgba(255, 255, 255, 0.05)',
@@ -848,68 +843,13 @@ export default function ResumenesPediatriaPage() {
                   return resumenes[0]?.medico_nombre === medicoNombre
                 })
                 const resumenes = medicoId ? resumenesPorMedico.get(medicoId) || [] : []
-                const totalBruto = resumenes.reduce((sum, r) => sum + r.total_bruto, 0)
-                const totalRetencion = resumenes.reduce((sum, r) => sum + r.retencion_30, 0)
-                const totalNeto = resumenes.reduce((sum, r) => sum + r.total_neto, 0)
-                const totalAdicionales = resumenes.reduce((sum, r) => sum + r.adicionales, 0)
-                const totalFinal = resumenes.reduce((sum, r) => sum + r.total_final, 0)
-                const totalCantidad = resumenes.reduce((sum, r) => sum + r.cantidad, 0)
 
                 return (
-                  <div
+                  <MedicoItem
                     key={medicoNombre}
-                    className="rounded-xl p-6"
-                    style={{
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      backdropFilter: 'blur(20px)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
-                    }}
-                  >
-                    <div className="flex items-center justify-between mb-4">
-                      <h2 className="text-2xl font-bold text-green-400">{medicoNombre}</h2>
-                    </div>
-
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b border-gray-700">
-                            <th className="px-4 py-3 text-left text-sm font-semibold text-green-400">Obra social</th>
-                            <th className="px-4 py-3 text-right text-sm font-semibold text-green-400">Cantidad</th>
-                            <th className="px-4 py-3 text-right text-sm font-semibold text-green-400">Valor unitario</th>
-                            <th className="px-4 py-3 text-right text-sm font-semibold text-green-400">Total Bruto</th>
-                            <th className="px-4 py-3 text-right text-sm font-semibold text-green-400">Retención (-30%)</th>
-                            <th className="px-4 py-3 text-right text-sm font-semibold text-green-400">Subtotal</th>
-                            <th className="px-4 py-3 text-right text-sm font-semibold text-green-400">Adicionales</th>
-                            <th className="px-4 py-3 text-right text-sm font-semibold text-green-400">Total Final</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {resumenes.map((resumen, idx) => (
-                            <tr key={idx} className="border-b border-gray-800 hover:bg-gray-800/50">
-                              <td className="px-4 py-3 text-sm text-gray-300">{resumen.obra_social}</td>
-                              <td className="px-4 py-3 text-sm text-gray-300 text-right">{resumen.cantidad}</td>
-                              <td className="px-4 py-3 text-sm text-gray-300 text-right">{formatearMoneda(resumen.valor_unitario)}</td>
-                              <td className="px-4 py-3 text-sm text-gray-300 text-right">{formatearMoneda(resumen.total_bruto)}</td>
-                              <td className="px-4 py-3 text-sm text-red-400 text-right">{formatearMoneda(resumen.retencion_30)}</td>
-                              <td className="px-4 py-3 text-sm text-gray-300 text-right">{formatearMoneda(resumen.total_neto)}</td>
-                              <td className="px-4 py-3 text-sm text-green-400 text-right">{formatearMoneda(resumen.adicionales)}</td>
-                              <td className="px-4 py-3 text-sm text-green-400 text-right font-semibold">{formatearMoneda(resumen.total_final)}</td>
-                            </tr>
-                          ))}
-                          <tr className="bg-gray-800/50 font-bold">
-                            <td className="px-4 py-3 text-sm text-green-400">TOTAL</td>
-                            <td className="px-4 py-3 text-sm text-green-400 text-right">{totalCantidad}</td>
-                            <td className="px-4 py-3 text-sm text-green-400 text-right"></td>
-                            <td className="px-4 py-3 text-sm text-green-400 text-right">{formatearMoneda(totalBruto)}</td>
-                            <td className="px-4 py-3 text-sm text-red-400 text-right">{formatearMoneda(totalRetencion)}</td>
-                            <td className="px-4 py-3 text-sm text-green-400 text-right">{formatearMoneda(totalNeto)}</td>
-                            <td className="px-4 py-3 text-sm text-green-400 text-right">{formatearMoneda(totalAdicionales)}</td>
-                            <td className="px-4 py-3 text-sm text-green-400 text-right">{formatearMoneda(totalFinal)}</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
+                    medicoNombre={medicoNombre}
+                    resumenes={resumenes}
+                  />
                 )
               })
             )}
@@ -1108,6 +1048,103 @@ function DetalleLiquidacion({ liquidacionId }: { liquidacionId: string }) {
           </tbody>
         </table>
       </div>
+    </div>
+
+  )
+}
+
+function MedicoItem({ medicoNombre, resumenes }: { medicoNombre: string, resumenes: ResumenPorMedico[] }) {
+  const [isOpen, setIsOpen] = useState(false)
+
+  const totalBruto = resumenes.reduce((sum, r) => sum + r.total_bruto, 0)
+  const totalRetencion = resumenes.reduce((sum, r) => sum + r.retencion_30, 0)
+  const totalNeto = resumenes.reduce((sum, r) => sum + r.total_neto, 0)
+  const totalAdicionales = resumenes.reduce((sum, r) => sum + r.adicionales, 0)
+  const totalFinal = resumenes.reduce((sum, r) => sum + r.total_final, 0)
+  const totalCantidad = resumenes.reduce((sum, r) => sum + r.cantidad, 0)
+
+  function formatearMoneda(valor: number): string {
+    return new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(valor)
+  }
+
+  return (
+    <div
+      className={`rounded-xl transition-all duration-200 ${isOpen ? 'p-6' : 'p-4 hover:bg-white/5'}`}
+      style={{
+        background: 'rgba(255, 255, 255, 0.05)',
+        backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(34, 197, 94, 0.3)',
+        marginBottom: '1rem'
+      }}
+    >
+      <div
+        className="flex items-center justify-between cursor-pointer select-none"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <div className="flex items-center gap-3">
+          {isOpen ? <ChevronUp className="h-5 w-5 text-green-400" /> : <ChevronDown className="h-5 w-5 text-green-400" />}
+          <h2 className="text-xl font-bold text-green-400">{medicoNombre}</h2>
+        </div>
+
+        {!isOpen && (
+          <div className="flex items-center gap-4 text-sm">
+            <div className="text-gray-300">
+              <span className="font-semibold">{totalCantidad}</span> órdenes
+            </div>
+            <div className="font-bold text-green-400">
+              {formatearMoneda(totalFinal)}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {isOpen && (
+        <div className="mt-6 overflow-x-auto animate-in fade-in slide-in-from-top-2 duration-200">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-700">
+                <th className="px-4 py-3 text-left text-sm font-semibold text-green-400">Obra social</th>
+                <th className="px-4 py-3 text-right text-sm font-semibold text-green-400">Cantidad</th>
+                <th className="px-4 py-3 text-right text-sm font-semibold text-green-400">Valor unitario</th>
+                <th className="px-4 py-3 text-right text-sm font-semibold text-green-400">Total Bruto</th>
+                <th className="px-4 py-3 text-right text-sm font-semibold text-green-400">Retención (-30%)</th>
+                <th className="px-4 py-3 text-right text-sm font-semibold text-green-400">Subtotal</th>
+                <th className="px-4 py-3 text-right text-sm font-semibold text-green-400">Adicionales</th>
+                <th className="px-4 py-3 text-right text-sm font-semibold text-green-400">Total Final</th>
+              </tr>
+            </thead>
+            <tbody>
+              {resumenes.map((resumen, idx) => (
+                <tr key={idx} className="border-b border-gray-800 hover:bg-gray-800/50">
+                  <td className="px-4 py-3 text-sm text-gray-300">{resumen.obra_social}</td>
+                  <td className="px-4 py-3 text-sm text-gray-300 text-right">{resumen.cantidad}</td>
+                  <td className="px-4 py-3 text-sm text-gray-300 text-right">{formatearMoneda(resumen.valor_unitario)}</td>
+                  <td className="px-4 py-3 text-sm text-gray-300 text-right">{formatearMoneda(resumen.total_bruto)}</td>
+                  <td className="px-4 py-3 text-sm text-red-400 text-right">{formatearMoneda(resumen.retencion_30)}</td>
+                  <td className="px-4 py-3 text-sm text-gray-300 text-right">{formatearMoneda(resumen.total_neto)}</td>
+                  <td className="px-4 py-3 text-sm text-green-400 text-right">{formatearMoneda(resumen.adicionales)}</td>
+                  <td className="px-4 py-3 text-sm text-green-400 text-right font-semibold">{formatearMoneda(resumen.total_final)}</td>
+                </tr>
+              ))}
+              <tr className="bg-gray-800/50 font-bold">
+                <td className="px-4 py-3 text-sm text-green-400">TOTAL</td>
+                <td className="px-4 py-3 text-sm text-green-400 text-right">{totalCantidad}</td>
+                <td className="px-4 py-3 text-sm text-green-400 text-right"></td>
+                <td className="px-4 py-3 text-sm text-green-400 text-right">{formatearMoneda(totalBruto)}</td>
+                <td className="px-4 py-3 text-sm text-red-400 text-right">{formatearMoneda(totalRetencion)}</td>
+                <td className="px-4 py-3 text-sm text-green-400 text-right">{formatearMoneda(totalNeto)}</td>
+                <td className="px-4 py-3 text-sm text-green-400 text-right">{formatearMoneda(totalAdicionales)}</td>
+                <td className="px-4 py-3 text-sm text-green-400 text-right font-black">{formatearMoneda(totalFinal)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }
