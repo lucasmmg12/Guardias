@@ -756,7 +756,14 @@ export async function procesarExcelPediatria(
 
         // FILTRO 3: Detectar duplicados (mismo Paciente + Fecha/Hora + Médico)
         const horaFormato = convertirHora(hora)
-        const firmaDuplicado = `${paciente || ''}|${fecha}|${horaFormato || ''}|${medicoNombre || ''}`
+        const pacienteNorm = paciente && typeof paciente === 'string' ? normalizarNombre(paciente) : (paciente || '')
+        const medicoNorm = medicoNombre && typeof medicoNombre === 'string' ? normalizarNombre(medicoNombre) : (medicoNombre || '')
+
+        const firmaDuplicado = `${pacienteNorm}|${fecha}|${horaFormato || ''}|${medicoNorm}`
+
+        // Debug para duplicados (opcional, habilitar si es necesario)
+        // if (i < 20) console.log(`[Duplicados] Firma fila ${i+1}: ${firmaDuplicado}`)
+
         if (duplicados.has(firmaDuplicado)) {
           filasDuplicadas++
           resultado.filasExcluidas.push({
