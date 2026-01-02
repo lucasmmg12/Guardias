@@ -107,7 +107,7 @@ export async function calcularResumenPorMedico(
 
   // Agrupar por médico y obra social
   const resumenMap = new Map<string, ResumenPorMedico>()
-  
+
   // Contadores para diagnóstico
   let registrosExcluidosSinValor = 0
   let registrosExcluidosSinMedico = 0
@@ -119,7 +119,7 @@ export async function calcularResumenPorMedico(
     const tieneMedicoNombre = detalle.medico_nombre && detalle.medico_nombre.trim() !== '' && detalle.medico_nombre !== 'Desconocido'
     const tieneMedicoId = detalle.medico_id && detalle.medico_id.trim() !== ''
     const tieneMedico = tieneMedicoNombre || tieneMedicoId
-    
+
     if (!tieneMedico) {
       registrosExcluidosSinMedico++
       return
@@ -128,12 +128,12 @@ export async function calcularResumenPorMedico(
     // MODIFICADO: Incluir TODOS los registros que tengan médico, independientemente del valor
     // Esto asegura que se incluyan todas las consultas, incluso si aún no tienen valores asignados
     const tieneValor = (detalle.monto_facturado ?? 0) > 0 || (detalle.importe_calculado ?? 0) > 0
-    
+
     // Contar registros sin valor para diagnóstico, pero incluirlos igual
     if (!tieneValor) {
       registrosExcluidosSinValor++
     }
-    
+
     // IMPORTANTE: Incluir TODOS los registros con médico, incluso sin valor
     // Esto asegura que todas las consultas se cuenten en los resúmenes
 
@@ -143,17 +143,21 @@ export async function calcularResumenPorMedico(
 
     // Clave única: usar medico_id si existe, sino usar nombre normalizado
     const nombreNormalizado = medicoNombre.toLowerCase().trim().replace(/\s+/g, ' ')
-    const clave = medicoId 
-      ? `${medicoId}|${obraSocial}` 
+    const clave = medicoId
+      ? `${medicoId}|${obraSocial}`
       : `${nombreNormalizado}|${obraSocial}`
 
     // Usar valores del detalle, o 0 si no están asignados
     const montoFacturado = detalle.monto_facturado ?? 0
     const montoRetencion = detalle.monto_retencion ?? 0
-    const montoNeto = detalle.importe_calculado ?? 0
     const montoAdicional = detalle.monto_adicional ?? 0
-    const totalFinal = montoNeto + montoAdicional
-    
+
+    // Subtotal = Bruto - Retención
+    const subtotal = montoFacturado - montoRetencion
+
+    // Total Final = Subtotal + Adicionales
+    const totalFinal = subtotal + montoAdicional
+
     registrosIncluidos++
 
     // Actualizar o crear resumen
@@ -162,7 +166,7 @@ export async function calcularResumenPorMedico(
       resumen.cantidad += 1
       resumen.total_bruto += montoFacturado
       resumen.retencion_30 += montoRetencion
-      resumen.total_neto += montoNeto
+      resumen.total_neto += subtotal // Subtotal
       resumen.adicionales += montoAdicional
       resumen.total_final += totalFinal
       // Actualizar valor unitario promedio
@@ -176,7 +180,7 @@ export async function calcularResumenPorMedico(
         valor_unitario: montoFacturado,
         total_bruto: montoFacturado,
         retencion_30: montoRetencion,
-        total_neto: montoNeto,
+        total_neto: subtotal, // Subtotal
         adicionales: montoAdicional,
         total_final: totalFinal
       })
