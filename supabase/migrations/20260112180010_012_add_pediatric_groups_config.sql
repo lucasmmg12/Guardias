@@ -1,4 +1,6 @@
--- Migración: Configuración de grupos para Pediatría
+SET search_path = public, extensions;
+-- Migración 012: Configuración de grupos para Pediatría
+-- Fecha: 2025-12-30
 -- Descripción: Crea la tabla para asignar médicos a diferentes tipos de consulta pediátrica mensualmente
 
 -- ============================================================================
@@ -23,16 +25,28 @@ CREATE INDEX IF NOT EXISTS idx_pediatric_groups_periodo ON pediatric_groups_conf
 CREATE INDEX IF NOT EXISTS idx_pediatric_groups_doctor ON pediatric_groups_config(doctor_id);
 CREATE INDEX IF NOT EXISTS idx_pediatric_groups_type ON pediatric_groups_config(group_type);
 
--- Trigger para updated_at
-CREATE TRIGGER trigger_update_pediatric_groups_updated_at
-  BEFORE UPDATE ON pediatric_groups_config
+-- Trigger para updated_at (usamos la función existente si existe, o la creamos si no)
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'update_updated_at_column') THEN
+        CREATE FUNCTION update_updated_at_column()
+        RETURNS TRIGGER AS $inner$
+        BEGIN
+            NEW.updated_at = NOW();
+            RETURN NEW;
+        END;
+        $inner$ LANGUAGE plpgsql;
+    END IF;
+END $$;
+
+DROP TRIGGER IF EXISTS trigger_update_pediatric_groups_updated_at ON pediatric_groups_config; CREATE TRIGGER trigger_update_pediatric_groups_updated_at BEFORE UPDATE ON pediatric_groups_config
   FOR EACH ROW
-  EXECUTE FUNCTION update_clinical_groups_updated_at();
+  EXECUTE FUNCTION update_clinical_groups_updated_at(); -- Reusamos la de la migración 008 ya que existe
 
 -- Habilitar RLS
 ALTER TABLE pediatric_groups_config ENABLE ROW LEVEL SECURITY;
 
--- Políticas básicas
+-- Políticas básicas (asumiendo que el usuario está autenticado)
 CREATE POLICY "Permitir todo a usuarios autenticados en pediatric_groups_config" 
 ON pediatric_groups_config FOR ALL 
 TO authenticated 
@@ -41,3 +55,4 @@ WITH CHECK (true);
 
 COMMENT ON TABLE pediatric_groups_config IS 'Configuración de grupos mensuales para Pediatría (Guardia Estándar vs Especialista/Neonatal)';
 COMMENT ON COLUMN pediatric_groups_config.group_type IS 'GUARDIA_ESTANDAR = Cobra Consulta de Guardia Pediatrica, ESPECIALISTA = Cobra Consulta Pediatrica y Neonatal';
+

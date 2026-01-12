@@ -34,6 +34,7 @@
     "@types/jspdf": "^1.3.3",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.7",
-    "@types/xlsx": "^0.0.35"
+    "@types/xlsx": "^0.0.35",
+    "supabase": "^2.72.4"
   }
 }
