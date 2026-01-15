@@ -54,7 +54,6 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
         const { data: medicosData, error } = await supabase
           .from('medicos')
           .select('*')
-          .eq('especialidad', especialidadValue)
           .eq('activo', true)
 
         if (error) throw error
@@ -592,8 +591,8 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
         title={
           <div className="flex items-center gap-2">
             <span className={`px-2.5 py-1 rounded-md text-xs font-semibold uppercase tracking-wide border ${especialidad === 'Admisiones Clínicas'
-                ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30'
-                : 'bg-purple-500/20 text-purple-400 border-purple-500/30'
+              ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30'
+              : 'bg-purple-500/20 text-purple-400 border-purple-500/30'
               }`}>
               Duplicado
             </span>

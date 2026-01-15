@@ -73,12 +73,12 @@ export function ExpandableSection({
     rowIndex?: number
     count?: number
   } | null>(null)
-  
+
   // Estado para filtros por columna (valor inmediato para el input)
   const [filterInputs, setFilterInputs] = useState<Map<string, string>>(new Map())
   // Estado para filtros aplicados (con debounce)
   const [filters, setFilters] = useState<Map<string, string>>(new Map())
-  
+
   // Refs para los timers de debounce
   const debounceTimers = useRef<Map<string, NodeJS.Timeout>>(new Map())
 
@@ -125,26 +125,31 @@ export function ExpandableSection({
         }
       }
     }
-    
+
     // Si no está guardado, calcular desde la obra social
     const clienteHeader = data.headers.find(h => {
       const hLower = h.toLowerCase().trim()
       return hLower === 'cliente' || hLower.includes('obra social') || hLower.includes('obra')
     })
-    
+
     if (!clienteHeader) return 0
-    
+
     const obraSocial = row[clienteHeader]
     if (!obraSocial || typeof obraSocial !== 'string') return 0
-    
+
     const obraSocialTrimmed = obraSocial.trim()
-    
+
     // Buscar en el mapa de adicionales
     return adicionales.get(obraSocialTrimmed) || 0
   }, [data.headers, adicionales])
 
   // Función para obtener el valor de importe basado en la obra social
-  const obtenerImporte = useCallback((row: ExcelRow): number => {
+  const obtenerImporte = useCallback((row: ExcelRow, rowIndex?: number): number => {
+    // Si es residente en horario formativo (detectado por el padre), el importe es 0
+    if (rowIndex !== undefined && esResidenteFormativoRow && esResidenteFormativoRow(rowIndex)) {
+      return 0
+    }
+
     // Si el importe ya está guardado en el row (desde BD), usarlo
     if (row['Importe'] !== null && row['Importe'] !== undefined) {
       const importeValue = row['Importe']
@@ -158,54 +163,54 @@ export function ExpandableSection({
         }
       }
     }
-    
+
     // Si no está guardado, calcular desde la obra social
     const clienteHeader = data.headers.find(h => {
       const hLower = h.toLowerCase().trim()
       return hLower === 'cliente' || hLower.includes('obra social') || hLower.includes('obra')
     })
-    
+
     if (!clienteHeader) return 0
-    
+
     const obraSocial = row[clienteHeader]
     if (!obraSocial || typeof obraSocial !== 'string') return 0
-    
+
     const obraSocialTrimmed = obraSocial.trim()
-    
+
     // Buscar en el mapa de valores
     let valor = valoresConsultas.get(obraSocialTrimmed) || 0
-    
+
     // Si no se encontró, intentar con variaciones
     if (valor === 0) {
       if (obraSocialTrimmed === 'PARTICULARES' || obraSocialTrimmed === '042 - PARTICULARES') {
         valor = valoresConsultas.get('PARTICULARES') || valoresConsultas.get('042 - PARTICULARES') || 0
       }
     }
-    
+
     return valor
-  }, [data.headers, valoresConsultas])
+  }, [data.headers, valoresConsultas, esResidenteFormativoRow])
 
   // Memoizar cálculos de importe y adicional solo para filas visibles (optimización crítica)
   // Solo calcular cuando realmente se necesita, no para todas las filas
   const valoresCalculados = useMemo(() => {
     const mapa = new Map<number, { adicional: number; importe: number }>()
-    
+
     // Si no hay filas, retornar mapa vacío
     if (rows.length === 0) return mapa
-    
+
     // Solo calcular para las primeras 200 filas (las que se mostrarán)
     // Esto reduce significativamente el tiempo de cálculo
     const filasACalcular = rows.slice(0, 200)
     filasACalcular.forEach((row, index) => {
       const adicional = obtenerAdicional(row)
-      const importe = obtenerImporte(row)
+      const importe = obtenerImporte(row, index)
       mapa.set(index, { adicional, importe })
     })
     return mapa
   }, [
     rows.length,
     // Usar tamaño de los mapas como dependencia en lugar de los mapas completos
-    valoresConsultas.size, 
+    valoresConsultas.size,
     adicionales.size,
     // Incluir una referencia estable a las funciones
     obtenerAdicional,
@@ -265,7 +270,7 @@ export function ExpandableSection({
         const adicional = valores?.adicional ?? obtenerAdicional(row)
         const adicionalStr = adicional.toString().toLowerCase()
         const filterStr = adicionalFilter.toLowerCase().trim()
-        
+
         if (!adicionalStr.includes(filterStr)) {
           return false
         }
@@ -278,7 +283,7 @@ export function ExpandableSection({
         const importe = valores?.importe ?? obtenerImporte(row)
         const importeStr = importe.toString().toLowerCase()
         const filterStr = importeFilter.toLowerCase().trim()
-        
+
         if (!importeStr.includes(filterStr)) {
           return false
         }
@@ -350,18 +355,18 @@ export function ExpandableSection({
     e.stopPropagation()
     try {
       // Extraer texto del título (si es string) o usar sectionKey como fallback
-      const titleText = typeof title === 'string' 
-        ? title 
+      const titleText = typeof title === 'string'
+        ? title
         : sectionKey.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-      
+
       // Generar nombre base del archivo más corto
       let nombreArchivo = `${titleText.toLowerCase().replace(/\s+/g, '_').substring(0, 15)}`
-      
+
       // Agregar mes y año en formato corto (MM_YYYY)
       if (mes && anio) {
         nombreArchivo += `_${String(mes).padStart(2, '0')}_${anio}`
       }
-      
+
       // Agregar filtros activos de forma compacta
       if (filters.size > 0) {
         const filtrosInfo: string[] = []
@@ -377,12 +382,12 @@ export function ExpandableSection({
             filtrosInfo.push(`${columnaAbrev}_${valorCorto}`)
           }
         })
-        
+
         if (filtrosInfo.length > 0) {
           nombreArchivo += `_${filtrosInfo.join('_')}`
         }
       }
-      
+
       exportFilteredDataToExcel({
         rows: filteredRows,
         headers: data.headers,
@@ -412,7 +417,7 @@ export function ExpandableSection({
   return (
     <div className="w-full space-y-2">
       {/* Header clickeable */}
-      <div 
+      <div
         className="p-4 rounded-xl border-2 cursor-pointer transition-all hover:opacity-90"
         style={{
           background: bgColor,
@@ -424,27 +429,27 @@ export function ExpandableSection({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3" style={{ color: textColor }}>
             {icon}
-              <div className="flex-1">
-                <div className="font-bold text-lg mb-1 flex items-center gap-2 flex-wrap">
-                  {typeof title === 'string' ? (
-                    <>
-                      {title} {displayCount !== count && `(${displayCount} de ${count})`}
-                    </>
-                  ) : (
-                    <>
-                      {title}
-                      {displayCount !== count && (
-                        <span className="text-sm font-normal opacity-75">
-                          ({displayCount} de {count})
-                        </span>
-                      )}
-                    </>
-                  )}
-                </div>
-                <div className="text-sm" style={{ color: textColor, opacity: 0.8 }}>
-                  {description}
-                </div>
+            <div className="flex-1">
+              <div className="font-bold text-lg mb-1 flex items-center gap-2 flex-wrap">
+                {typeof title === 'string' ? (
+                  <>
+                    {title} {displayCount !== count && `(${displayCount} de ${count})`}
+                  </>
+                ) : (
+                  <>
+                    {title}
+                    {displayCount !== count && (
+                      <span className="text-sm font-normal opacity-75">
+                        ({displayCount} de {count})
+                      </span>
+                    )}
+                  </>
+                )}
               </div>
+              <div className="text-sm" style={{ color: textColor, opacity: 0.8 }}>
+                {description}
+              </div>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             {/* Botón de descarga Excel */}
@@ -514,7 +519,7 @@ export function ExpandableSection({
 
       {/* Contenido expandible */}
       {isExpanded && (
-        <div 
+        <div
           className="rounded-xl overflow-hidden"
           style={{
             background: 'rgba(255, 255, 255, 0.05)',
@@ -567,15 +572,15 @@ export function ExpandableSection({
                               // Usar la misma lógica mejorada para encontrar índices
                               const filaExcel = (row as any).__fila_excel
                               let originalRowIndex = -1
-                              
+
                               if (filaExcel !== undefined && filaExcel !== null) {
                                 originalRowIndex = data.rows.findIndex(r => (r as any).__fila_excel === filaExcel)
                               }
-                              
+
                               if (originalRowIndex === -1) {
                                 originalRowIndex = data.rows.findIndex(r => r === row)
                               }
-                              
+
                               return originalRowIndex
                             }).filter(idx => idx !== -1)
                             setSelectedRows(new Set(allIndices))
@@ -588,28 +593,30 @@ export function ExpandableSection({
                       />
                     </th>
                   )}
-                  {data.headers.map((header, index) => (
-                    <th
-                      key={index}
-                      className="px-2 py-2 text-left text-xs font-semibold text-gray-300 bg-white/5 whitespace-nowrap"
-                      style={{
-                        position: 'sticky',
-                        top: 0,
-                        zIndex: 10,
-                        minWidth: '120px',
-                        maxWidth: '200px',
-                      }}
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <span className="truncate">{header}</span>
-                        {isEditable(header) && allowEdit && (
-                          <span className="text-[10px] text-green-400 bg-green-400/20 px-1.5 py-0.5 rounded flex-shrink-0">
-                            Editable
-                          </span>
-                        )}
-                      </div>
-                    </th>
-                  ))}
+                  {data.headers
+                    .filter(h => !['adicional', 'importe'].includes(h.toLowerCase().trim()))
+                    .map((header, index) => (
+                      <th
+                        key={index}
+                        className="px-2 py-2 text-left text-xs font-semibold text-gray-300 bg-white/5 whitespace-nowrap"
+                        style={{
+                          position: 'sticky',
+                          top: 0,
+                          zIndex: 10,
+                          minWidth: '120px',
+                          maxWidth: '200px',
+                        }}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span className="truncate">{header}</span>
+                          {isEditable(header) && allowEdit && (
+                            <span className="text-[10px] text-green-400 bg-green-400/20 px-1.5 py-0.5 rounded flex-shrink-0">
+                              Editable
+                            </span>
+                          )}
+                        </div>
+                      </th>
+                    ))}
                   {/* Columna Adicional */}
                   <th
                     className="px-2 py-2 text-left text-xs font-semibold text-gray-300 bg-white/5 whitespace-nowrap"
@@ -651,7 +658,7 @@ export function ExpandableSection({
                     </div>
                   </th>
                 </tr>
-                
+
                 {/* Fila de filtros */}
                 <tr className="border-b border-white/5 bg-white/2">
                   {allowDelete && (
@@ -665,40 +672,42 @@ export function ExpandableSection({
                       }}
                     ></td>
                   )}
-                  {data.headers.map((header, index) => (
-                    <td
-                      key={index}
-                      className="px-1 py-2"
-                      style={{
-                        position: 'sticky',
-                        top: filterTop,
-                        zIndex: 9,
-                        background: 'rgba(0, 0, 0, 0.9)',
-                      }}
-                    >
-                      <div className="relative">
-                        <input
-                          type="text"
-                          value={filterInputs.get(header) || ''}
-                          onChange={(e) => handleFilterChange(header, e.target.value)}
-                          placeholder="Filtrar..."
-                          className="w-full px-2 py-1.5 text-xs bg-gray-800/70 border border-gray-600 rounded text-white placeholder-gray-500 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500"
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                        {filterInputs.get(header) && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleFilterChange(header, '')
-                            }}
-                            className="absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white z-10"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  ))}
+                  {data.headers
+                    .filter(h => !['adicional', 'importe'].includes(h.toLowerCase().trim()))
+                    .map((header, index) => (
+                      <td
+                        key={index}
+                        className="px-1 py-2"
+                        style={{
+                          position: 'sticky',
+                          top: filterTop,
+                          zIndex: 9,
+                          background: 'rgba(0, 0, 0, 0.9)',
+                        }}
+                      >
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={filterInputs.get(header) || ''}
+                            onChange={(e) => handleFilterChange(header, e.target.value)}
+                            placeholder="Filtrar..."
+                            className="w-full px-2 py-1.5 text-xs bg-gray-800/70 border border-gray-600 rounded text-white placeholder-gray-500 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                          {filterInputs.get(header) && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleFilterChange(header, '')
+                              }}
+                              className="absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white z-10"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    ))}
                   {/* Filtro para columna Importe */}
                   <td
                     className="px-1 py-2"
@@ -739,59 +748,59 @@ export function ExpandableSection({
                   // Usar mapa de índices para búsqueda O(1) en lugar de O(n)
                   const filaExcel = (row as any).__fila_excel
                   let originalRowIndex = -1
-                  
+
                   if (filaExcel !== undefined && filaExcel !== null) {
                     originalRowIndex = rowIndexMap.get(filaExcel) ?? -1
                   }
-                  
+
                   // Si no se encontró por fila_excel, usar referencia del objeto
                   if (originalRowIndex === -1) {
                     originalRowIndex = rowIndexMap.get(row) ?? -1
                   }
-                  
+
                   // Fallback: usar el índice del filteredRows si no se encuentra
                   if (originalRowIndex === -1) {
                     originalRowIndex = filteredIndex
                   }
-                  
+
                   // Usar un key más estable para evitar problemas de renderizado
-                  const rowKey = filaExcel !== undefined && filaExcel !== null 
-                    ? `fila-${filaExcel}` 
+                  const rowKey = filaExcel !== undefined && filaExcel !== null
+                    ? `fila-${filaExcel}`
                     : originalRowIndex !== -1
-                    ? `row-${originalRowIndex}`
-                    : `filtered-${filteredIndex}`
-                  
+                      ? `row-${originalRowIndex}`
+                      : `filtered-${filteredIndex}`
+
                   const isSelected = originalRowIndex !== -1 && selectedRows.has(originalRowIndex)
-                  
+
                   // Determinar colores según reglas (solo si es detalle completo)
                   const esDetalleCompleto = sectionKey === 'detalle_completo'
                   const esParticular = esDetalleCompleto && esParticularRow ? esParticularRow(originalRowIndex) : false
                   const esSinHorario = esDetalleCompleto && esSinHorarioRow ? esSinHorarioRow(originalRowIndex) : false
                   const esDuplicado = esDetalleCompleto && esDuplicadoRow ? esDuplicadoRow(originalRowIndex) : false
                   const esResidenteFormativo = esDetalleCompleto && esResidenteFormativoRow ? esResidenteFormativoRow(originalRowIndex) : false
-                  
+
                   // Determinar color de fondo según prioridad
                   let rowBgColor = 'transparent'
                   if (esSinHorario) {
                     rowBgColor = 'rgba(239, 68, 68, 0.15)' // Rojo para sin horario
                   } else if (esDuplicado) {
                     // Color celeste para Admisiones Clínicas, púrpura para otros
-                    rowBgColor = especialidad === 'Admisiones Clínicas' 
+                    rowBgColor = especialidad === 'Admisiones Clínicas'
                       ? 'rgba(103, 232, 249, 0.15)' // Celeste para Admisiones
                       : 'rgba(168, 85, 247, 0.15)' // Púrpura para otros módulos
                   } else if (esParticular) {
                     rowBgColor = 'rgba(251, 191, 36, 0.15)' // Amarillo para sin obra social
                   } else if (esResidenteFormativo) {
-                    rowBgColor = 'rgba(59, 130, 246, 0.15)' // Azul para residente formativo
+                    rowBgColor = 'rgba(59, 130, 246, 0.4)' // Azul para residente formativo (más visible)
                   }
-                  
+
                   // Si está seleccionado, agregar borde
                   if (isSelected) {
-                    rowBgColor = rowBgColor === 'transparent' 
-                      ? 'rgba(34, 197, 94, 0.2)' 
+                    rowBgColor = rowBgColor === 'transparent'
+                      ? 'rgba(34, 197, 94, 0.2)'
                       : rowBgColor.replace('0.15', '0.25')
                   }
-                  
+
                   return (
                     <tr
                       key={rowKey}
@@ -828,35 +837,37 @@ export function ExpandableSection({
                           />
                         </td>
                       )}
-                      {data.headers.map((header, colIndex) => {
-                        const value = row[header] ?? null
-                        const editable = isEditable(header) && allowEdit
+                      {data.headers
+                        .filter(h => !['adicional', 'importe'].includes(h.toLowerCase().trim()))
+                        .map((header, colIndex) => {
+                          const value = row[header] ?? null
+                          const editable = isEditable(header) && allowEdit
 
-                        return (
-                          <td
-                            key={colIndex}
-                            className="px-2 py-1.5 text-xs text-gray-300"
-                            style={{
-                              minWidth: '120px',
-                              maxWidth: '200px',
-                              position: 'relative',
-                              zIndex: 1,
-                            }}
-                          >
-                            {editable && onCellUpdate ? (
-                              <InlineEditCell
-                                value={value || ''}
-                                onSave={async (newValue) => {
-                                  await onCellUpdate(originalRowIndex, header, newValue)
-                                }}
-                                columnName={header}
-                              />
-                            ) : (
-                              <span className="truncate block">{value || '-'}</span>
-                            )}
-                          </td>
-                        )
-                      })}
+                          return (
+                            <td
+                              key={colIndex}
+                              className="px-2 py-1.5 text-xs text-gray-300"
+                              style={{
+                                minWidth: '120px',
+                                maxWidth: '200px',
+                                position: 'relative',
+                                zIndex: 1,
+                              }}
+                            >
+                              {editable && onCellUpdate ? (
+                                <InlineEditCell
+                                  value={value || ''}
+                                  onSave={async (newValue) => {
+                                    await onCellUpdate(originalRowIndex, header, newValue)
+                                  }}
+                                  columnName={header}
+                                />
+                              ) : (
+                                <span className="truncate block">{value || '-'}</span>
+                              )}
+                            </td>
+                          )
+                        })}
                       {/* Columna Adicional */}
                       <td
                         className="px-2 py-1.5 text-xs text-gray-300 text-right"
@@ -873,7 +884,7 @@ export function ExpandableSection({
                           const adicionalValue = row['Adicional'] !== null && row['Adicional'] !== undefined
                             ? (typeof row['Adicional'] === 'number' ? row['Adicional'] : parseFloat(String(row['Adicional'])) || 0)
                             : (valores?.adicional ?? obtenerAdicional(row))
-                          
+
                           return allowEdit && onCellUpdate ? (
                             <InlineEditCell
                               value={adicionalValue}
@@ -912,7 +923,7 @@ export function ExpandableSection({
                           const importeValue = row['Importe'] !== null && row['Importe'] !== undefined
                             ? (typeof row['Importe'] === 'number' ? row['Importe'] : parseFloat(String(row['Importe'])) || 0)
                             : (valores?.importe ?? obtenerImporte(row))
-                          
+
                           return allowEdit && onCellUpdate ? (
                             <InlineEditCell
                               value={importeValue}
@@ -952,22 +963,25 @@ export function ExpandableSection({
                         }}
                       ></td>
                     )}
-                    {data.headers.map((header, colIndex) => {
-                      // Si es la última columna antes de Adicional e Importe, mostrar "TOTAL"
-                      const isLastColumn = colIndex === data.headers.length - 1
-                      return (
-                        <td
-                          key={colIndex}
-                          className="px-2 py-2 text-xs text-green-400 font-semibold"
-                          style={{
-                            minWidth: '120px',
-                            maxWidth: '200px',
-                          }}
-                        >
-                          {isLastColumn ? 'TOTAL' : ''}
-                        </td>
-                      )
-                    })}
+                    {data.headers
+                      .filter(h => !['adicional', 'importe'].includes(h.toLowerCase().trim()))
+                      .map((header, colIndex) => {
+                        // Si es la última columna antes de Adicional e Importe, mostrar "TOTAL"
+                        const visibleHeaders = data.headers.filter(h => !['adicional', 'importe'].includes(h.toLowerCase().trim()))
+                        const isLastColumn = colIndex === visibleHeaders.length - 1
+                        return (
+                          <td
+                            key={colIndex}
+                            className="px-2 py-2 text-xs text-green-400 font-semibold"
+                            style={{
+                              minWidth: '120px',
+                              maxWidth: '200px',
+                            }}
+                          >
+                            {isLastColumn ? 'TOTAL' : ''}
+                          </td>
+                        )
+                      })}
                     {/* Total de Adicional */}
                     <td
                       className="px-2 py-2 text-xs text-green-400 font-semibold text-right"
@@ -1060,7 +1074,7 @@ export function ExpandableSection({
               // IMPORTANTE: Obtener los índices originales ANTES de empezar a eliminar
               // porque después de cada eliminación, los índices cambian al recargar los datos
               const indicesArray = Array.from(selectedRows).sort((a, b) => b - a) // Orden inverso
-              
+
               // Obtener los fila_excel de todas las filas seleccionadas ANTES de eliminar
               const filasExcel = indicesArray
                 .map(index => {
@@ -1068,7 +1082,7 @@ export function ExpandableSection({
                   return row ? (row as any).__fila_excel : null
                 })
                 .filter((filaExcel): filaExcel is number => filaExcel !== null && filaExcel !== undefined)
-              
+
               // Eliminar cada fila usando su índice original
               // El handleDeleteRow ya maneja la recarga de datos después de cada eliminación
               // Pero como estamos usando fila_excel, no importa si los índices cambian
@@ -1095,8 +1109,8 @@ export function ExpandableSection({
           confirmAction?.type === 'all'
             ? `¿Está seguro de que desea eliminar todos los ${confirmAction.count} registros? Esta acción no se puede deshacer.`
             : confirmAction?.type === 'multiple'
-            ? `¿Está seguro de que desea eliminar los ${confirmAction.count} registros seleccionados? Esta acción no se puede deshacer.`
-            : '¿Está seguro de que desea eliminar esta fila? Esta acción no se puede deshacer.'
+              ? `¿Está seguro de que desea eliminar los ${confirmAction.count} registros seleccionados? Esta acción no se puede deshacer.`
+              : '¿Está seguro de que desea eliminar esta fila? Esta acción no se puede deshacer.'
         }
         confirmText="Eliminar"
         cancelText="Cancelar"
