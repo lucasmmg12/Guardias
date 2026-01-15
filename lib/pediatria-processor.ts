@@ -131,12 +131,14 @@ function buscarValor(row: ExcelRow, variaciones: string[], debugKey?: string): a
 
 /**
  * Normaliza un nombre para búsqueda (sin acentos, minúsculas, sin espacios extra)
+ * Elimina comas y puntos para mejorar la coincidencia
  */
 function normalizarNombre(nombre: string): string {
   return nombre
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[,\.]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
 }
