@@ -1,6 +1,6 @@
 import { supabase } from './supabase/client'
 import { DetalleGuardia, ValorConsultaObraSocial, Medico } from './types'
-import { esResidenteHorarioFormativo } from './utils'
+import { esResidenteHorarioFormativo, extraerCodigoObraSocial, coincidenObrasSociales } from './utils'
 
 export interface ResumenPorMedico {
   medico_id: string | null
@@ -117,7 +117,7 @@ export async function calcularResumenPorMedico(
   valoresConsultas.forEach(v => {
     valoresPorObraSocial.set(v.obra_social, v.valor)
   })
-  
+
   // Normalizar PARTICULARES: si existe "042 - PARTICULARES", también agregarlo como "PARTICULARES"
   // y viceversa, para que funcione independientemente de cómo esté guardado
   if (valoresPorObraSocial.has('042 - PARTICULARES') && !valoresPorObraSocial.has('PARTICULARES')) {
@@ -126,14 +126,14 @@ export async function calcularResumenPorMedico(
       valoresPorObraSocial.set('PARTICULARES', valor042)
     }
   }
-  
+
   if (valoresPorObraSocial.has('PARTICULARES') && !valoresPorObraSocial.has('042 - PARTICULARES')) {
     const valorParticulares = valoresPorObraSocial.get('PARTICULARES')
     if (valorParticulares) {
       valoresPorObraSocial.set('042 - PARTICULARES', valorParticulares)
     }
   }
-  
+
   // Si no se encontró ninguno, buscar en la BD
   if (!valoresPorObraSocial.has('PARTICULARES') && !valoresPorObraSocial.has('042 - PARTICULARES')) {
     // Buscar "PARTICULARES" primero
@@ -145,7 +145,7 @@ export async function calcularResumenPorMedico(
       .eq('mes', mes)
       .eq('anio', anio)
       .single()
-    
+
     if (valorParticular && (valorParticular as any).valor) {
       const valor = (valorParticular as any).valor
       valoresPorObraSocial.set('PARTICULARES', valor)
@@ -160,7 +160,7 @@ export async function calcularResumenPorMedico(
         .eq('mes', mes)
         .eq('anio', anio)
         .single()
-      
+
       if (valorParticular042 && (valorParticular042 as any).valor) {
         const valor = (valorParticular042 as any).valor
         valoresPorObraSocial.set('PARTICULARES', valor)
@@ -183,7 +183,7 @@ export async function calcularResumenPorMedico(
     const tieneMedicoNombre = detalle.medico_nombre && detalle.medico_nombre.trim() !== '' && detalle.medico_nombre !== 'Desconocido'
     const tieneMedicoId = detalle.medico_id && detalle.medico_id.trim() !== ''
     const tieneMedico = tieneMedicoNombre || tieneMedicoId
-    
+
     if (!tieneMedico) {
       registrosExcluidosSinMedico++
       return
@@ -191,10 +191,10 @@ export async function calcularResumenPorMedico(
 
     // Excluir consultas de residentes en horario formativo del resumen por médico
     // Estas NO se deben mostrar al médico, pero SÍ se contabilizan para administración
-    
+
     // Primero verificar el campo guardado
     let esHorarioFormativo = detalle.es_horario_formativo === true
-    
+
     // Si es residente, recalcular si es horario formativo basándose en fecha y hora
     // Esto asegura que se excluyan incluso si el campo no está guardado correctamente
     if (detalle.medico_es_residente === true && detalle.fecha && detalle.hora) {
@@ -208,12 +208,12 @@ export async function calcularResumenPorMedico(
         esHorarioFormativo = true
       }
     }
-    
+
     // También excluir si es residente y tiene valores en 0 (probablemente horario formativo)
     // Esto cubre casos donde el campo es_horario_formativo no está correctamente guardado
-    const esResidenteConValorCero = detalle.medico_es_residente === true && 
-                                     (detalle.importe_calculado ?? 0) === 0 && 
-                                     (detalle.monto_facturado ?? 0) === 0
+    const esResidenteConValorCero = detalle.medico_es_residente === true &&
+      (detalle.importe_calculado ?? 0) === 0 &&
+      (detalle.monto_facturado ?? 0) === 0
 
     // Si es horario formativo o residente con valor cero, NO debe contarse en el resumen por médico
     // (pero SÍ se contabilizan en "Residentes Formativos" para administración)
@@ -240,13 +240,39 @@ export async function calcularResumenPorMedico(
     // Esto evita que médicos diferentes se agrupen incorrectamente cuando no tienen ID
     // Normalizar el nombre para evitar duplicados por diferencias de formato
     const nombreNormalizado = medicoNombre.toLowerCase().trim().replace(/\s+/g, ' ')
-    const clave = medicoId 
-      ? `${medicoId}|${obraSocial}` 
+    const clave = medicoId
+      ? `${medicoId}|${obraSocial}`
       : `${nombreNormalizado}|${obraSocial}`
 
-    // Obtener valor unitario de la obra social
-    // Ya se normalizó el mapa para que "PARTICULARES" y "042 - PARTICULARES" apunten al mismo valor
-    const valorUnitario = valoresPorObraSocial.get(obraSocial) || 0
+    // Obtener valor unitario de la obra social usando el sistema mejorado
+    let valorUnitario = 0
+    const osExcel = obraSocial.trim()
+    const codigoExcel = extraerCodigoObraSocial(osExcel)
+
+    // 1. Intentar por código exacto
+    if (codigoExcel) {
+      for (const [osBD, valor] of valoresPorObraSocial.entries()) {
+        if (extraerCodigoObraSocial(osBD) === codigoExcel) {
+          valorUnitario = valor
+          break
+        }
+      }
+    }
+
+    // 2. Si no se encontró por código, intentar por coincidencia flexible
+    if (valorUnitario === 0) {
+      for (const [osBD, valor] of valoresPorObraSocial.entries()) {
+        if (coincidenObrasSociales(osExcel, osBD)) {
+          valorUnitario = valor
+          break
+        }
+      }
+    }
+
+    // 3. Fallback para PARTICULARES
+    if (valorUnitario === 0 && (osExcel.includes('PARTICULAR') || osExcel.includes('042'))) {
+      valorUnitario = valoresPorObraSocial.get('PARTICULARES') || valoresPorObraSocial.get('042 - PARTICULARES') || 0
+    }
 
     // Si el valor unitario es 0, también excluir (obra social sin valor configurado)
     if (valorUnitario === 0) {
@@ -463,13 +489,20 @@ export async function obtenerResidentesFormativos(
   const resumenMap = new Map<string, ResumenResidenteFormativo>()
 
   detalles.forEach(detalle => {
-    // Usar directamente el campo es_horario_formativo que ya está guardado en la BD
-    // Este campo se guarda durante el procesamiento del Excel
-    // El campo es boolean según la interfaz, pero puede ser null/undefined en algunos casos
-    const esHorarioFormativo = detalle.es_horario_formativo === true
+    // Primero verificar el campo guardado
+    let esHorarioFormativo = detalle.es_horario_formativo === true
+
+    // Si no está el campo pero es residente, recalcular como fallback
+    if (!esHorarioFormativo && detalle.medico_es_residente === true && detalle.fecha && detalle.hora) {
+      esHorarioFormativo = esResidenteHorarioFormativo(
+        detalle.fecha,
+        detalle.hora,
+        true
+      )
+    }
 
     // Solo procesar si es residente en horario formativo
-    if (!esHorarioFormativo) {
+    if (!esHorarioFormativo || detalle.medico_es_residente !== true) {
       return
     }
 
@@ -480,8 +513,35 @@ export async function obtenerResidentesFormativos(
     // Clave única: medico_id + obra_social
     const clave = `${medicoId}|${obraSocial}`
 
-    // Obtener valor unitario de la obra social
-    const valorUnitario = valoresPorObraSocial.get(obraSocial) || 0
+    // Obtener valor unitario de la obra social usando el sistema mejorado
+    let valorUnitario = 0
+    const osExcel = obraSocial.trim()
+    const codigoExcel = extraerCodigoObraSocial(osExcel)
+
+    // 1. Intentar por código exacto
+    if (codigoExcel) {
+      for (const [osBD, valor] of valoresPorObraSocial.entries()) {
+        if (extraerCodigoObraSocial(osBD) === codigoExcel) {
+          valorUnitario = valor
+          break
+        }
+      }
+    }
+
+    // 2. Si no se encontró por código, intentar por coincidencia flexible
+    if (valorUnitario === 0) {
+      for (const [osBD, valor] of valoresPorObraSocial.entries()) {
+        if (coincidenObrasSociales(osExcel, osBD)) {
+          valorUnitario = valor
+          break
+        }
+      }
+    }
+
+    // 3. Fallback para PARTICULARES
+    if (valorUnitario === 0 && (osExcel.includes('PARTICULAR') || osExcel.includes('042'))) {
+      valorUnitario = valoresPorObraSocial.get('PARTICULARES') || valoresPorObraSocial.get('042 - PARTICULARES') || 0
+    }
 
     // Actualizar o crear resumen
     if (resumenMap.has(clave)) {
