@@ -76,11 +76,6 @@ export function MedicoFormModal({ medico, onClose, onSave }: MedicoFormModalProp
         formData.matricula = formData.matricula_provincial?.trim() || formData.cuit?.trim() || `TEMP-${Date.now()}`
       }
 
-      // Determinar si es residente basado en el perfil
-      if (formData.perfil) {
-        const perfilLower = formData.perfil.toLowerCase()
-        formData.es_residente = perfilLower.includes('residente') || perfilLower.includes('resident')
-      }
 
       if (medico) {
         // Actualizar
@@ -122,12 +117,12 @@ export function MedicoFormModal({ medico, onClose, onSave }: MedicoFormModalProp
   }
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: 'rgba(0, 0, 0, 0.8)' }}
       onClick={onClose}
     >
-      <div 
+      <div
         className="relative rounded-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
         style={{
           background: 'rgba(255, 255, 255, 0.1)',
@@ -248,11 +243,11 @@ export function MedicoFormModal({ medico, onClose, onSave }: MedicoFormModalProp
                 value={formData.perfil || ''}
                 onChange={(e) => {
                   const perfil = e.target.value
-                  setFormData({ 
-                    ...formData, 
+                  setFormData({
+                    ...formData,
                     perfil,
-                    es_residente: perfil.toLowerCase().includes('residente') || 
-                                 perfil.toLowerCase().includes('resident')
+                    es_residente: perfil.toLowerCase().includes('residente') ||
+                      perfil.toLowerCase().includes('resident')
                   })
                 }}
                 className="bg-black/30 border-gray-600 text-white"

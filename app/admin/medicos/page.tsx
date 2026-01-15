@@ -9,14 +9,14 @@ import { MedicoFormModal } from '@/components/custom/MedicoFormModal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
-import { 
-  Plus, 
-  Download, 
-  Upload, 
-  Search, 
-  Edit, 
-  Trash2, 
-  CheckCircle2, 
+import {
+  Plus,
+  Download,
+  Upload,
+  Search,
+  Edit,
+  Trash2,
+  CheckCircle2,
   XCircle,
   AlertCircle,
   Sparkles,
@@ -108,6 +108,22 @@ export default function MedicosPage() {
     }
   }
 
+  const handleToggleResidente_DB = async (medico: Medico) => {
+    try {
+      const { error } = await supabase
+        .from('medicos')
+        // @ts-ignore - Los tipos de Supabase no reconocen los nuevos campos aún
+        .update({ es_residente: !medico.es_residente })
+        .eq('id', medico.id)
+
+      if (error) throw error
+      loadMedicos()
+    } catch (error) {
+      console.error('Error updating médico:', error)
+      alert('Error al actualizar el médico')
+    }
+  }
+
   const handleImport = async (file: File) => {
     // Actualizar estado inmediatamente para feedback visual
     setIsImporting(true)
@@ -116,7 +132,7 @@ export default function MedicosPage() {
     try {
       // Procesar Excel (esta es la operación más pesada)
       const resultado = await importMedicosFromExcel(file)
-      
+
       // Verificar duplicados por matrícula o CUIT
       const { data: existingMedicos } = await supabase
         .from('medicos')
@@ -130,7 +146,7 @@ export default function MedicosPage() {
 
       // Procesar duplicados de forma eficiente
       for (const medico of resultado.medicos) {
-        const isDuplicate = 
+        const isDuplicate =
           existingMatriculas.has(medico.matricula) ||
           (medico.cuit && existingCuits.has(medico.cuit))
 
@@ -189,7 +205,7 @@ export default function MedicosPage() {
       if (filterResidente && !medico.es_residente) {
         return false
       }
-      
+
       // Filtro de búsqueda
       if (searchTerm) {
         const search = searchTerm.toLowerCase()
@@ -202,7 +218,7 @@ export default function MedicosPage() {
         )
         if (!matchesSearch) return false
       }
-      
+
       return true
     })
   }, [medicos, filterResidente, searchTerm])
@@ -236,9 +252,9 @@ export default function MedicosPage() {
               Volver
             </Button>
             <Link href="/" className="hover:opacity-80 transition-opacity">
-              <img 
-                src="/logogrow.png" 
-                alt="Grow Labs" 
+              <img
+                src="/logogrow.png"
+                alt="Grow Labs"
                 className="h-16 w-auto drop-shadow-2xl"
                 style={{
                   filter: 'drop-shadow(0 0 20px rgba(34, 197, 94, 0.5))'
@@ -260,7 +276,7 @@ export default function MedicosPage() {
         </div>
 
         {/* Barra de acciones */}
-        <div 
+        <div
           className="p-4 sm:p-6 rounded-xl overflow-hidden"
           style={{
             background: 'rgba(255, 255, 255, 0.1)',
@@ -303,7 +319,7 @@ export default function MedicosPage() {
                 <option value="activo">Activos</option>
                 <option value="inactivo">Inactivos</option>
               </select>
-              
+
               {/* Botón toggle para filtrar residentes */}
               <button
                 onClick={handleToggleResidente}
@@ -356,7 +372,7 @@ export default function MedicosPage() {
         </div>
 
         {/* Tabla de médicos */}
-        <div 
+        <div
           className="rounded-xl overflow-hidden"
           style={{
             background: 'rgba(255, 255, 255, 0.05)',
@@ -418,24 +434,23 @@ export default function MedicosPage() {
                       <td className="px-4 py-3 text-gray-400 break-words">{medico.grupo_persona || '-'}</td>
                       <td className="px-4 py-3 text-gray-400 break-words">{medico.perfil || '-'}</td>
                       <td className="px-4 py-3">
-                        {medico.es_residente ? (
-                          <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded whitespace-nowrap">
-                            Sí
-                          </span>
-                        ) : (
-                          <span className="px-2 py-1 bg-gray-500/20 text-gray-400 text-xs rounded whitespace-nowrap">
-                            No
-                          </span>
-                        )}
+                        <button
+                          onClick={() => handleToggleResidente_DB(medico)}
+                          className={`px-2 py-1 text-xs rounded transition-colors whitespace-nowrap ${medico.es_residente
+                              ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
+                              : 'bg-gray-500/20 text-gray-400 hover:bg-gray-500/30'
+                            }`}
+                        >
+                          {medico.es_residente ? 'Sí' : 'No'}
+                        </button>
                       </td>
                       <td className="px-4 py-3">
                         <button
                           onClick={() => handleToggleActivo(medico)}
-                          className={`px-2 py-1 text-xs rounded transition-colors whitespace-nowrap ${
-                            medico.activo
+                          className={`px-2 py-1 text-xs rounded transition-colors whitespace-nowrap ${medico.activo
                               ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
                               : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-                          }`}
+                            }`}
                         >
                           {medico.activo ? 'Activo' : 'Inactivo'}
                         </button>
@@ -505,12 +520,12 @@ export default function MedicosPage() {
 
       {/* Modal de importación */}
       {showImportModal && (
-        <div 
+        <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ background: 'rgba(0, 0, 0, 0.8)' }}
           onClick={() => !isImporting && setShowImportModal(false)}
         >
-          <div 
+          <div
             className="relative rounded-2xl p-8 max-w-2xl w-full"
             style={{
               background: 'rgba(255, 255, 255, 0.1)',
