@@ -15,33 +15,33 @@ export function cn(...inputs: ClassValue[]) {
  */
 export function esNombrePersona(valor: string | null | undefined): boolean {
     if (!valor || typeof valor !== 'string') return false
-    
+
     const trimmed = valor.trim()
     if (trimmed === '') return false
-    
+
     // Si contiene números al inicio o códigos como "042 -", no es nombre de persona
     if (/^\d+/.test(trimmed) || /^\d+\s*-\s*/.test(trimmed)) {
         return false
     }
-    
+
     // Si contiene solo números, no es nombre de persona
     if (/^\d+$/.test(trimmed)) {
         return false
     }
-    
+
     // Si es muy corto (menos de 3 caracteres), probablemente no es nombre completo
     if (trimmed.length < 3) {
         return false
     }
-    
+
     // Dividir en palabras
     const palabras = trimmed.split(/\s+/).filter(p => p.length > 0)
-    
+
     // Si tiene más de 4 palabras, probablemente no es un nombre de persona
     if (palabras.length > 4) {
         return false
     }
-    
+
     // Si tiene 2-4 palabras y contiene letras, probablemente es un nombre
     if (palabras.length >= 2 && palabras.length <= 4) {
         // Verificar que todas las palabras contengan letras
@@ -50,7 +50,7 @@ export function esNombrePersona(valor: string | null | undefined): boolean {
             return true
         }
     }
-    
+
     // Si tiene una sola palabra pero es larga y tiene mayúsculas/minúsculas, podría ser nombre
     if (palabras.length === 1 && trimmed.length > 5) {
         const tieneMayusculas = /[A-ZÁÉÍÓÚÑ]/.test(trimmed)
@@ -59,7 +59,7 @@ export function esNombrePersona(valor: string | null | undefined): boolean {
             return true
         }
     }
-    
+
     return false
 }
 
@@ -71,18 +71,18 @@ export function esParticular(cliente: string | null | undefined): boolean {
     if (!cliente || cliente.trim() === '') {
         return true
     }
-    
+
     // Si es "042 - PARTICULARES" o variaciones, no es particular (ya está marcado)
     const clienteLower = cliente.toLowerCase().trim()
     if (clienteLower.includes('042') && clienteLower.includes('particular')) {
         return false
     }
-    
+
     // Si parece un nombre de persona, es particular
     if (esNombrePersona(cliente)) {
         return true
     }
-    
+
     return false
 }
 
@@ -96,14 +96,14 @@ export const CODIGO_PARTICULARES = '042 - PARTICULARES'
  */
 export function obtenerSugerenciasObraSocial(valor: string | null | undefined): string[] {
     const sugerencias: string[] = []
-    
+
     if (esParticular(valor)) {
         sugerencias.push(CODIGO_PARTICULARES)
     }
-    
+
     // Aquí se pueden agregar más sugerencias basadas en obras sociales comunes
     // Por ejemplo: 'OSDE', 'DAMSU', 'PROVINCIA', etc.
-    
+
     return sugerencias
 }
 
@@ -115,30 +115,30 @@ export function tieneHorario(row: any, headers: string[]): boolean {
     // Buscar columna de horario
     const columnaHorario = headers.find(h => {
         const hLower = h.toLowerCase().trim()
-        return hLower.includes('hora') || 
-               hLower.includes('horario') || 
-               hLower.includes('inicio') ||
-               hLower === 'hora' ||
-               hLower === 'horario'
+        return hLower.includes('hora') ||
+            hLower.includes('horario') ||
+            hLower.includes('inicio') ||
+            hLower === 'hora' ||
+            hLower === 'horario'
     })
-    
+
     if (!columnaHorario) {
         // Si no hay columna de horario, asumir que tiene horario (no es problema)
         return true
     }
-    
+
     const valor = row[columnaHorario]
-    
+
     // Si está vacío, null, undefined o string vacío, no tiene horario
     if (valor === null || valor === undefined || valor === '') {
         return false
     }
-    
+
     // Si es string, verificar que no esté vacío después de trim
     if (typeof valor === 'string' && valor.trim() === '') {
         return false
     }
-    
+
     return true
 }
 
@@ -164,7 +164,7 @@ function crearFirmaFila(row: any, headers: string[]): string {
 export function detectarDuplicados(rows: any[], headers: string[]): Map<string, number[]> {
     const duplicados = new Map<string, number[]>()
     const firmas = new Map<string, number[]>()
-    
+
     // Crear mapa de firmas a índices
     rows.forEach((row, index) => {
         const firma = crearFirmaFila(row, headers)
@@ -173,14 +173,14 @@ export function detectarDuplicados(rows: any[], headers: string[]): Map<string, 
         }
         firmas.get(firma)!.push(index)
     })
-    
+
     // Encontrar firmas que aparecen más de una vez
     firmas.forEach((indices, firma) => {
         if (indices.length > 1) {
             duplicados.set(firma, indices)
         }
     })
-    
+
     return duplicados
 }
 
@@ -190,11 +190,11 @@ export function detectarDuplicados(rows: any[], headers: string[]): Map<string, 
 export function obtenerIndicesDuplicados(rows: any[], headers: string[]): Set<number> {
     const indices = new Set<number>()
     const duplicados = detectarDuplicados(rows, headers)
-    
+
     duplicados.forEach((indicesFila) => {
         indicesFila.forEach(index => indices.add(index))
     })
-    
+
     return indices
 }
 
@@ -204,21 +204,21 @@ export function obtenerIndicesDuplicados(rows: any[], headers: string[]): Set<nu
  */
 export function horaAMinutos(hora: string | null | undefined): number | null {
     if (!hora || typeof hora !== 'string') return null
-    
+
     const trimmed = hora.trim()
     if (trimmed === '') return null
-    
+
     // Extraer horas y minutos usando regex
     const match = trimmed.match(/^(\d{1,2}):(\d{2})(?::\d{2})?/)
     if (!match) return null
-    
+
     const horas = parseInt(match[1], 10)
     const minutos = parseInt(match[2], 10)
-    
+
     if (isNaN(horas) || isNaN(minutos) || horas < 0 || horas > 23 || minutos < 0 || minutos > 59) {
         return null
     }
-    
+
     return horas * 60 + minutos
 }
 
@@ -228,9 +228,9 @@ export function horaAMinutos(hora: string | null | undefined): number | null {
  */
 export function obtenerDiaSemana(fecha: string | Date | null | undefined): number | null {
     if (!fecha) return null
-    
+
     let date: Date
-    
+
     if (fecha instanceof Date) {
         date = fecha
     } else if (typeof fecha === 'string') {
@@ -242,17 +242,26 @@ export function obtenerDiaSemana(fecha: string | Date | null | undefined): numbe
             const anio = parseInt(matchDDMMYYYY[3], 10)
             date = new Date(anio, mes, dia)
         } else {
-            // Intentar parsear como ISO o formato estándar
-            date = new Date(fecha)
+            // Intentar parsear formato YYYY-MM-DD (Evitar shift horario de new Date(isoString))
+            const matchISO = fecha.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/)
+            if (matchISO) {
+                const anio = parseInt(matchISO[1], 10)
+                const mes = parseInt(matchISO[2], 10) - 1
+                const dia = parseInt(matchISO[3], 10)
+                date = new Date(anio, mes, dia)
+            } else {
+                // Fallback para otros formatos
+                date = new Date(fecha)
+            }
         }
-        
+
         if (isNaN(date.getTime())) {
             return null
         }
     } else {
         return null
     }
-    
+
     return date.getDay() // 0 = Domingo, 1 = Lunes, ..., 6 = Sábado
 }
 
@@ -272,7 +281,7 @@ export function esDiaLaboral(fecha: string | Date | null | undefined): boolean {
 export function esHorarioFormativo(hora: string | null | undefined): boolean {
     const minutos = horaAMinutos(hora)
     if (minutos === null) return false
-    
+
     // 07:00 = 420 minutos, 15:00 = 900 minutos
     // El horario formativo es de 07:00 a 15:00 (inclusive)
     return minutos >= 420 && minutos < 900 // 15:00 no se incluye (es < 900, no <=)
@@ -289,13 +298,13 @@ export function esResidenteHorarioFormativo(
 ): boolean {
     // Solo aplica si es residente
     if (!esResidente) return false
-    
+
     // Debe ser día laboral (lunes a sábado)
     if (!esDiaLaboral(fecha)) return false
-    
+
     // Debe estar en horario formativo (07:00 a 15:00)
     if (!esHorarioFormativo(hora)) return false
-    
+
     return true
 }
 
@@ -308,9 +317,9 @@ export function calcularNumeroLiquidacion(mes: number, anio: number): number {
     const mesBase = 8 // Agosto
     const anioBase = 2025
     const numeroBase = 401
-    
+
     // Calcular diferencia de meses desde la base
     const mesesDiferencia = (anio - anioBase) * 12 + (mes - mesBase)
-    
+
     return numeroBase + mesesDiferencia
 }

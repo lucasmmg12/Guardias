@@ -782,7 +782,7 @@ export async function procesarExcelPediatria(
           medico = mapaNombresMedicos.get(nombreNormalizado) || null
         }
 
-        const esResidente = medico ? (medico.matricula_provincial === null) : false
+        const esResidente = medico ? medico.es_residente : false
 
         // Obtener valor de consulta según el grupo del médico
         let obraSocialFinal: string

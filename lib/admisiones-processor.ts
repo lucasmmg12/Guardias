@@ -37,9 +37,9 @@ function normalizarColumna(nombre: string): string {
  */
 function buscarValor(row: ExcelRow, variaciones: string[]): any {
   const keys = Object.keys(row)
-  
+
   if (keys.length === 0) return null
-  
+
   // Buscar coincidencia exacta (case-insensitive)
   for (const variacion of variaciones) {
     for (const key of keys) {
@@ -52,7 +52,7 @@ function buscarValor(row: ExcelRow, variaciones: string[]): any {
       }
     }
   }
-  
+
   // Buscar coincidencia normalizada (sin acentos, espacios)
   const normalizadas = variaciones.map(normalizarColumna)
   for (const key of keys) {
@@ -65,12 +65,12 @@ function buscarValor(row: ExcelRow, variaciones: string[]): any {
       }
     }
   }
-  
+
   // Buscar coincidencia parcial (contiene palabras clave)
   for (const variacion of variaciones) {
     const palabras = normalizarColumna(variacion).split(/\s+/).filter(p => p.length > 2)
     if (palabras.length === 0) continue
-    
+
     for (const key of keys) {
       const keyNormalizada = normalizarColumna(key)
       const todasPalabrasPresentes = palabras.every(p => keyNormalizada.includes(p))
@@ -83,7 +83,7 @@ function buscarValor(row: ExcelRow, variaciones: string[]): any {
       }
     }
   }
-  
+
   return null
 }
 
@@ -105,20 +105,20 @@ function normalizarNombre(nombre: string): string {
  */
 function buscarMedico(nombre: string | null, medicos: Medico[]): Medico | null {
   if (!nombre || typeof nombre !== 'string') return null
-  
+
   const nombreTrimmed = nombre.trim()
   if (nombreTrimmed === '') return null
-  
+
   // ESTRATEGIA 0: Coincidencia exacta SIN normalizar (prioridad máxima)
   for (const medico of medicos) {
     if (medico.nombre.trim() === nombreTrimmed) {
       return medico
     }
   }
-  
+
   const nombreNormalizado = normalizarNombre(nombre)
   if (nombreNormalizado === '') return null
-  
+
   // Estrategia 1: Coincidencia exacta (después de normalizar)
   for (const medico of medicos) {
     const medicoNombreNormalizado = normalizarNombre(medico.nombre)
@@ -126,100 +126,100 @@ function buscarMedico(nombre: string | null, medicos: Medico[]): Medico | null {
       return medico
     }
   }
-  
+
   // Estrategia 2: Coincidencia exacta sin considerar orden
   const partesNombre = nombreNormalizado.split(',').map(p => p.trim())
   const palabrasNombre = nombreNormalizado.split(/\s+/).filter(p => p.length > 2)
-  
+
   for (const medico of medicos) {
     const medicoNombreNormalizado = normalizarNombre(medico.nombre)
     const partesMedico = medicoNombreNormalizado.split(',').map(p => p.trim())
     const palabrasMedico = medicoNombreNormalizado.split(/\s+/).filter(p => p.length > 2)
-    
+
     if (palabrasNombre.length > 0 && palabrasMedico.length > 0) {
       const palabrasNombreSet = new Set(palabrasNombre)
       const palabrasMedicoSet = new Set(palabrasMedico)
-      
+
       if (palabrasNombreSet.size === palabrasMedicoSet.size &&
-          Array.from(palabrasNombreSet).every(p => palabrasMedicoSet.has(p))) {
+        Array.from(palabrasNombreSet).every(p => palabrasMedicoSet.has(p))) {
         return medico
       }
     }
   }
-  
+
   // Estrategia 3: Buscar por apellido
-  const apellidoNombre = partesNombre.length > 1 
+  const apellidoNombre = partesNombre.length > 1
     ? partesNombre[0].trim()
     : (palabrasNombre.length > 0 ? palabrasNombre[0] : nombreNormalizado)
-  
+
   let mejorCoincidenciaApellido: Medico | null = null
   let mejorPuntuacionApellido = 0
-  
+
   for (const medico of medicos) {
     const medicoNombreNormalizado = normalizarNombre(medico.nombre)
     const partesMedico = medicoNombreNormalizado.split(',').map(p => p.trim())
     const palabrasMedico = medicoNombreNormalizado.split(/\s+/).filter(p => p.length > 2)
-    
+
     const apellidoMedico = partesMedico.length > 1
       ? partesMedico[0].trim()
       : (palabrasMedico.length > 0 ? palabrasMedico[0] : medicoNombreNormalizado)
-    
+
     if (apellidoNombre === apellidoMedico && apellidoNombre.length > 2) {
-      const palabrasCoincidentes = palabrasNombre.filter(p => 
+      const palabrasCoincidentes = palabrasNombre.filter(p =>
         palabrasMedico.some(m => m === p || m.includes(p) || p.includes(m))
       ).length
-      
+
       if (palabrasCoincidentes > mejorPuntuacionApellido) {
         mejorPuntuacionApellido = palabrasCoincidentes
         mejorCoincidenciaApellido = medico
       }
     }
   }
-  
+
   if (mejorCoincidenciaApellido && mejorPuntuacionApellido > 0) {
     return mejorCoincidenciaApellido
   }
-  
+
   // Estrategia 4: Buscar por todas las palabras importantes
   if (palabrasNombre.length > 0) {
     for (const medico of medicos) {
       const medicoNombreNormalizado = normalizarNombre(medico.nombre)
       const palabrasMedico = medicoNombreNormalizado.split(/\s+/).filter(p => p.length > 2)
-      
+
       if (palabrasNombre.every(p => medicoNombreNormalizado.includes(p))) {
         return medico
       }
-      
+
       if (palabrasMedico.length > 0 && palabrasMedico.every(p => nombreNormalizado.includes(p))) {
         return medico
       }
     }
   }
-  
+
   // Estrategia 5: Búsqueda por similitud (al menos 2 palabras coinciden)
   if (palabrasNombre.length >= 2) {
     let mejorCoincidencia: Medico | null = null
     let mejorPuntuacion = 0
-    
+
     for (const medico of medicos) {
       const medicoNombreNormalizado = normalizarNombre(medico.nombre)
       const palabrasMedico = medicoNombreNormalizado.split(/\s+/).filter(p => p.length > 2)
-      
-      const palabrasCoincidentes = palabrasNombre.filter(p => 
+
+      const palabrasCoincidentes = palabrasNombre.filter(p =>
         palabrasMedico.some(m => m.includes(p) || p.includes(m))
       ).length
-      
+
       if (palabrasCoincidentes >= 2 && palabrasCoincidentes > mejorPuntuacion) {
         mejorPuntuacion = palabrasCoincidentes
         mejorCoincidencia = medico
       }
     }
-    
+
     if (mejorCoincidencia) {
       return mejorCoincidencia
     }
   }
-  
+
   return null
 }
 
@@ -228,12 +228,12 @@ function buscarMedico(nombre: string | null, medicos: Medico[]): Medico | null {
  */
 function convertirFechaISO(fecha: string | number | null | undefined): string | null {
   if (fecha === null || fecha === undefined) return null
-  
+
   // Si es un número, puede ser un serial de Excel
   if (typeof fecha === 'number') {
     const excelEpoch = new Date(1899, 11, 30)
     const dateObj = new Date(excelEpoch.getTime() + fecha * 24 * 60 * 60 * 1000)
-    
+
     if (!isNaN(dateObj.getTime())) {
       const year = dateObj.getFullYear()
       const month = String(dateObj.getMonth() + 1).padStart(2, '0')
@@ -242,10 +242,10 @@ function convertirFechaISO(fecha: string | number | null | undefined): string | 
     }
     return null
   }
-  
+
   const fechaStr = String(fecha).trim()
   if (fechaStr === '') return null
-  
+
   // Intentar formato YYYY-MM-DD (ya está en ISO)
   const matchISO = fechaStr.match(/(\d{4})-(\d{1,2})-(\d{1,2})/)
   if (matchISO) {
@@ -254,7 +254,7 @@ function convertirFechaISO(fecha: string | number | null | undefined): string | 
     const dia = matchISO[3].padStart(2, '0')
     return `${anio}-${mes}-${dia}`
   }
-  
+
   // Intentar formato DD/MM/YYYY
   const matchDDMMYYYY = fechaStr.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/)
   if (matchDDMMYYYY) {
@@ -263,7 +263,7 @@ function convertirFechaISO(fecha: string | number | null | undefined): string | 
     const anio = matchDDMMYYYY[3]
     return `${anio}-${mes}-${dia}`
   }
-  
+
   // Intentar parsear como Date object
   try {
     const dateObj = new Date(fechaStr)
@@ -276,7 +276,7 @@ function convertirFechaISO(fecha: string | number | null | undefined): string | 
   } catch {
     // Ignorar error
   }
-  
+
   return null
 }
 
@@ -310,12 +310,12 @@ export async function procesarExcelAdmisiones(
     }
 
     const medicos = medicosData || []
-    
+
     console.log(`[Admisiones] Médicos cargados: ${medicos.length}`)
 
     // 2. Crear o obtener liquidación
     const numeroLiquidacion = calcularNumeroLiquidacion(mes, anio)
-    
+
     // Verificar si ya existe
     const { data: liquidacionExistente } = await supabase
       .from('liquidaciones_guardia')
@@ -330,7 +330,7 @@ export async function procesarExcelAdmisiones(
     if (liquidacionExistente && (liquidacionExistente as any).id) {
       // Ya existe, usar la existente
       liquidacionId = (liquidacionExistente as any).id
-      
+
       // Eliminar detalles existentes
       await supabase
         .from('detalle_guardia')
@@ -377,9 +377,9 @@ export async function procesarExcelAdmisiones(
     // 3. Extraer todos los nombres únicos de "Responsable" del Excel
     const nombresUnicos = new Set<string>()
     const nombresOriginales = new Map<string, string>()
-    
+
     console.log(`Extrayendo nombres únicos de ${excelData.rows.length} filas del Excel`)
-    
+
     for (const row of excelData.rows) {
       const medicoNombre = buscarValor(row, [
         'Responsable', 'responsable', 'RESPONSABLE',
@@ -389,7 +389,7 @@ export async function procesarExcelAdmisiones(
         'Médico responsable', 'Médico Responsable', 'Medico Responsable',
         'MÉDICO RESPONSABLE'
       ])
-      
+
       if (medicoNombre && typeof medicoNombre === 'string' && medicoNombre.trim() !== '') {
         const nombreNormalizado = normalizarNombre(medicoNombre.trim())
         if (nombreNormalizado !== '') {
@@ -400,28 +400,28 @@ export async function procesarExcelAdmisiones(
         }
       }
     }
-    
+
     console.log(`[Mapeo] Nombres únicos encontrados en Excel: ${nombresUnicos.size}`)
-    
+
     // 4. Buscar cada nombre único en la BD y crear mapa
     const mapaNombresMedicos = new Map<string, Medico>()
-    
+
     for (const nombreNormalizado of nombresUnicos) {
       const medico = buscarMedico(nombresOriginales.get(nombreNormalizado) || nombreNormalizado, medicos)
       if (medico) {
         mapaNombresMedicos.set(nombreNormalizado, medico)
       }
     }
-    
+
     const nombresEncontrados = Array.from(mapaNombresMedicos.keys())
     const nombresNoEncontrados = Array.from(nombresUnicos).filter(n => !mapaNombresMedicos.has(n))
-    
+
     console.log(`[Mapeo] Médicos encontrados: ${nombresEncontrados.length}/${nombresUnicos.size}`)
-    
+
     if (nombresNoEncontrados.length > 0) {
       resultado.advertencias.push(`Médicos no encontrados en BD (${nombresNoEncontrados.length}): ${nombresNoEncontrados.slice(0, 5).map(n => nombresOriginales.get(n) || n).join(', ')}${nombresNoEncontrados.length > 5 ? '...' : ''}`)
     }
-    
+
     // 5. Procesar cada fila del Excel aplicando deduplicación
     const detalles: DetalleGuardiaInsert[] = []
     resultado.totalFilas = excelData.rows.length
@@ -443,18 +443,18 @@ export async function procesarExcelAdmisiones(
 
     for (let i = 0; i < excelData.rows.length; i++) {
       const row = excelData.rows[i]
-      
+
       try {
         // Extraer datos de la fila
         const fechaStr = buscarValor(row, [
           'Fecha Visita', 'Fecha visita', 'FECHA VISITA',
-          'Fecha', 'fecha', 'FECHA', 
+          'Fecha', 'fecha', 'FECHA',
           'Fecha de visita', 'Fecha de Visita',
           'Fecha de atención', 'Fecha Atención',
           'Fecha de la consulta', 'Fecha Consulta'
         ])
         const paciente = buscarValor(row, [
-          'Paciente', 'paciente', 'PACIENTE', 
+          'Paciente', 'paciente', 'PACIENTE',
           'Nombre paciente', 'Nombre Paciente', 'Nombre del paciente',
           'NOMBRE PACIENTE'
         ])
@@ -466,14 +466,14 @@ export async function procesarExcelAdmisiones(
           'Médico responsable', 'Médico Responsable', 'Medico Responsable',
           'MÉDICO RESPONSABLE'
         ])
-        
+
         // Convertir fecha
         let fecha: string | null = null
-        
+
         if (fechaStr) {
           fecha = convertirFechaISO(fechaStr)
         }
-        
+
         // Validar datos mínimos
         if (!fecha) {
           filasSinFecha++
@@ -501,18 +501,18 @@ export async function procesarExcelAdmisiones(
         // Normalizar valores
         const pacienteNormalizado = (paciente || '').trim().toLowerCase()
         const medicoNombreNormalizado = medicoNombre ? normalizarNombre(medicoNombre.trim()) : ''
-        
+
         // NOTA: Los duplicados (mismo paciente + misma fecha) se guardan todos
         // Se marcan visualmente en color celeste en la UI para revisión manual
-        
+
         // Buscar médico en el mapa
         let medico: Medico | null = null
         if (medicoNombre && typeof medicoNombre === 'string' && medicoNombre.trim() !== '') {
           const nombreNormalizado = normalizarNombre(medicoNombre.trim())
           medico = mapaNombresMedicos.get(nombreNormalizado) || null
         }
-        
-        const esResidente = medico ? (medico.matricula_provincial === null) : false
+
+        const esResidente = medico ? medico.es_residente : false
 
         // Valor fijo por admisión
         const montoFacturado = ADMISSION_VALUE
@@ -564,7 +564,7 @@ export async function procesarExcelAdmisiones(
     }
 
     console.log(`Guardando ${detalles.length} detalles en la base de datos`)
-    
+
     // Insertar en lotes de 100
     const batchSize = 100
     for (let i = 0; i < detalles.length; i += batchSize) {
@@ -603,7 +603,7 @@ export async function procesarExcelAdmisiones(
 
     // Guardar log simple de procesamiento
     const { guardarLogProcesamiento } = await import('./historial-logger')
-    await guardarLogProcesamiento('Admisiones Clínicas', mes, anio, liquidacionId).catch(() => {})
+    await guardarLogProcesamiento('Admisiones Clínicas', mes, anio, liquidacionId).catch(() => { })
 
   } catch (error: any) {
     resultado.errores.push(`Error general: ${error.message || 'Error desconocido'}`)
