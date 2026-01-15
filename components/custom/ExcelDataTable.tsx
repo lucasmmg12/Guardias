@@ -80,8 +80,8 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
     async function loadValoresConsultas() {
       try {
         setValoresLoading(true)
-        const tipoConsulta = especialidad === 'Pediatría' 
-          ? 'CONSULTA DE GUARDIA PEDIATRICA' 
+        const tipoConsulta = especialidad === 'Pediatría'
+          ? 'CONSULTA DE GUARDIA PEDIATRICA'
           : 'CONSULTA GINECOLOGICA'
 
         // Validar que mes y anio estén definidos
@@ -106,7 +106,7 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
           // Manejar PARTICULARES y 042 - PARTICULARES
           const valorParticular = valoresMap.get('PARTICULARES')
           const valorParticular042 = valoresMap.get('042 - PARTICULARES')
-          
+
           if (valorParticular && !valoresMap.has('042 - PARTICULARES')) {
             valoresMap.set('042 - PARTICULARES', valorParticular)
           }
@@ -182,16 +182,20 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
         .toLowerCase()
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[,\.]/g, ' ')
+        .replace(/\s+/g, ' ')
         .trim()
       mapa.set(nombreNormalizado, medico)
-      
+
       // También agregar variaciones del nombre (solo apellido, etc.)
-      const partes = medico.nombre.split(',').map(p => p.trim())
+      const partes = medico.nombre.split(/[,\.]/).map(p => p.trim())
       if (partes.length > 0) {
         const apellidoNormalizado = partes[0]
           .toLowerCase()
           .normalize('NFD')
           .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[,\.]/g, ' ')
+          .replace(/\s+/g, ' ')
           .trim()
         if (apellidoNormalizado && !mapa.has(apellidoNormalizado)) {
           mapa.set(apellidoNormalizado, medico)
@@ -204,25 +208,27 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
   // Función optimizada para buscar médico por nombre
   const buscarMedico = useCallback((nombre: string | null | undefined): Medico | null => {
     if (!nombre || typeof nombre !== 'string') return null
-    
+
     const nombreNormalizado = nombre
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[,\.]/g, ' ')
+      .replace(/\s+/g, ' ')
       .trim()
-    
+
     // Buscar coincidencia exacta
     if (mapaMedicos.has(nombreNormalizado)) {
       return mapaMedicos.get(nombreNormalizado) || null
     }
-    
+
     // Buscar coincidencia parcial (el nombre contiene el apellido del médico)
     for (const [key, medico] of mapaMedicos.entries()) {
       if (nombreNormalizado.includes(key) || key.includes(nombreNormalizado)) {
         return medico
       }
     }
-    
+
     return null
   }, [mapaMedicos])
 
@@ -263,42 +269,42 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
   // (estos últimos porque pueden haber sido convertidos desde nombres de pacientes)
   const filasParticulares = useMemo(() => {
     const indices: Set<number> = new Set()
-    
+
     // Buscar columna de cliente/obra social con múltiples variaciones
     const clienteIndex = data.headers.findIndex(h => {
       const hLower = h.toLowerCase().trim()
-      return hLower === 'cliente' || 
-             hLower.includes('obra social') || 
-             hLower === 'obra social' ||
-             hLower === 'obra' ||
-             (hLower.includes('obra') && hLower.includes('social'))
+      return hLower === 'cliente' ||
+        hLower.includes('obra social') ||
+        hLower === 'obra social' ||
+        hLower === 'obra' ||
+        (hLower.includes('obra') && hLower.includes('social'))
     })
-    
+
     if (clienteIndex === -1) {
       console.warn('[ExcelDataTable] No se encontró columna de Cliente/Obra Social')
       return indices
     }
-    
+
     const headerCliente = data.headers[clienteIndex]
-    
+
     rows.forEach((row, index) => {
       const cliente = row[headerCliente]
       const clienteStr = cliente ? String(cliente).trim() : ''
       const clienteLower = clienteStr.toLowerCase()
-      
+
       // Detectar si es particular:
       // 1. Si es un nombre de persona (usando esParticular)
       // 2. Si está vacío
       // 3. Si es "042 - PARTICULARES" o "PARTICULARES" (pueden haber sido convertidos desde nombres)
-      if (esParticular(cliente) || 
-          clienteStr === '' || 
-          clienteLower === '042 - particulares' || 
-          clienteLower === 'particulares' ||
-          clienteLower.includes('042') && clienteLower.includes('particulares')) {
+      if (esParticular(cliente) ||
+        clienteStr === '' ||
+        clienteLower === '042 - particulares' ||
+        clienteLower === 'particulares' ||
+        clienteLower.includes('042') && clienteLower.includes('particulares')) {
         indices.add(index)
       }
     })
-    
+
     console.log(`[ExcelDataTable] Filas sin obra social detectadas: ${indices.size}`)
     return indices
   }, [rows, data.headers])
@@ -306,13 +312,13 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
   // Detectar filas sin horario de inicio
   const filasSinHorario = useMemo(() => {
     const indices: Set<number> = new Set()
-    
+
     rows.forEach((row, index) => {
       if (!tieneHorario(row, data.headers)) {
         indices.add(index)
       }
     })
-    
+
     return indices
   }, [rows, data.headers])
 
@@ -324,7 +330,7 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
       // Lógica específica para Admisiones: paciente + fecha
       const indices: Set<number> = new Set()
       const pacientesFechas = new Map<string, number[]>() // clave: "paciente|fecha" -> índices
-      
+
       // Buscar índices de columnas relevantes
       const pacienteIndex = data.headers.findIndex(h => {
         const hLower = h.toLowerCase().trim()
@@ -334,28 +340,28 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
         const hLower = h.toLowerCase().trim()
         return hLower.includes('fecha') || hLower.includes('fecha visita')
       })
-      
+
       if (pacienteIndex === -1 || fechaIndex === -1) {
         return indices
       }
-      
+
       rows.forEach((row, index) => {
         const paciente = row[data.headers[pacienteIndex]]
         const fecha = row[data.headers[fechaIndex]]
-        
+
         // Normalizar valores
         const pacienteStr = paciente ? String(paciente).trim().toLowerCase() : ''
         const fechaStr = fecha ? String(fecha).trim() : ''
-        
+
         // Crear clave única: paciente + fecha
         const clave = `${pacienteStr}|${fechaStr}`
-        
+
         if (!pacientesFechas.has(clave)) {
           pacientesFechas.set(clave, [])
         }
         pacientesFechas.get(clave)!.push(index)
       })
-      
+
       // Marcar como duplicados todos los índices que tienen la misma clave (excepto el primero)
       pacientesFechas.forEach((indicesArray) => {
         if (indicesArray.length > 1) {
@@ -363,7 +369,7 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
           indicesArray.slice(1).forEach(idx => indices.add(idx))
         }
       })
-      
+
       return indices
     } else {
       // Lógica original para otros módulos: fila completamente igual
@@ -374,7 +380,7 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
   // Detectar filas con residentes en horario formativo (optimizado)
   const filasResidenteHorarioFormativo = useMemo(() => {
     const indices: Set<number> = new Set()
-    
+
     // Si no hay especialidad o no hay médicos cargados, retornar vacío
     if (!especialidad || medicos.length === 0 || medicosLoading) {
       return indices
@@ -439,8 +445,8 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
       data.rows = updatedRows
     } else {
       // Fallback: solo actualizar local (modo legacy, sin confirmación porque no hay modal)
-    const updatedRows = rows.filter((_, index) => index !== rowIndex)
-    setRows(updatedRows)
+      const updatedRows = rows.filter((_, index) => index !== rowIndex)
+      setRows(updatedRows)
       data.rows = updatedRows
     }
   }, [rows, data, onDeleteRow])
@@ -499,7 +505,7 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
     <div className="w-full space-y-4">
       {/* Información del período */}
       {data.periodo && (
-        <div 
+        <div
           className="p-4 rounded-xl"
           style={{
             background: 'rgba(255, 255, 255, 0.1)',
@@ -585,11 +591,10 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
       <ExpandableSection
         title={
           <div className="flex items-center gap-2">
-            <span className={`px-2.5 py-1 rounded-md text-xs font-semibold uppercase tracking-wide border ${
-              especialidad === 'Admisiones Clínicas'
+            <span className={`px-2.5 py-1 rounded-md text-xs font-semibold uppercase tracking-wide border ${especialidad === 'Admisiones Clínicas'
                 ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30'
                 : 'bg-purple-500/20 text-purple-400 border-purple-500/30'
-            }`}>
+              }`}>
               Duplicado
             </span>
             <span className="font-semibold">
