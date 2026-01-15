@@ -64,8 +64,8 @@ export default function GinecologiaPage() {
         }
 
         // Si no hay período, buscar en las fechas de las filas
-        const fechaColumn = data.headers.find(h => 
-            h.toLowerCase().includes('fecha') || 
+        const fechaColumn = data.headers.find(h =>
+            h.toLowerCase().includes('fecha') ||
             h.toLowerCase().includes('date')
         )
 
@@ -119,7 +119,7 @@ export default function GinecologiaPage() {
         try {
             const data = await readExcelFileGinecologia(file)
             setExcelData(data)
-            
+
             // Detectar mes y año automáticamente
             const { mes, anio } = detectarMesAnio(data)
             if (mes && anio) {
@@ -159,9 +159,9 @@ export default function GinecologiaPage() {
 
                 // Guardar resultado del procesamiento para mostrar filas excluidas
                 setResultadoProcesamiento(resultado)
-                
+
                 if (resultado.errores.length > 0) {
-                    const mensajeError = resultado.errores.length > 0 
+                    const mensajeError = resultado.errores.length > 0
                         ? `Se procesaron ${resultado.procesadas} filas. Errores: ${resultado.errores.slice(0, 3).join('; ')}${resultado.errores.length > 3 ? '...' : ''}`
                         : `Se procesaron ${resultado.procesadas} filas. Errores: ${resultado.errores.length}`
                     showNotification(
@@ -235,9 +235,9 @@ export default function GinecologiaPage() {
                     <div>
                         <div className="flex items-center gap-4 mb-4">
                             <Link href="/" className="hover:opacity-80 transition-opacity">
-                                <img 
-                                    src="/logogrow.png" 
-                                    alt="Grow Labs" 
+                                <img
+                                    src="/logogrow.png"
+                                    alt="Grow Labs"
                                     className="h-16 w-auto drop-shadow-2xl"
                                     style={{
                                         filter: 'drop-shadow(0 0 20px rgba(34, 197, 94, 0.5))'
@@ -260,7 +260,7 @@ export default function GinecologiaPage() {
                 </div>
 
                 {/* Upload Excel Card */}
-                <div 
+                <div
                     className="relative rounded-2xl shadow-2xl overflow-hidden p-8"
                     style={{
                         background: 'rgba(255, 255, 255, 0.1)',
@@ -270,7 +270,7 @@ export default function GinecologiaPage() {
                     }}
                 >
                     {/* Borde brillante animado */}
-                    <div 
+                    <div
                         className="absolute inset-0 rounded-2xl"
                         style={{
                             background: 'linear-gradient(45deg, transparent, rgba(59, 130, 246, 0.3), transparent)',
@@ -280,9 +280,9 @@ export default function GinecologiaPage() {
                     <div className="relative">
                         <div className="flex items-center justify-between mb-6">
                             <h2 className="text-2xl font-bold text-blue-400 flex items-center gap-2">
-                            <Upload className="h-6 w-6" />
-                            Cargar Liquidación
-                        </h2>
+                                <Upload className="h-6 w-6" />
+                                Cargar Liquidación
+                            </h2>
                             <Button
                                 onClick={() => router.push('/ginecologia/resumenes')}
                                 variant="outline"
@@ -292,124 +292,173 @@ export default function GinecologiaPage() {
                             </Button>
                         </div>
 
-                    <UploadExcel onUpload={handleUpload} isProcessing={isProcessing} />
+                        <UploadExcel onUpload={handleUpload} isProcessing={isProcessing} />
 
-                    {/* Mensaje de error */}
-                    {error && (
-                        <div className="mt-6 bg-red-500/10 border border-red-500/30 rounded-lg p-4 flex items-start gap-3 text-red-400">
-                            <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" />
-                            <div>
-                                <h3 className="font-semibold">Error de Procesamiento</h3>
-                                <p className="text-sm opacity-90">{error}</p>
+                        {/* Mensaje de error */}
+                        {error && (
+                            <div className="mt-6 bg-red-500/10 border border-red-500/30 rounded-lg p-4 flex items-start gap-3 text-red-400">
+                                <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" />
+                                <div>
+                                    <h3 className="font-semibold">Error de Procesamiento</h3>
+                                    <p className="text-sm opacity-90">{error}</p>
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        )}
                     </div>
                 </div>
 
 
                 {/* Reglas de Negocio */}
-                <div 
-                    className="p-6 rounded-xl"
+                <div
+                    className="p-8 rounded-2xl"
                     style={{
-                        background: 'rgba(255, 255, 255, 0.1)',
+                        background: 'linear-gradient(145deg, rgba(20, 20, 25, 0.9), rgba(10, 10, 15, 0.95))',
                         backdropFilter: 'blur(20px)',
-                        border: '1px solid rgba(255, 255, 255, 0.2)',
-                        boxShadow: '0 8px 32px 0 rgba(59, 130, 246, 0.2)',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
                     }}
                 >
-                        <h3 className="text-xl font-semibold text-gray-200 mb-4 flex items-center gap-2">
-                            <FileText className="h-5 w-5" />
-                            Reglas Vigentes
-                        </h3>
-                        <div className="space-y-4 text-sm text-gray-300">
-                            <div className="p-3 bg-white/5 rounded-lg border border-white/5">
-                                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Pago por Hora</div>
-                                <div className="font-semibold text-white">Según Tarifa</div>
-                                <div className="text-xs text-gray-400">Valor hora vigente por obra social</div>
+                    <div className="flex items-center gap-3 mb-8 pb-4 border-b border-white/10">
+                        <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 shadow-inner">
+                            <FileText className="h-6 w-6 text-blue-400" />
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+                                Reglas de Liquidación Vigentes
+                            </h3>
+                            <p className="text-xs text-gray-500 uppercase tracking-widest font-medium">Ginecología</p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Pago por Consulta */}
+                        <div className="relative group overflow-hidden rounded-xl bg-gradient-to-b from-white/5 to-transparent p-5 border border-white/5 transition-all hover:border-white/10">
+                            <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/10 rounded-full blur-2xl -mr-10 -mt-10 group-hover:bg-green-500/20 transition-all"></div>
+
+                            <div className="text-xs font-bold text-green-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
+                                Pago por Consulta
+                            </div>
+                            <div className="text-2xl font-bold text-white mb-1">Valor Variable</div>
+                            <p className="text-sm text-gray-400 leading-relaxed">
+                                Se abona un valor fijo por cada consulta realizada. El importe depende exclusivamente de la <span className="text-white font-medium">Obra Social</span> del paciente, según la tabla de valores vigente para el mes.
+                            </p>
+                        </div>
+
+                        {/* Médicos de Planta */}
+                        <div className="relative group overflow-hidden rounded-xl bg-gradient-to-b from-white/5 to-transparent p-5 border border-white/5 transition-all hover:border-white/10">
+                            <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl -mr-10 -mt-10 group-hover:bg-blue-500/20 transition-all"></div>
+
+                            <div className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                                <User className="h-3 w-3" />
+                                Médicos de Planta
+                            </div>
+                            <div className="text-2xl font-bold text-white mb-1">100% Abonable</div>
+                            <p className="text-sm text-gray-400 leading-relaxed">
+                                Los médicos de planta (no residentes) cobran <span className="text-white font-medium">siempre el 100%</span> del valor de la consulta, sin importar el día ni el horario en que se realice.
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Regla de Residentes */}
+                    <div className="mt-6 rounded-xl overflow-hidden border border-white/5 bg-gradient-to-b from-[#1a1b26] to-[#13141c]">
+                        <div className="p-4 bg-white/[0.03] border-b border-white/5 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <AlertCircle className="h-4 w-4 text-purple-400" />
+                                <span className="font-semibold text-gray-200">Regla de Residentes en Horario Formativo</span>
+                            </div>
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20 font-medium">
+                                Condición Especial
+                            </span>
+                        </div>
+
+                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="space-y-4">
+                                <div className="flex items-start gap-3">
+                                    <div className="mt-1 p-1 rounded-md bg-red-500/10 text-red-500">
+                                        <X className="h-4 w-4" />
+                                    </div>
+                                    <div>
+                                        <div className="font-bold text-white mb-0.5"> NO SE PAGA (Horario Formativo)</div>
+                                        <p className="text-sm text-gray-400 leading-snug">
+                                            Si la consulta cumple las 3 condiciones:
+                                        </p>
+                                        <ul className="mt-2 space-y-2 text-sm text-gray-400">
+                                            <li className="flex items-center gap-2">
+                                                <span className="w-1 h-1 bg-red-500 rounded-full"></span>
+                                                Día <strong className="text-gray-300">Lunes a Sábado</strong>
+                                            </li>
+                                            <li className="flex items-center gap-2">
+                                                <span className="w-1 h-1 bg-red-500 rounded-full"></span>
+                                                Horario entre <strong className="text-gray-300">07:00 y 15:00</strong>
+                                            </li>
+                                            <li className="flex items-center gap-2">
+                                                <span className="w-1 h-1 bg-red-500 rounded-full"></span>
+                                                El médico es <strong className="text-gray-300">Residente</strong>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
                             </div>
 
-                            <div className="p-3 bg-white/5 rounded-lg border border-white/5">
-                                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">
-                                    <User className="h-3 w-3" />
-                                    Regla de Residentes en Horario Formativo
-                                </div>
-                                <div className="text-sm mt-2 space-y-2">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-red-400 font-semibold">NO SE PAGA</span>
-                                        <span className="text-xs text-gray-400">si se cumplen todas las condiciones:</span>
+                            <div className="space-y-4">
+                                <div className="flex items-start gap-3">
+                                    <div className="mt-1 p-1 rounded-md bg-green-500/10 text-green-500">
+                                        <CheckCircle2 className="h-4 w-4" />
                                     </div>
-                                    <ul className="text-xs space-y-1 ml-2 text-gray-300">
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-blue-400">•</span>
-                                            <span>Médico es <strong>RESIDENTE</strong> (verificado en BD)</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-blue-400">•</span>
-                                            <span>Día: <strong>Lunes a Sábado</strong> (no domingo)</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-blue-400">•</span>
-                                            <span>Horario: <strong className="text-blue-400">07:00 a 15:00</strong></span>
-                                        </li>
-                                        <li className="text-xs text-gray-400 mt-1 ml-4">
-                                            (Incluye 07:00, excluye 15:00)
-                                        </li>
-                                    </ul>
+                                    <div>
+                                        <div className="font-bold text-white mb-0.5"> SÍ SE PAGA (Guardia)</div>
+                                        <p className="text-sm text-gray-400 leading-snug">
+                                            En cualquier otro caso:
+                                        </p>
+                                        <ul className="mt-2 space-y-2 text-sm text-gray-400">
+                                            <li className="flex items-center gap-2">
+                                                <span className="w-1 h-1 bg-green-500 rounded-full"></span>
+                                                <strong className="text-gray-300">Domingos</strong> (todo el día)
+                                            </li>
+                                            <li className="flex items-center gap-2">
+                                                <span className="w-1 h-1 bg-green-500 rounded-full"></span>
+                                                <strong className="text-gray-300">Feriados</strong> (todo el día)
+                                            </li>
+                                            <li className="flex items-center gap-2">
+                                                <span className="w-1 h-1 bg-green-500 rounded-full"></span>
+                                                Lunes a Sab. fuera de horario (ej: <strong className="text-gray-300">16:00, 20:00</strong>)
+                                            </li>
+                                        </ul>
+                                    </div>
                                 </div>
-                                </div>
-
-                            <div className="p-3 bg-white/5 rounded-lg border border-white/5">
-                                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">
-                                    <CheckCircle2 className="h-3 w-3" />
-                                    Casos que SÍ se Pagan
-                                </div>
-                                <ul className="text-xs space-y-1 mt-2 text-gray-300">
-                                    <li className="flex items-start gap-2">
-                                        <span className="text-green-400">✓</span>
-                                        <span>Residente fuera del horario formativo (ej: 16:00, 20:00)</span>
-                                    </li>
-                                    <li className="flex items-start gap-2">
-                                        <span className="text-green-400">✓</span>
-                                        <span>Residente en <strong>Domingo</strong> (cualquier hora)</span>
-                                    </li>
-                                    <li className="flex items-start gap-2">
-                                        <span className="text-green-400">✓</span>
-                                        <span>Médico de <strong>Planta</strong> (no residente) - siempre se paga</span>
-                                    </li>
-                                </ul>
                             </div>
+                        </div>
 
-                            <div className="p-3 bg-white/5 rounded-lg border border-white/5">
-                                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">
-                                    <Activity className="h-3 w-3" />
-                                    Ejemplos de Horarios
+                        {/* Ejemplos Visuales con Timeline */}
+                        <div className="px-6 pb-6 pt-2 border-t border-white/5">
+                            <div className="text-xs font-semibold text-gray-500 uppercase mb-4 tracking-wider">Línea de Tiempo (Lunes - Sábado)</div>
+                            <div className="relative h-12 flex items-center w-full bg-gray-800/50 rounded-lg overflow-hidden border border-white/5">
+                                {/* Zona Formativa (07:00 - 15:00) */}
+                                <div className="absolute left-[30%] width-[33%] h-full bg-red-500/10 border-x border-red-500/20 flex items-center justify-center" style={{ width: '33.33%' }}>
+                                    <span className="text-[10px] font-bold text-red-400 uppercase tracking-tight">Formativo</span>
                                 </div>
-                                <div className="text-xs space-y-1 mt-2">
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-300">07:00 (Residente, L-S)</span>
-                                        <span className="text-red-400">$0</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-300">14:59 (Residente, L-S)</span>
-                                        <span className="text-red-400">$0</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-300">15:00 (Residente, L-S)</span>
-                                        <span className="text-green-400">Se paga</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-300">10:00 (Residente, Domingo)</span>
-                                        <span className="text-green-400">Se paga</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-300">10:00 (Planta, cualquier día)</span>
-                                        <span className="text-green-400">Se paga</span>
-                                    </div>
+
+                                {/* Marcadores de hora */}
+                                <div className="absolute left-[30%] -top-1 h-3 w-px bg-gray-600"></div>
+                                <div className="absolute left-[30%] top-8 text-[10px] text-gray-500 font-mono -ml-3">07:00</div>
+
+                                <div className="absolute left-[63.33%] -top-1 h-3 w-px bg-gray-600"></div>
+                                <div className="absolute left-[63.33%] top-8 text-[10px] text-gray-500 font-mono -ml-3">15:00</div>
+
+                                {/* Zona Guardia */}
+                                <div className="w-full flex justify-between px-4 text-[10px] text-gray-400 font-mono uppercase">
+                                    <span>00:00</span>
+                                    <span>24:00</span>
+                                </div>
+                            </div>
+                            <div className="flex justify-between mt-2 text-[10px] text-gray-500">
+                                <span className="flex items-center gap-1"><span className="w-2 h-2 bg-red-500/20 border border-red-500/50 rounded-sm"></span> No se paga</span>
+                                <span className="flex items-center gap-1"><span className="w-2 h-2 bg-gray-800 border border-gray-600 rounded-sm"></span> Se paga (Guardia)</span>
                             </div>
                         </div>
                     </div>
-            </div>
+                </div>
             </div>
 
             {/* Modal de selección de mes */}
@@ -442,7 +491,7 @@ export default function GinecologiaPage() {
             {/* Sección de filas excluidas */}
             {resultadoProcesamiento && resultadoProcesamiento.filasExcluidas && resultadoProcesamiento.filasExcluidas.length > 0 && excelData && (
                 <div className="max-w-6xl mx-auto mt-8 relative z-10">
-                    <div 
+                    <div
                         className="rounded-2xl shadow-2xl overflow-hidden p-6 mb-6"
                         style={{
                             background: 'rgba(239, 68, 68, 0.15)',
@@ -463,7 +512,7 @@ export default function GinecologiaPage() {
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm border-collapse">
                                 <thead>
