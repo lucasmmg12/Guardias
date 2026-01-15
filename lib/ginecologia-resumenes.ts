@@ -22,7 +22,7 @@ export interface ResumenPorPrestador {
 
 /**
  * Calcula el resumen por médico y obra social (PRE-RETENCIÓN)
- * Aplica la regla de residentes: si es residente en horario formativo (lunes-sábado 07:00-13:00), no se cuenta
+ * Aplica la regla de residentes: si es residente en horario formativo (lunes-sábado 07:00-15:00), no se cuenta
  * Busca la liquidación por mes y año o usa liquidacionId si se proporciona
  */
 export async function calcularResumenPorMedico(

@@ -322,9 +322,9 @@ export function esHorarioFormativo(hora: string | null | undefined): boolean {
     const minutos = horaAMinutos(hora)
     if (minutos === null) return false
 
-    // 07:00 = 420 minutos, 13:00 = 780 minutos
-    // El horario formativo es de 07:00 a 13:00 (inclusive)
-    return minutos >= 420 && minutos < 780 // 13:00 no se incluye (es < 780, no <=)
+    // 07:00 = 420 minutos, 15:00 = 900 minutos
+    // El horario formativo es de 07:00 a 15:00 (inclusive)
+    return minutos >= 420 && minutos < 900 // 15:00 no se incluye (es < 900, no <=)
 }
 
 /**
