@@ -415,21 +415,41 @@ export default function ValoresConsultasPage() {
     newValue: number
   ) {
     try {
+      // Usar upsert en lugar de update para que si la fila no existe (ej: era un valor 0 no guardado), se cree
       const { error } = await supabase
         .from('valores_consultas_obra_social')
-        // @ts-ignore - La tabla no está en los tipos generados de Supabase aún
-        .update({ valor: newValue })
-        .eq('obra_social', obraSocial)
-        .eq('tipo_consulta', tipoConsulta)
-        .eq('mes', mes)
-        .eq('anio', anio)
+        // @ts-ignore
+        .upsert({
+          obra_social: obraSocial,
+          tipo_consulta: tipoConsulta,
+          mes: mes,
+          anio: anio,
+          valor: newValue,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'obra_social,tipo_consulta,mes,anio'
+        })
 
-      if (error) throw error
+      if (error) {
+        // Si falla por falta de resolución de conflicto (ej: no hay constraint único),
+        // intentar el update tradicional como fallback
+        console.warn('Upsert failed, trying traditional update:', error)
+        const { error: updateError } = await supabase
+          .from('valores_consultas_obra_social')
+          // @ts-ignore
+          .update({ valor: newValue })
+          .eq('obra_social', obraSocial)
+          .eq('tipo_consulta', tipoConsulta)
+          .eq('mes', mes)
+          .eq('anio', anio)
+
+        if (updateError) throw updateError
+      }
 
       await cargarValores()
     } catch (error) {
       console.error('Error actualizando valor:', error)
-      throw error
+      showNotification('error', 'No se pudo actualizar el valor. Verifique su conexión o permisos.')
     }
   }
 
