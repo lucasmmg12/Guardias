@@ -390,7 +390,7 @@ export default function GinecologiaPage() {
                                             </li>
                                             <li className="flex items-center gap-2">
                                                 <span className="w-1 h-1 bg-red-500 rounded-full"></span>
-                                                Horario entre <strong className="text-gray-300">07:00 y 15:00</strong>
+                                                Horario entre <strong className="text-gray-300">07:00 y 13:00</strong>
                                             </li>
                                             <li className="flex items-center gap-2">
                                                 <span className="w-1 h-1 bg-red-500 rounded-full"></span>
@@ -434,17 +434,17 @@ export default function GinecologiaPage() {
                         <div className="px-6 pb-6 pt-2 border-t border-white/5">
                             <div className="text-xs font-semibold text-gray-500 uppercase mb-4 tracking-wider">Línea de Tiempo (Lunes - Sábado)</div>
                             <div className="relative h-12 flex items-center w-full bg-gray-800/50 rounded-lg overflow-hidden border border-white/5">
-                                {/* Zona Formativa (07:00 - 15:00) */}
-                                <div className="absolute left-[30%] width-[33%] h-full bg-red-500/10 border-x border-red-500/20 flex items-center justify-center" style={{ width: '33.33%' }}>
+                                {/* Zona Formativa (07:00 - 13:00) */}
+                                <div className="absolute left-[29.16%] h-full bg-red-500/10 border-x border-red-500/20 flex items-center justify-center" style={{ width: '25%' }}>
                                     <span className="text-[10px] font-bold text-red-400 uppercase tracking-tight">Formativo</span>
                                 </div>
 
                                 {/* Marcadores de hora */}
-                                <div className="absolute left-[30%] -top-1 h-3 w-px bg-gray-600"></div>
-                                <div className="absolute left-[30%] top-8 text-[10px] text-gray-500 font-mono -ml-3">07:00</div>
+                                <div className="absolute left-[29.16%] -top-1 h-3 w-px bg-gray-600"></div>
+                                <div className="absolute left-[29.16%] top-8 text-[10px] text-gray-500 font-mono -ml-3">07:00</div>
 
-                                <div className="absolute left-[63.33%] -top-1 h-3 w-px bg-gray-600"></div>
-                                <div className="absolute left-[63.33%] top-8 text-[10px] text-gray-500 font-mono -ml-3">15:00</div>
+                                <div className="absolute left-[54.16%] -top-1 h-3 w-px bg-gray-600"></div>
+                                <div className="absolute left-[54.16%] top-8 text-[10px] text-gray-500 font-mono -ml-3">13:00</div>
 
                                 {/* Zona Guardia */}
                                 <div className="w-full flex justify-between px-4 text-[10px] text-gray-400 font-mono uppercase">
