@@ -92,6 +92,46 @@ export function esParticular(cliente: string | null | undefined): boolean {
 export const CODIGO_PARTICULARES = '042 - PARTICULARES'
 
 /**
+ * Extrae el código numérico inicial de una obra social (ej: "042 - PARTICULARES" -> "042")
+ */
+export function extraerCodigoObraSocial(valor: string | null | undefined): string | null {
+    if (!valor || typeof valor !== 'string') return null
+    const match = valor.trim().match(/^(\d+)/)
+    return match ? match[1] : null
+}
+
+/**
+ * Compara dos nombres de obra social por sus códigos numéricos o por nombre completo si no tienen código
+ */
+export function coincidenObrasSociales(valor1: string | null | undefined, valor2: string | null | undefined): boolean {
+    if (!valor1 || !valor2) return false
+
+    const v1 = String(valor1).trim()
+    const v2 = String(valor2).trim()
+
+    const codigo1 = extraerCodigoObraSocial(v1)
+    const codigo2 = extraerCodigoObraSocial(v2)
+
+    // Si ambos tienen código, comparar solo los códigos
+    if (codigo1 && codigo2) {
+        return codigo1 === codigo2
+    }
+
+    // Fallback: Si alguno no tiene código, comparar nombres normalizados
+    const norm1 = v1.toUpperCase()
+    const norm2 = v2.toUpperCase()
+
+    if (norm1 === norm2) return true
+
+    // Si uno está contenido en el otro de forma significativa
+    if (norm1.length > 4 && norm2.length > 4) {
+        return norm1.includes(norm2) || norm2.includes(norm1)
+    }
+
+    return false
+}
+
+/**
  * Obtiene sugerencias de obra social basadas en el valor actual
  */
 export function obtenerSugerenciasObraSocial(valor: string | null | undefined): string[] {

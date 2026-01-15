@@ -1,7 +1,7 @@
 import { supabase } from './supabase/client'
 import { ExcelData, ExcelRow } from './excel-reader'
 import { Medico, DetalleGuardiaInsert, LiquidacionGuardiaInsert, DetalleHorasGuardiaInsert, ValorConsultaObraSocial } from './types'
-import { calcularNumeroLiquidacion, esParticular } from './utils'
+import { calcularNumeroLiquidacion, esParticular, extraerCodigoObraSocial, coincidenObrasSociales } from './utils'
 
 interface FilaExcluida {
   numeroFila: number
@@ -431,58 +431,26 @@ export async function procesarExcelGuardiasClinicas(
 
     const valoresConsultas = todosLosValoresConsultas
     const valoresPorObraSocial = new Map<string, number>()
-    const valoresPorCodigoOS = new Map<string, number>()
-    const nombresPorCodigoOS = new Map<string, string>()
 
-    // Función auxiliar para extraer el código numérico (ej: "213" de "213 - UNIMED")
-    const extraerCodigo = (nombre: string): string | null => {
-      const match = nombre.match(/^(\d+)\s*-/);
-      return match ? match[1] : null;
-    }
-
+    // Almacenamos los valores en el mapa
     valoresConsultas.forEach(v => {
       valoresPorObraSocial.set(v.obra_social, v.valor)
-      const codigo = extraerCodigo(v.obra_social)
-      if (codigo) {
-        valoresPorCodigoOS.set(codigo, v.valor)
-        nombresPorCodigoOS.set(codigo, v.obra_social)
-      }
     })
 
-    // Cargar valores de PARTICULARES al inicio para evitar consultas dentro del loop
-    const { data: valorParticularData } = await supabase
-      .from('valores_consultas_obra_social')
-      .select('valor')
-      .eq('obra_social', 'PARTICULARES')
-      .eq('tipo_consulta', 'CONSULTA DE GUARDIA CLINICA')
-      .eq('mes', mes)
-      .eq('anio', anio)
-      .single()
-
-    const valorParticular = valorParticularData ? (valorParticularData as any).valor : null
-
-    // Si no se encontró con 'PARTICULARES', intentar con '042 - PARTICULARES'
-    let valorParticular042 = null
-    if (!valorParticular) {
-      const { data: valorParticular042Data } = await supabase
+    // Cargar valores de PARTICULARES al inicio
+    if (!valoresPorObraSocial.has('PARTICULARES')) {
+      const { data: valorParticularData } = await supabase
         .from('valores_consultas_obra_social')
         .select('valor')
-        .eq('obra_social', '042 - PARTICULARES')
+        .eq('obra_social', 'PARTICULARES')
         .eq('tipo_consulta', 'CONSULTA DE GUARDIA CLINICA')
         .eq('mes', mes)
         .eq('anio', anio)
-        .single()
+        .maybeSingle()
 
-      valorParticular042 = valorParticular042Data ? (valorParticular042Data as any).valor : null
-    }
-
-    // Agregar valores de PARTICULARES al mapa si se encontraron
-    if (valorParticular) {
-      valoresPorObraSocial.set('PARTICULARES', valorParticular)
-      valoresPorObraSocial.set('042 - PARTICULARES', valorParticular)
-    } else if (valorParticular042) {
-      valoresPorObraSocial.set('PARTICULARES', valorParticular042)
-      valoresPorObraSocial.set('042 - PARTICULARES', valorParticular042)
+      if (valorParticularData) {
+        valoresPorObraSocial.set('PARTICULARES', (valorParticularData as any).valor)
+      }
     }
 
     // 4. Crear o obtener liquidación
@@ -736,22 +704,43 @@ export async function procesarExcelGuardiasClinicas(
         }
 
         // Obtener valor unitario de consulta desde la base de datos
-        // Primero intentamos búsqueda exacta, si falla buscamos por código numérico (ej: "213")
-        let valorUnitario = valoresPorObraSocial.get(obraSocialFinal) || 0
+        // Usar la nueva lógica de códigos y coincidencia flexible
+        let valorUnitario = 0
+        const codigoExcel = extraerCodigoObraSocial(obraSocialFinal)
 
-        if (valorUnitario === 0) {
-          const codigoExcel = extraerCodigo(obraSocialFinal)
-          if (codigoExcel) {
-            valorUnitario = valoresPorCodigoOS.get(codigoExcel) || 0
-            // Si lo encontramos por código, normalizamos el nombre al que tenemos en el sistema
-            if (valorUnitario > 0) {
-              obraSocialFinal = nombresPorCodigoOS.get(codigoExcel) || obraSocialFinal
+        // 1. Intentar por código numérico exacto
+        if (codigoExcel) {
+          for (const v of valoresConsultas) {
+            if (extraerCodigoObraSocial(v.obra_social) === codigoExcel) {
+              valorUnitario = v.valor
+              break
             }
           }
         }
 
+        // 2. Si no se encontró por código, intentar por coincidencia de nombre flexible
+        if (valorUnitario === 0) {
+          for (const v of valoresConsultas) {
+            if (coincidenObrasSociales(obraSocialFinal, v.obra_social)) {
+              valorUnitario = v.valor
+              break
+            }
+          }
+        }
+
+        // 3. Fallback especial para PARTICULARES si sigue siendo 0
+        if (valorUnitario === 0 && (obraSocialFinal.includes('PARTICULAR') || obraSocialFinal.includes('042'))) {
+          // Buscar explícitamente cualquier valor que sea de particulares
+          const vParticular = valoresConsultas.find(v =>
+            v.obra_social.includes('PARTICULAR') || extraerCodigoObraSocial(v.obra_social) === '042'
+          )
+          if (vParticular) {
+            valorUnitario = vParticular.valor
+          }
+        }
+
         // Solo registrar advertencia si NO es PARTICULARES y no tiene valor
-        if (valorUnitario === 0 && obraSocialFinal !== 'PARTICULARES' && obraSocialFinal !== '042 - PARTICULARES') {
+        if (valorUnitario === 0 && !esParticular(obraSocialFinal)) {
           resultado.advertencias.push(`Fila ${i + 1}: No hay valor configurado para obra social: ${obraSocialFinal}`)
         }
 

@@ -7,6 +7,7 @@ import { ExcelRow, ExcelData } from '@/lib/excel-reader'
 import { InlineEditCell } from './InlineEditCell'
 import { ConfirmModal } from './ConfirmModal'
 import { exportFilteredDataToExcel } from '@/lib/excel-exporter'
+import { extraerCodigoObraSocial, coincidenObrasSociales } from '@/lib/utils'
 
 interface ExpandableSectionProps {
   title: string | React.ReactNode
@@ -138,9 +139,25 @@ export function ExpandableSection({
     if (!obraSocial || typeof obraSocial !== 'string') return 0
 
     const obraSocialTrimmed = obraSocial.trim()
+    const codigoExcel = extraerCodigoObraSocial(obraSocialTrimmed)
 
-    // Buscar en el mapa de adicionales
-    return adicionales.get(obraSocialTrimmed) || 0
+    // 1. Intentar por código numérico
+    if (codigoExcel) {
+      for (const [nombreBD, valor] of adicionales.entries()) {
+        if (extraerCodigoObraSocial(nombreBD) === codigoExcel) {
+          return valor
+        }
+      }
+    }
+
+    // 2. Intentar por coincidencia flexible
+    for (const [nombreBD, valor] of adicionales.entries()) {
+      if (coincidenObrasSociales(obraSocialTrimmed, nombreBD)) {
+        return valor
+      }
+    }
+
+    return 0
   }, [data.headers, adicionales])
 
   // Función para obtener el valor de importe basado en la obra social
@@ -176,18 +193,33 @@ export function ExpandableSection({
     if (!obraSocial || typeof obraSocial !== 'string') return 0
 
     const obraSocialTrimmed = obraSocial.trim()
+    const codigoExcel = extraerCodigoObraSocial(obraSocialTrimmed)
 
-    // Buscar en el mapa de valores
-    let valor = valoresConsultas.get(obraSocialTrimmed) || 0
-
-    // Si no se encontró, intentar con variaciones
-    if (valor === 0) {
-      if (obraSocialTrimmed === 'PARTICULARES' || obraSocialTrimmed === '042 - PARTICULARES') {
-        valor = valoresConsultas.get('PARTICULARES') || valoresConsultas.get('042 - PARTICULARES') || 0
+    // 1. Intentar por código numérico
+    if (codigoExcel) {
+      for (const [nombreBD, valor] of valoresConsultas.entries()) {
+        if (extraerCodigoObraSocial(nombreBD) === codigoExcel) {
+          return valor
+        }
       }
     }
 
-    return valor
+    // 2. Intentar por coincidencia flexible
+    for (const [nombreBD, valor] of valoresConsultas.entries()) {
+      if (coincidenObrasSociales(obraSocialTrimmed, nombreBD)) {
+        return valor
+      }
+    }
+
+    // 3. Fallback para PARTICULARES
+    if (obraSocialTrimmed.includes('PARTICULAR') || obraSocialTrimmed.includes('042')) {
+      const vParticular = Array.from(valoresConsultas.entries()).find(([nombreBD]) =>
+        nombreBD.includes('PARTICULAR') || extraerCodigoObraSocial(nombreBD) === '042'
+      )
+      if (vParticular) return vParticular[1]
+    }
+
+    return 0
   }, [data.headers, valoresConsultas, esResidenteFormativoRow])
 
   // Memoizar cálculos de importe y adicional solo para filas visibles (optimización crítica)

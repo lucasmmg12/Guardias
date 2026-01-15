@@ -8,7 +8,7 @@ import {
   ConfiguracionAdicional,
   PediatricGroupsConfig
 } from './types'
-import { calcularNumeroLiquidacion, esParticular } from './utils'
+import { calcularNumeroLiquidacion, esParticular, extraerCodigoObraSocial, coincidenObrasSociales } from './utils'
 
 interface FilaExcluida {
   numeroFila: number
@@ -808,15 +808,19 @@ export async function procesarExcelPediatria(
 
         if (mapsTipo) {
           // 1. Intentar por código (ej: "065")
-          const matchCodigo = obraSocialFinal.match(/^(\d+)/)
-          if (matchCodigo) {
-            valorUnitario = mapsTipo.byCode.get(matchCodigo[1]) || 0
+          const codigoExcel = extraerCodigoObraSocial(obraSocialFinal)
+          if (codigoExcel) {
+            valorUnitario = mapsTipo.byCode.get(codigoExcel) || 0
           }
 
-          // 2. Si no, intentar por nombre normalizado
+          // 2. Si no, intentar por nombre normalizado o flexible
           if (valorUnitario === 0) {
-            const osNorm = normalizarNombre(obraSocialFinal)
-            valorUnitario = mapsTipo.byName.get(osNorm) || 0
+            for (const [nombreBD, v] of mapsTipo.byName.entries()) {
+              if (coincidenObrasSociales(obraSocialFinal, nombreBD)) {
+                valorUnitario = v
+                break
+              }
+            }
           }
         }
 
@@ -824,12 +828,17 @@ export async function procesarExcelPediatria(
         if (valorUnitario === 0 && tipoConsultaUsar === 'CONSULTA PEDIATRICA Y NEONATAL') {
           const mapsEstandar = valoresMaps.get('CONSULTA DE GUARDIA PEDIATRICA')
           if (mapsEstandar) {
-            const matchCodigo = obraSocialFinal.match(/^(\d+)/)
-            if (matchCodigo) {
-              valorUnitario = mapsEstandar.byCode.get(matchCodigo[1]) || 0
+            const codigoExcel = extraerCodigoObraSocial(obraSocialFinal)
+            if (codigoExcel) {
+              valorUnitario = mapsEstandar.byCode.get(codigoExcel) || 0
             }
             if (valorUnitario === 0) {
-              valorUnitario = mapsEstandar.byName.get(normalizarNombre(obraSocialFinal)) || 0
+              for (const [nombreBD, v] of mapsEstandar.byName.entries()) {
+                if (coincidenObrasSociales(obraSocialFinal, nombreBD)) {
+                  valorUnitario = v
+                  break
+                }
+              }
             }
           }
         }
@@ -854,9 +863,7 @@ export async function procesarExcelPediatria(
 
         // Buscar en el mapa de adicionales (usar búsqueda flexible por nombre de obra social)
         for (const [obraSocialKey, adicional] of adicionalesPorObraSocial.entries()) {
-          // Verificar si la obra social del Excel contiene el nombre de la obra social del adicional
-          if (obraSocialFinal.toLowerCase().includes(obraSocialKey.toLowerCase()) ||
-            obraSocialKey.toLowerCase().includes(obraSocialFinal.toLowerCase())) {
+          if (coincidenObrasSociales(obraSocialFinal, obraSocialKey)) {
             montoAdicional = adicional.monto_adicional || 0
             aplicaAdicional = true
             break

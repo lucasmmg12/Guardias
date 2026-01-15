@@ -1,7 +1,7 @@
 import { supabase } from './supabase/client'
 import { ExcelData, ExcelRow } from './excel-reader'
 import { Medico, DetalleGuardiaInsert, LiquidacionGuardiaInsert, ValorConsultaObraSocial } from './types'
-import { esResidenteHorarioFormativo, horaAMinutos, calcularNumeroLiquidacion, esParticular } from './utils'
+import { esResidenteHorarioFormativo, horaAMinutos, calcularNumeroLiquidacion, esParticular, extraerCodigoObraSocial, coincidenObrasSociales } from './utils'
 
 interface FilaExcluida {
   numeroFila: number
@@ -648,56 +648,52 @@ export async function procesarExcelGinecologia(
         // Obtener valor de consulta
         // Si está vacío o es un nombre de persona, asignar '042 - PARTICULARES'
         let obraSocialFinal: string
-        if (!obraSocial || obraSocial.trim() === '') {
+        if (!obraSocial || String(obraSocial).trim() === '') {
           obraSocialFinal = '042 - PARTICULARES'
-        } else if (esParticular(obraSocial)) {
+        } else if (esParticular(String(obraSocial))) {
           // Si es un nombre de persona, también asignar '042 - PARTICULARES'
           obraSocialFinal = '042 - PARTICULARES'
         } else {
-          obraSocialFinal = obraSocial.trim()
+          obraSocialFinal = String(obraSocial).trim()
         }
 
-        // Buscar valor en el Map
-        let valorUnitario = valoresPorObraSocial.get(obraSocialFinal) || 0
+        // Buscar valor con la nueva lógica de códigos y coincidencia flexible
+        let valorUnitario = 0
+        const codigoExcel = extraerCodigoObraSocial(obraSocialFinal)
 
-        // Si es PARTICULARES (o 042 - PARTICULARES) y no se encontró valor, buscar en la BD
-        if (valorUnitario === 0 && (obraSocialFinal === 'PARTICULARES' || obraSocialFinal === '042 - PARTICULARES')) {
-          // Buscar valor para PARTICULARES en la BD
-          const { data: valorParticular } = await supabase
-            .from('valores_consultas_obra_social')
-            .select('valor')
-            .eq('obra_social', 'PARTICULARES')
-            .eq('tipo_consulta', 'CONSULTA GINECOLOGICA')
-            .eq('mes', mes)
-            .eq('anio', anio)
-            .single()
-
-          if (valorParticular && (valorParticular as any).valor) {
-            valorUnitario = (valorParticular as any).valor
-            // Agregar al Map para futuras consultas
-            valoresPorObraSocial.set('PARTICULARES', valorUnitario)
-            valoresPorObraSocial.set('042 - PARTICULARES', valorUnitario)
-          } else {
-            // Intentar también con "042 - PARTICULARES"
-            const { data: valorParticular042 } = await supabase
-              .from('valores_consultas_obra_social')
-              .select('valor')
-              .eq('obra_social', '042 - PARTICULARES')
-              .eq('tipo_consulta', 'CONSULTA GINECOLOGICA')
-              .eq('mes', mes)
-              .eq('anio', anio)
-              .single()
-
-            if (valorParticular042 && (valorParticular042 as any).valor) {
-              valorUnitario = (valorParticular042 as any).valor
-              valoresPorObraSocial.set('PARTICULARES', valorUnitario)
-              valoresPorObraSocial.set('042 - PARTICULARES', valorUnitario)
+        // 1. Intentar por código numérico exacto
+        if (codigoExcel) {
+          for (const v of valoresConsultas) {
+            if (extraerCodigoObraSocial(v.obra_social) === codigoExcel) {
+              valorUnitario = v.valor
+              break
             }
           }
         }
 
+        // 2. Si no se encontró por código, intentar por coincidencia de nombre flexible
+        if (valorUnitario === 0) {
+          for (const v of valoresConsultas) {
+            if (coincidenObrasSociales(obraSocialFinal, v.obra_social)) {
+              valorUnitario = v.valor
+              break
+            }
+          }
+        }
+
+        // 3. Fallback especial para PARTICULARES si sigue siendo 0
+        if (valorUnitario === 0 && (obraSocialFinal.includes('PARTICULAR') || obraSocialFinal.includes('042'))) {
+          // Buscar explícitamente cualquier valor que sea de particulares
+          const vParticular = valoresConsultas.find(v =>
+            v.obra_social.includes('PARTICULAR') || extraerCodigoObraSocial(v.obra_social) === '042'
+          )
+          if (vParticular) {
+            valorUnitario = vParticular.valor
+          }
+        }
+
         // Solo registrar advertencia si NO es PARTICULARES y no tiene valor
-        if (valorUnitario === 0 && obraSocialFinal !== 'PARTICULARES' && obraSocialFinal !== '042 - PARTICULARES') {
+        if (valorUnitario === 0 && !esParticular(obraSocialFinal)) {
           resultado.advertencias.push(`Fila ${i + 1}: No hay valor configurado para obra social: ${obraSocialFinal}`)
         }
 
