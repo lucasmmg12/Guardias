@@ -9,6 +9,7 @@ import { InlineEditCell } from '@/components/custom/InlineEditCell'
 import { AdicionalFormModal } from '@/components/custom/AdicionalFormModal'
 import { Button } from '@/components/ui/button'
 import { Plus, Trash2, ArrowLeft, Copy, CopyCheck } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 const MESES = [
   { value: 1, label: 'Enero' },
@@ -154,7 +155,7 @@ export default function AdicionalesPage() {
   async function handleCopiarDesdeMesAnterior() {
     try {
       setLoading(true)
-      
+
       // Calcular mes anterior
       let mesAnterior = mes - 1
       let anioAnterior = anio
@@ -190,13 +191,13 @@ export default function AdicionalesPage() {
       const nuevosAdicionales = adicionalesAnterioresData.map(a => {
         let montoBase = a.monto_base_adicional || a.monto_adicional || 0
         let porcentaje = a.porcentaje_pago_medico || 100
-        
+
         if (copiarConAumento && montoBase > 0) {
           montoBase = montoBase * (1 + porcentajeAumento / 100)
         }
-        
+
         const montoAdicional = montoBase * (porcentaje / 100)
-        
+
         return {
           obra_social: a.obra_social,
           especialidad: a.especialidad,
@@ -233,7 +234,7 @@ export default function AdicionalesPage() {
   ) {
     try {
       let updateData: any = {}
-      
+
       if (campo === 'aplica_adicional') {
         updateData.aplica_adicional = newValue
       } else if (campo === 'monto_base_adicional') {
@@ -300,114 +301,123 @@ export default function AdicionalesPage() {
   }, {} as Record<string, ConfiguracionAdicional[]>)
 
   return (
-    <div className="min-h-screen relative p-8 pb-20 overflow-hidden">
-      {/* Efectos de luz */}
-      <div className="absolute top-20 left-20 w-96 h-96 bg-green-500/20 rounded-full blur-3xl animate-pulse"></div>
-      <div className="absolute bottom-20 right-20 w-96 h-96 bg-green-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+    <div className="min-h-screen bg-black text-white relative overflow-hidden">
+      {/* Fondo con auroras de servidor GrowLabs */}
+      <div className="fixed inset-0 z-0 text-white">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-green-500/10 rounded-full blur-[120px] animate-pulse"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-500/10 rounded-full blur-[120px] animate-pulse delay-700"></div>
+      </div>
 
-      <div className="max-w-7xl mx-auto space-y-8 relative z-10">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <Button
-              onClick={() => router.push('/')}
-              variant="outline"
-              className="border-green-500/50 text-green-400 hover:bg-green-500/20"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Volver
-            </Button>
-          </div>
-          <div>
-            <h1 className="text-4xl font-bold mb-2 tracking-tight">
-              <span className="bg-gradient-to-r from-green-400 to-emerald-300 bg-clip-text text-transparent">
-                Administración de Adicionales
-              </span>
+      <div className="max-w-7xl mx-auto px-6 py-12 relative z-10">
+        {/* Header Premium */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16 animate-in slide-in-from-top-4 duration-700">
+          <div className="space-y-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20 text-[#00FF88] text-xs font-bold tracking-widest uppercase">
+              <Plus className="h-3 w-3" />
+              Supplemental Intelligence
+            </div>
+            <h1 className="text-6xl font-black tracking-tighter leading-none">
+              GESTIÓN DE<br />
+              <span className="text-[#00FF88] italic uppercase">ADICIONALES</span>
             </h1>
-            <p className="text-gray-400">Configuración de adicionales por obra social y especialidad</p>
+            <p className="text-gray-400 text-lg max-w-md font-medium leading-relaxed">
+              Configuración de honorarios suplementarios por especialidad y cobertura médica.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-4">
+            <button
+              onClick={() => router.push('/')}
+              className="group flex items-center gap-3 px-6 py-3 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all font-bold text-sm tracking-tight"
+            >
+              <ArrowLeft className="h-4 w-4 text-gray-400 group-hover:text-white group-hover:-translate-x-1 transition-all" />
+              VOLVER
+            </button>
+            <button
+              onClick={() => setShowFormModal(true)}
+              className="flex items-center gap-3 px-8 py-4 rounded-full bg-[#00FF88] text-black font-black text-sm tracking-tighter hover:scale-105 transition-all shadow-[0_0_30px_rgba(0,255,136,0.3)]"
+            >
+              <Plus className="h-5 w-5" />
+              NUEVO ADICIONAL
+            </button>
           </div>
         </div>
 
-        {/* Selectores de mes/año */}
-        <div 
-          className="p-6 rounded-xl"
-          style={{
-            background: 'rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(34, 197, 94, 0.3)',
-          }}
+        {/* Action Bar & Month Selector */}
+        <div
+          className="p-1.5 bg-white/5 backdrop-blur-md border border-white/10 rounded-full mb-12 animate-in fade-in slide-in-from-bottom-2 duration-1000"
         >
-          <div className="flex items-center gap-4 flex-wrap">
-            <div>
-              <label className="text-sm text-gray-400 mb-1 block">Mes</label>
+          <div className="flex flex-col md:flex-row gap-2 items-center">
+            <div className="flex bg-white/5 rounded-full p-1 gap-2 ml-1">
               <select
                 value={mes}
                 onChange={(e) => setMes(parseInt(e.target.value))}
-                className="bg-gray-900/50 border border-green-500/30 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="bg-transparent border-none text-white font-bold text-xs px-6 focus:outline-none cursor-pointer uppercase tracking-widest"
               >
                 {MESES.map(m => (
-                  <option key={m.value} value={m.value}>{m.label}</option>
+                  <option key={m.value} value={m.value} className="bg-black">{m.label}</option>
                 ))}
               </select>
-            </div>
-            <div>
-              <label className="text-sm text-gray-400 mb-1 block">Año</label>
               <input
                 type="number"
                 value={anio}
                 onChange={(e) => setAnio(parseInt(e.target.value))}
-                className="bg-gray-900/50 border border-green-500/30 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-500 w-32"
-                min="2020"
+                className="bg-black/50 border border-white/10 rounded-full w-24 py-2 px-4 text-xs font-black focus:border-[#00FF88]/50 outline-none text-center"
               />
             </div>
+
             <div className="flex-1"></div>
-            <Button
-              onClick={() => setShowFormModal(true)}
-              disabled={loading}
-              className="bg-green-600 hover:bg-green-700 text-white"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Agregar Adicional
-            </Button>
-            <Button
-              onClick={handleCopiarDesdeMesAnterior}
-              disabled={loading}
-              variant="outline"
-              className="border-green-500/50 text-green-400 hover:bg-green-500/20"
-            >
-              {copiarConAumento ? <CopyCheck className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
-              Copiar Mes Anterior
-            </Button>
-          </div>
-          
-          {copiarConAumento && (
-            <div className="mt-4 flex items-center gap-2">
-              <label className="text-sm text-gray-400">Aumento porcentual:</label>
-              <input
-                type="number"
-                value={porcentajeAumento}
-                onChange={(e) => setPorcentajeAumento(parseFloat(e.target.value) || 0)}
-                className="bg-gray-900/50 border border-green-500/30 rounded-lg px-3 py-1 text-white focus:outline-none focus:ring-2 focus:ring-green-500 w-24"
-                step="0.1"
-              />
-              <span className="text-sm text-gray-400">%</span>
-              <Button
-                onClick={() => setCopiarConAumento(false)}
-                variant="outline"
-                size="sm"
-                className="ml-2"
+
+            <div className="flex gap-2 pr-1.5">
+              <button
+                onClick={() => {
+                  if (!copiarConAumento) {
+                    const porcentaje = prompt('Ingrese el porcentaje de aumento:')
+                    if (porcentaje && !isNaN(Number(porcentaje))) {
+                      setPorcentajeAumento(Number(porcentaje))
+                      setCopiarConAumento(true)
+                    }
+                  } else {
+                    setCopiarConAumento(false)
+                    setPorcentajeAumento(0)
+                  }
+                }}
+                className={cn(
+                  "px-8 py-3 rounded-full font-black text-xs tracking-tighter transition-all flex items-center gap-2",
+                  copiarConAumento
+                    ? "bg-[#00D1FF] text-black shadow-[0_0_20px_rgba(0,209,255,0.3)]"
+                    : "text-gray-400 hover:text-white hover:bg-white/5"
+                )}
               >
-                Cancelar
-              </Button>
+                {copiarConAumento ? (
+                  <>
+                    <CopyCheck className="h-4 w-4" />
+                    AUMENTO {porcentajeAumento}% ACTIVO
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4" />
+                    HABILITAR AUMENTO %
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={handleCopiarDesdeMesAnterior}
+                className="flex items-center gap-2 px-8 py-3 rounded-full bg-white/5 border border-white/10 text-white font-black text-xs tracking-tighter hover:bg-white/10 transition-all"
+              >
+                <Copy className="h-4 w-4" />
+                COPIAR MES ANTERIOR
+              </button>
             </div>
-          )}
+          </div>
         </div>
 
         {/* Tabla de adicionales */}
         {loading && adicionales.length === 0 ? (
           <div className="text-center py-12 text-gray-400">Cargando...</div>
         ) : adicionales.length === 0 ? (
-          <div 
+          <div
             className="p-8 rounded-xl text-center"
             style={{
               background: 'rgba(255, 255, 255, 0.1)',
@@ -419,7 +429,7 @@ export default function AdicionalesPage() {
           </div>
         ) : (
           Object.entries(adicionalesPorEspecialidad).map(([especialidad, adicionalesEspecialidad]) => (
-            <div 
+            <div
               key={especialidad}
               className="p-6 rounded-xl"
               style={{

@@ -30,7 +30,7 @@ const MESES = [
 
 export default function ResumenesGinecologiaPage() {
   const router = useRouter()
-  
+
   // Cargar mes y año desde localStorage al inicializar
   const [mes, setMes] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -39,7 +39,7 @@ export default function ResumenesGinecologiaPage() {
     }
     return new Date().getMonth() + 1
   })
-  
+
   const [anio, setAnio] = useState(() => {
     if (typeof window !== 'undefined') {
       const savedAnio = localStorage.getItem('ginecologia_resumenes_anio')
@@ -107,7 +107,7 @@ export default function ResumenesGinecologiaPage() {
       if (liquidacion) {
         const liq = liquidacion as LiquidacionGuardia
         setLiquidacionActual(liq)
-        
+
         // Cargar ExcelData desde BD
         const excelDataCargado = await cargarExcelDataDesdeBD(liq.id, supabase)
         if (excelDataCargado) {
@@ -176,7 +176,7 @@ export default function ResumenesGinecologiaPage() {
           cambiosPorFila.set(cambio.filaExcel, new Map())
         }
         const filaCambios = cambiosPorFila.get(cambio.filaExcel)!
-        
+
         // Mapear nombre de columna del Excel a campo de BD
         if (cambio.columna.toLowerCase().includes('cliente') || cambio.columna.toLowerCase().includes('obra')) {
           filaCambios.set('obra_social', cambio.valor)
@@ -201,12 +201,12 @@ export default function ResumenesGinecologiaPage() {
         campos.forEach((valor, campo) => {
           updateData[campo] = valor
         })
-        
+
         // ✅ Si se cambió la obra social, recalcular importes
         // NOTA: Ginecología NO tiene retención del 30% ni adicionales
         if (campos.has('obra_social')) {
           const nuevaObraSocial = String(campos.get('obra_social')).trim()
-          
+
           try {
             // Obtener detalle actual para verificar si es horario formativo
             const { data: detalleActualData } = await supabase
@@ -215,10 +215,10 @@ export default function ResumenesGinecologiaPage() {
               .eq('liquidacion_id', liquidacionActual.id)
               .eq('fila_excel', filaExcel)
               .maybeSingle()
-            
+
             const detalleActual = detalleActualData as { es_horario_formativo: boolean } | null
             const esHorarioFormativo = detalleActual?.es_horario_formativo || false
-            
+
             // Cargar valor de consulta para la nueva obra social
             const { data: valorConsultaData } = await supabase
               .from('valores_consultas_obra_social')
@@ -228,17 +228,17 @@ export default function ResumenesGinecologiaPage() {
               .eq('anio', anio)
               .eq('obra_social', nuevaObraSocial)
               .maybeSingle()
-            
+
             const valorConsulta = valorConsultaData as { valor: number } | null
             let montoFacturado = valorConsulta?.valor || 0
             let importeCalculado = montoFacturado
-            
+
             // Si es horario formativo, no se paga
             if (esHorarioFormativo) {
               montoFacturado = 0
               importeCalculado = 0
             }
-            
+
             // Actualizar campos calculados
             // Ginecología: sin retención, sin adicionales
             updateData.monto_facturado = montoFacturado
@@ -246,7 +246,7 @@ export default function ResumenesGinecologiaPage() {
             updateData.monto_adicional = 0
             updateData.importe_calculado = importeCalculado
             updateData.porcentaje_retencion = null
-            
+
             // También actualizar ExcelData local para reflejar los cambios
             if (excelData && excelData.rows[filaExcel - 1]) {
               excelData.rows[filaExcel - 1]['Importe'] = montoFacturado
@@ -255,7 +255,7 @@ export default function ResumenesGinecologiaPage() {
             console.error(`Error recalculando importes para fila ${filaExcel}:`, error)
           }
         }
-        
+
         updateData.updated_at = new Date().toISOString()
 
         const { error } = await supabase
@@ -276,7 +276,7 @@ export default function ResumenesGinecologiaPage() {
         if (excelData) {
           setExcelData({ ...excelData })
         }
-        
+
         // Actualizar totales de liquidación
         const actualizarTotales = async () => {
           const { data: detalles } = await supabase
@@ -396,7 +396,7 @@ export default function ResumenesGinecologiaPage() {
     setLoading(true)
     try {
       console.log(`[Ginecología Resúmenes] Cargando resúmenes para ${mes}/${anio}`)
-      
+
       // Obtener liquidación específica de Ginecología para trabajar solo con ese archivo
       const { data: liquidacion } = await supabase
         .from('liquidaciones_guardia')
@@ -415,7 +415,7 @@ export default function ResumenesGinecologiaPage() {
 
       const liquidacionId = (liquidacion as any).id
       console.log(`[Ginecología Resúmenes] Liquidación ID: ${liquidacionId}`)
-      
+
       // Calcular resumen por prestador pasando liquidacionId específico
       const resumenPrestadores = await calcularResumenPorPrestador(mes, anio, liquidacionId)
       console.log(`[Ginecología Resúmenes] Resúmenes por prestador: ${resumenPrestadores.length}`)
@@ -428,20 +428,20 @@ export default function ResumenesGinecologiaPage() {
       console.log(`[Ginecología Resúmenes] Resúmenes por médico: ${resumenMedicos.length}`)
       const totalConsultasMedicos = resumenMedicos.reduce((sum, r) => sum + r.cantidad, 0)
       console.log(`[Ginecología Resúmenes] Total de consultas en médicos: ${totalConsultasMedicos}`)
-      
+
       // Agrupar por médico - usar nombre normalizado si no hay ID para evitar agrupar médicos diferentes
       const resumenesPorMedicoMap = new Map<string, ResumenPorMedico[]>()
       resumenMedicos.forEach(resumen => {
         // Usar ID si existe, sino usar nombre normalizado como clave única
         const nombreNormalizado = resumen.medico_nombre.toLowerCase().trim().replace(/\s+/g, ' ')
         const clave = resumen.medico_id || `nombre-${nombreNormalizado}`
-        
+
         if (!resumenesPorMedicoMap.has(clave)) {
           resumenesPorMedicoMap.set(clave, [])
         }
         resumenesPorMedicoMap.get(clave)!.push(resumen)
       })
-      
+
       console.log(`[Ginecología Resúmenes] Médicos únicos: ${resumenesPorMedicoMap.size}`)
       setResumenesPorMedico(resumenesPorMedicoMap)
     } catch (error) {
@@ -535,111 +535,107 @@ export default function ResumenesGinecologiaPage() {
   }).sort()
 
   return (
-    <div className="min-h-screen p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button
-              onClick={() => router.push('/ginecologia')}
-              variant="outline"
-              className="border-green-500/50 text-green-400 hover:bg-green-500/20"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Volver
-            </Button>
-            <h1 className="text-3xl font-bold text-green-400">
-              Resúmenes de Liquidación - Ginecología
+    <div className="min-h-screen bg-black text-white relative overflow-hidden">
+      {/* Fondo con auroras de servidor GrowLabs */}
+      <div className="fixed inset-0 z-0">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#00D1FF]/10 rounded-full blur-[120px] animate-pulse"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#1E3A8A]/15 rounded-full blur-[120px] animate-pulse delay-700"></div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-6 py-12 relative z-10">
+        {/* Header Premium */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16 animate-in slide-in-from-top-4 duration-700">
+          <div className="space-y-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#00D1FF]/10 border border-[#00D1FF]/20 text-[#00D1FF] text-xs font-bold tracking-widest uppercase">
+              <History className="h-3 w-3" />
+              Intelligence Hub
+            </div>
+            <h1 className="text-6xl font-black tracking-tighter leading-none">
+              RESÚMENES<br />
+              <span className="text-[#00D1FF] italic uppercase">Ginecología</span>
             </h1>
+            <p className="text-gray-400 text-lg max-w-md font-medium leading-relaxed">
+              Analítica detallada de producción ginecológica con validación horaria automática.
+            </p>
           </div>
-        </div>
 
-        {/* Selector de Mes y Año */}
-        <div 
-          className="flex items-center gap-4 p-4 rounded-xl"
-          style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-          }}
-        >
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-300">Mes:</label>
-            <select
-              value={mes}
-              onChange={(e) => setMes(Number(e.target.value))}
-              className="px-3 py-2 bg-gray-800 border border-green-500/50 rounded-lg text-white focus:border-green-400 focus:outline-none"
+          <div className="flex flex-wrap gap-4">
+            <button
+              onClick={() => router.push('/ginecologia')}
+              className="group flex items-center gap-3 px-6 py-3 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all font-bold text-sm tracking-tight"
             >
-              {MESES.map(m => (
-                <option key={m.value} value={m.value}>{m.label}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-300">Año:</label>
-            <input
-              type="number"
-              value={anio}
-              onChange={(e) => setAnio(Number(e.target.value))}
-              className="px-3 py-2 bg-gray-800 border border-green-500/50 rounded-lg text-white w-24 focus:border-green-400 focus:outline-none"
-            />
+              <ArrowLeft className="h-4 w-4 text-gray-400 group-hover:text-white group-hover:-translate-x-1 transition-all" />
+              VOLVER
+            </button>
+            <div className="flex bg-white/5 backdrop-blur-md border border-white/10 rounded-full p-1.5 gap-2">
+              <select
+                value={mes}
+                onChange={(e) => setMes(parseInt(e.target.value))}
+                className="bg-transparent border-none text-white font-bold text-sm px-4 focus:outline-none cursor-pointer"
+              >
+                {MESES.map(m => (
+                  <option key={m.value} value={m.value}>{m.label}</option>
+                ))}
+              </select>
+              <input
+                type="number"
+                value={anio}
+                onChange={(e) => setAnio(parseInt(e.target.value))}
+                className="bg-black border border-white/10 rounded-full w-24 py-1.5 px-4 text-sm font-bold focus:border-[#00D1FF]/50 outline-none"
+              />
+            </div>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-2 border-b border-gray-700">
+        {/* Tabs Premium */}
+        <div className="flex overflow-x-auto gap-2 p-1.5 bg-white/5 backdrop-blur-md border border-white/10 rounded-full w-fit mb-12 animate-in fade-in slide-in-from-bottom-2 duration-1000 no-scrollbar">
           <button
             onClick={() => setTabActiva('medicos')}
-            className={`px-4 py-2 font-semibold transition-colors ${
-              tabActiva === 'medicos'
-                ? 'text-green-400 border-b-2 border-green-400'
-                : 'text-gray-400 hover:text-gray-300'
-            }`}
+            className={`px-8 py-3 rounded-full font-bold text-xs whitespace-nowrap tracking-tighter transition-all flex items-center gap-2 ${tabActiva === 'medicos'
+              ? 'bg-[#00D1FF] text-black shadow-[0_0_20px_rgba(0,209,255,0.2)]'
+              : 'text-gray-400 hover:text-white hover:bg-white/5'
+              }`}
           >
-            Resumen por Médico
+            POR MÉDICO
           </button>
           <button
             onClick={() => setTabActiva('prestadores')}
-            className={`px-4 py-2 font-semibold transition-colors ${
-              tabActiva === 'prestadores'
-                ? 'text-green-400 border-b-2 border-green-400'
-                : 'text-gray-400 hover:text-gray-300'
-            }`}
+            className={`px-8 py-3 rounded-full font-bold text-xs whitespace-nowrap tracking-tighter transition-all flex items-center gap-2 ${tabActiva === 'prestadores'
+              ? 'bg-[#00D1FF] text-black shadow-[0_0_209,255,0.2)]'
+              : 'text-gray-400 hover:text-white hover:bg-white/5'
+              }`}
           >
-            Resumen por Prestador
-          </button>
-          <button
-            onClick={() => setTabActiva('historial')}
-            className={`px-4 py-2 font-semibold transition-colors flex items-center gap-2 ${
-              tabActiva === 'historial'
-                ? 'text-green-400 border-b-2 border-green-400'
-                : 'text-gray-400 hover:text-gray-300'
-            }`}
-          >
-            <History className="h-4 w-4" />
-            Historial
+            POR PRESTADOR
           </button>
           <button
             onClick={() => setTabActiva('residentes')}
-            className={`px-4 py-2 font-semibold transition-colors flex items-center gap-2 ${
-              tabActiva === 'residentes'
-                ? 'text-green-400 border-b-2 border-green-400'
-                : 'text-gray-400 hover:text-gray-300'
-            }`}
+            className={`px-8 py-3 rounded-full font-bold text-xs whitespace-nowrap tracking-tighter transition-all flex items-center gap-2 ${tabActiva === 'residentes'
+              ? 'bg-[#00D1FF] text-black shadow-[0_0_209,255,0.2)]'
+              : 'text-gray-400 hover:text-white hover:bg-white/5'
+              }`}
           >
             <GraduationCap className="h-4 w-4" />
-            Residentes Formativos
+            RESIDENTES FORMATIVOS
+          </button>
+          <button
+            onClick={() => setTabActiva('historial')}
+            className={`px-8 py-3 rounded-full font-bold text-xs whitespace-nowrap tracking-tighter transition-all flex items-center gap-2 ${tabActiva === 'historial'
+              ? 'bg-[#00D1FF] text-black shadow-[0_0_209,255,0.2)]'
+              : 'text-gray-400 hover:text-white hover:bg-white/5'
+              }`}
+          >
+            <History className="h-4 w-4" />
+            HISTORIAL
           </button>
           <button
             onClick={() => setTabActiva('excel')}
-            className={`px-4 py-2 font-semibold transition-colors flex items-center gap-2 ${
-              tabActiva === 'excel'
-                ? 'text-green-400 border-b-2 border-green-400'
-                : 'text-gray-400 hover:text-gray-300'
-            }`}
+            className={`px-8 py-3 rounded-full font-bold text-xs whitespace-nowrap tracking-tighter transition-all flex items-center gap-2 ${tabActiva === 'excel'
+              ? 'bg-[#00D1FF] text-black shadow-[0_0_209,255,0.2)]'
+              : 'text-gray-400 hover:text-white hover:bg-white/5'
+              }`}
           >
             <FileSpreadsheet className="h-4 w-4" />
-            Excel
+            VISUALIZADOR EXCEL
           </button>
         </div>
 
@@ -648,67 +644,62 @@ export default function ResumenesGinecologiaPage() {
           /* Tab: Historial */
           <div className="space-y-6">
             {loadingHistorial ? (
-              <div className="text-center py-12 text-gray-400">Cargando historial...</div>
+              <div className="text-center py-12 text-gray-500 font-mono text-sm animate-pulse tracking-widest uppercase">Consultando Archivos Históricos...</div>
             ) : historial.length === 0 ? (
-              <div 
-                className="rounded-xl p-8 text-center"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  backdropFilter: 'blur(20px)',
-                  border: '1px solid rgba(255, 193, 7, 0.3)',
-                }}
+              <div
+                className="rounded-[32px] p-12 text-center bg-white/[0.02] border border-white/5 backdrop-blur-3xl animate-in zoom-in-95"
               >
-                <div className="text-yellow-400 text-xl font-bold mb-4">
-                  No hay liquidaciones procesadas
+                <div className="text-[#FACC15] text-2xl font-black italic uppercase tracking-tighter mb-4">
+                  SISTEMA SIN REGISTROS
                 </div>
-                <div className="text-gray-400 mb-6">
-                  Aún no se ha procesado ningún archivo Excel de Ginecología.
+                <div className="text-gray-500 font-medium mb-8 max-w-sm mx-auto">
+                  No se han detectado liquidaciones previas para el módulo de Ginecología.
                 </div>
-                <Button
+                <button
                   onClick={() => router.push('/ginecologia')}
-                  className="bg-green-600 hover:bg-green-500 text-white"
+                  className="px-8 py-4 rounded-full bg-white/5 border border-white/10 text-white font-black text-xs tracking-widest hover:bg-white/10 transition-all uppercase"
                 >
-                  Ir a Ginecología
-                </Button>
+                  Iniciar Primer Proceso
+                </button>
               </div>
             ) : (
               <div
-                className="rounded-xl p-6"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  backdropFilter: 'blur(20px)',
-                  border: '1px solid rgba(34, 197, 94, 0.3)',
-                }}
+                className="rounded-[32px] overflow-hidden bg-white/[0.02] border border-white/10 backdrop-blur-3xl animate-in slide-in-from-bottom-4 duration-700"
               >
-                <h2 className="text-2xl font-bold text-green-400 mb-4">Historial de Liquidaciones</h2>
-                
+                <div className="p-8 border-b border-white/5 flex items-center justify-between">
+                  <h2 className="text-3xl font-black tracking-tighter italic uppercase underline decoration-[#00D1FF] decoration-4 underline-offset-8">Historial Maestro</h2>
+                  <div className="px-4 py-1.5 rounded-full bg-[#00D1FF]/10 border border-[#00D1FF]/20 text-[#00D1FF] text-[10px] font-black tracking-widest uppercase">
+                    MOD: GYN-25
+                  </div>
+                </div>
+
                 <div className="overflow-x-auto">
-                  <table className="w-full">
+                  <table className="w-full text-left">
                     <thead>
-                      <tr className="border-b border-gray-700">
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-green-400">Período</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-green-400">N° Liquidación</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-green-400">Archivo</th>
-                        <th className="px-4 py-3 text-center text-sm font-semibold text-green-400">Estado</th>
-                        <th className="px-4 py-3 text-right text-sm font-semibold text-green-400">Consultas</th>
-                        <th className="px-4 py-3 text-right text-sm font-semibold text-green-400">Total Bruto</th>
-                        <th className="px-4 py-3 text-right text-sm font-semibold text-green-400">Total Neto</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-green-400">Fecha Procesamiento</th>
-                        <th className="px-4 py-3 text-center text-sm font-semibold text-green-400">Acciones</th>
+                      <tr className="bg-white/5 border-y border-white/5">
+                        <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">Período</th>
+                        <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">N° Liquidación</th>
+                        <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">Archivo</th>
+                        <th className="px-6 py-4 text-xs font-black text-center text-gray-400 uppercase tracking-widest">Estado</th>
+                        <th className="px-6 py-4 text-xs font-black text-right text-gray-400 uppercase tracking-widest">Consultas</th>
+                        <th className="px-6 py-4 text-xs font-black text-right text-gray-400 uppercase tracking-widest">Total Bruto</th>
+                        <th className="px-6 py-4 text-xs font-black text-right text-[#00D1FF] uppercase tracking-widest">Total Neto</th>
+                        <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">Procesamiento</th>
+                        <th className="px-6 py-4 text-xs font-black text-center text-gray-400 uppercase tracking-widest">Acciones</th>
                       </tr>
                     </thead>
                     <tbody>
                       {historial.map((liquidacion) => {
-                        const fechaProcesamiento = liquidacion.created_at 
+                        const fechaProcesamiento = liquidacion.created_at
                           ? new Date(liquidacion.created_at).toLocaleDateString('es-AR', {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })
                           : 'N/A'
-                        
+
                         const nombreMes = MESES.find(m => m.value === liquidacion.mes)?.label || `Mes ${liquidacion.mes}`
                         const estaExpandida = liquidacionExpandida === liquidacion.id
 
@@ -727,15 +718,14 @@ export default function ResumenesGinecologiaPage() {
                                 </div>
                               </td>
                               <td className="px-4 py-3 text-sm text-center">
-                                <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                                  liquidacion.estado === 'finalizada' 
-                                    ? 'bg-green-500/20 text-green-400'
-                                    : liquidacion.estado === 'procesando'
+                                <span className={`px-2 py-1 rounded text-xs font-semibold ${liquidacion.estado === 'finalizada'
+                                  ? 'bg-green-500/20 text-green-400'
+                                  : liquidacion.estado === 'procesando'
                                     ? 'bg-yellow-500/20 text-yellow-400'
                                     : liquidacion.estado === 'error'
-                                    ? 'bg-red-500/20 text-red-400'
-                                    : 'bg-gray-500/20 text-gray-400'
-                                }`}>
+                                      ? 'bg-red-500/20 text-red-400'
+                                      : 'bg-gray-500/20 text-gray-400'
+                                  }`}>
                                   {liquidacion.estado}
                                 </span>
                               </td>
@@ -783,173 +773,142 @@ export default function ResumenesGinecologiaPage() {
           </div>
         ) : tabActiva === 'residentes' ? (
           /* Tab: Residentes Formativos - Solo para Administración */
-          <div 
-            className="rounded-xl p-6"
-            style={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(59, 130, 246, 0.3)', // Azul para residentes
-            }}
+          <div
+            className="rounded-[32px] overflow-hidden bg-white/[0.02] border border-white/10 backdrop-blur-3xl animate-in fade-in"
           >
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-blue-400 mb-2">
-                Consultas de Residentes en Horario Formativo
-              </h2>
-              <p className="text-gray-400 text-sm mb-2">
-                Estas consultas son de residentes realizadas entre lunes a sábado de 07:00 a 15:00. 
-                <strong className="text-yellow-400"> NO se deben pagar</strong> según las reglas del sistema, 
-                pero se contabilizan para administración.
+            <div className="p-8 border-b border-white/5">
+              <div className="flex items-center gap-4 mb-2">
+                <div className="w-2 h-8 bg-purple-500 rounded-full"></div>
+                <h2 className="text-3xl font-black text-white tracking-tighter italic uppercase">
+                  Residentes Formativos
+                </h2>
+              </div>
+              <p className="text-gray-500 font-bold max-w-2xl text-sm leading-relaxed">
+                Consultas bloqueadas: Residentes actuando en horario formativo (Lunes a Sábado, 07:00 a 15:00).
+                <span className="text-[#FACC15] block mt-1 uppercase tracking-widest text-[10px]">SISTEMA: NO PAGO RECOMENDADO</span>
               </p>
-              <div className="mt-4 p-4 rounded-lg bg-blue-500/10 border border-blue-500/30">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-blue-300 text-sm mb-1">
-                      <strong>Total de consultas:</strong>
-                    </p>
-                    <p className="text-blue-200 text-2xl font-bold">
-                      {residentesFormativos.totalConsultas} consultas
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-blue-300 text-sm mb-1">
-                      <strong>Valor total (no pagado):</strong>
-                    </p>
-                    <p className="text-blue-200 text-2xl font-bold">
-                      {formatearMoneda(residentesFormativos.totalValor)}
-                    </p>
-                  </div>
+              <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5">
+                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Volumen Total Bloqueado</p>
+                  <p className="text-4xl font-black text-white tracking-tighter font-mono">{residentesFormativos.totalConsultas} <span className="text-xs">CONSULTAS</span></p>
                 </div>
-                <p className="text-blue-300 text-xs mt-3 pt-3 border-t border-blue-500/30">
-                  Estas consultas <strong>NO aparecen</strong> en los resúmenes por médico, 
-                  ya que los residentes no deben verlas en sus liquidaciones.
-                </p>
+                <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5">
+                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Carga Económica No Abonable</p>
+                  <p className="text-4xl font-black text-purple-400 tracking-tighter font-mono">{formatearMoneda(residentesFormativos.totalValor)}</p>
+                </div>
               </div>
             </div>
-
-            {loadingResidentes ? (
-              <div className="text-center py-12 text-gray-400">Cargando resumen...</div>
-            ) : residentesFormativos.resumenes.length === 0 ? (
-              <div className="text-center py-12 text-gray-400">
-                No hay consultas de residentes en horario formativo para este período
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {/* Resumen agrupado por residente y obra social */}
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse text-sm">
-                    <thead>
-                      <tr className="border-b border-white/10">
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 bg-white/5">Residente</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 bg-white/5">Obra Social</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-300 bg-white/5">Cantidad</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-300 bg-white/5">Valor Unitario</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-300 bg-white/5">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {residentesFormativos.resumenes.map((resumen, index) => (
-                        <tr
-                          key={index}
-                          className="border-b border-white/5 hover:bg-white/5 transition-colors"
-                        >
-                          <td className="px-4 py-3 text-gray-300">
-                            {resumen.medico_nombre}
-                          </td>
-                          <td className="px-4 py-3 text-gray-300">
-                            {resumen.obra_social}
-                          </td>
-                          <td className="px-4 py-3 text-gray-300 text-right">
-                            {resumen.cantidad}
-                          </td>
-                          <td className="px-4 py-3 text-gray-300 text-right">
-                            {formatearMoneda(resumen.valor_unitario)}
-                          </td>
-                          <td className="px-4 py-3 text-gray-300 text-right font-semibold">
-                            {formatearMoneda(resumen.total)}
-                          </td>
-                        </tr>
-                      ))}
-                      {/* Fila de totales */}
-                      <tr className="border-t-2 border-blue-400/50 bg-blue-500/10">
-                        <td colSpan={2} className="px-4 py-3 text-gray-200 font-bold">
-                          TOTAL
-                        </td>
-                        <td className="px-4 py-3 text-gray-200 text-right font-bold">
-                          {residentesFormativos.totalConsultas}
-                        </td>
-                        <td className="px-4 py-3 text-gray-200 text-right">
-                          -
-                        </td>
-                        <td className="px-4 py-3 text-blue-300 text-right font-bold text-lg">
-                          {formatearMoneda(residentesFormativos.totalValor)}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+            <div className="p-8">
+              {loadingResidentes ? (
+                <div className="text-center py-12 text-gray-500 font-mono text-xs animate-pulse tracking-widest uppercase">Escaneando Registros Formativos...</div>
+              ) : residentesFormativos.resumenes.length === 0 ? (
+                <div className="text-center py-20">
+                  <div className="text-gray-600 font-black text-xs tracking-[0.2em] uppercase italic">Sin Actividad Bloqueada</div>
+                  <p className="text-gray-500 mt-2 text-sm italic">No se detectaron residentes en horario formativo para este ciclo.</p>
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="space-y-8 animate-in fade-in duration-500">
+                  <div className="overflow-hidden rounded-2xl border border-white/5 bg-white/[0.01]">
+                    <table className="w-full text-left">
+                      <thead>
+                        <tr className="bg-white/5 border-b border-white/5">
+                          <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-widest italic">Médico Residente</th>
+                          <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-widest italic">Cobertura</th>
+                          <th className="px-6 py-4 text-xs font-black text-right text-gray-500 uppercase tracking-widest italic">Volumen</th>
+                          <th className="px-6 py-4 text-xs font-black text-right text-gray-500 uppercase tracking-widest italic">Cuota Referencial</th>
+                          <th className="px-6 py-4 text-xs font-black text-right text-purple-400 uppercase tracking-widest italic">Subtotal</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5">
+                        {residentesFormativos.resumenes.map((resumen, index) => (
+                          <tr key={index} className="hover:bg-white/[0.03] transition-colors">
+                            <td className="px-6 py-4 text-sm font-bold text-gray-300 uppercase tracking-tight">{resumen.medico_nombre}</td>
+                            <td className="px-6 py-4 text-sm text-gray-400 font-medium">{resumen.obra_social}</td>
+                            <td className="px-6 py-4 text-sm text-right font-mono text-gray-400 italic">{resumen.cantidad}</td>
+                            <td className="px-6 py-4 text-sm text-right font-mono text-gray-400">{formatearMoneda(resumen.valor_unitario)}</td>
+                            <td className="px-6 py-4 text-sm text-right font-black text-white font-mono">{formatearMoneda(resumen.total)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr className="bg-purple-500/5 border-t border-purple-500/20">
+                          <td colSpan={2} className="px-6 py-4 text-[10px] font-black text-purple-400 uppercase tracking-widest italic">Consolidado Formativo</td>
+                          <td className="px-6 py-4 text-sm text-right font-black text-purple-400 font-mono italic">{residentesFormativos.totalConsultas}</td>
+                          <td className="px-6 py-4"></td>
+                          <td className="px-6 py-4 text-2xl text-right font-black text-purple-400 tracking-tighter font-mono">{formatearMoneda(residentesFormativos.totalValor)}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+
+                  <div className="flex items-center gap-3 p-4 rounded-xl bg-purple-500/5 border border-purple-500/10">
+                    <div className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse"></div>
+                    <p className="text-[10px] font-bold text-purple-300 leading-none tracking-tight uppercase">
+                      Nota: Estos registros son de carácter administrativo y no impactan en la liquidación final de haberes.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         ) : tabActiva === 'excel' ? (
           /* Tab: Excel */
           <div className="space-y-6">
             {loadingExcel ? (
-              <div className="text-center py-12 text-gray-400">Cargando Excel...</div>
+              <div className="text-center py-12 text-gray-500 font-mono text-sm animate-pulse tracking-widest uppercase italic">Decodificando Matriz de Datos...</div>
             ) : !liquidacionActual ? (
-              <div 
-                className="rounded-xl p-8 text-center"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  backdropFilter: 'blur(20px)',
-                  border: '1px solid rgba(255, 193, 7, 0.3)',
-                }}
+              <div
+                className="rounded-[32px] p-12 text-center bg-white/[0.02] border border-white/5 backdrop-blur-3xl animate-in zoom-in-95"
               >
-                <div className="text-yellow-400 text-xl font-bold mb-4">
-                  No hay liquidación para este período
+                <div className="text-[#FACC15] text-2xl font-black italic uppercase tracking-tighter mb-4">
+                  PERÍODO SIN PROCESAR
                 </div>
-                <div className="text-gray-400 mb-6">
-                  No se ha procesado ningún archivo Excel para {MESES.find(m => m.value === mes)?.label || `Mes ${mes}`} {anio}.
+                <div className="text-gray-500 font-medium mb-8 max-w-md mx-auto">
+                  No se ha detectado ninguna estructura de liquidación para {MESES.find(m => m.value === mes)?.label || `Mes ${mes}`} {anio}.
                 </div>
-                <Button
+                <button
                   onClick={() => router.push('/ginecologia')}
-                  className="bg-green-600 hover:bg-green-500 text-white"
+                  className="px-8 py-4 rounded-full bg-[#00FF88] text-black font-black text-xs tracking-widest hover:scale-105 transition-all uppercase shadow-[0_0_30px_rgba(0,255,136,0.3)]"
                 >
-                  Ir a Ginecología para procesar archivo
-                </Button>
+                  Ir a Procesamiento
+                </button>
               </div>
             ) : !excelData ? (
-              <div className="text-center py-12 text-gray-400">No se pudo cargar el Excel</div>
+              <div className="text-center py-12 text-[#FF3131] font-black text-xs uppercase tracking-widest italic animate-pulse">Error Crítico: Fallo en la Reconstrucción del Archivo</div>
             ) : (
-              <div 
-                className="rounded-xl p-6"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  backdropFilter: 'blur(20px)',
-                  border: '1px solid rgba(34, 197, 94, 0.3)',
-                }}
+              <div
+                className="rounded-[32px] overflow-hidden bg-white/[0.02] border border-white/10 backdrop-blur-3xl animate-in fade-in"
               >
-                <h2 className="text-2xl font-bold text-green-400 mb-4">
-                  Excel - {MESES.find(m => m.value === mes)?.label || `Mes ${mes}`} {anio}
-                </h2>
-                <p className="text-gray-400 mb-4 text-sm">
-                  Los cambios se guardan automáticamente. Revisa duplicados, filas sin obra social y sin horario.
-                </p>
-                <ExcelDataTable
-                  data={excelData}
-                  especialidad="Ginecología"
-                  onCellUpdate={handleCellUpdate}
-                  onDeleteRow={handleDeleteRow}
-                  liquidacionId={liquidacionActual.id}
-                  mes={mes}
-                  anio={anio}
-                />
+                <div className="p-8 border-b border-white/5 bg-white/[0.01]">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="space-y-1">
+                      <h2 className="text-3xl font-black text-white tracking-tighter italic uppercase underline decoration-[#00FF88] decoration-4 underline-offset-8">Visualizador Maestro</h2>
+                      <p className="text-gray-500 font-bold text-[10px] tracking-widest uppercase">Motor de Persistencia en Tiempo Real Activo</p>
+                    </div>
+                    <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#00FF88]/10 border border-[#00FF88]/20 text-[#00FF88] text-[10px] font-black tracking-widest uppercase">
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#00FF88] animate-pulse"></div>
+                      Auto-Save On
+                    </div>
+                  </div>
+                </div>
+                <div className="p-1">
+                  <ExcelDataTable
+                    data={excelData}
+                    especialidad="Ginecología"
+                    onCellUpdate={handleCellUpdate}
+                    onDeleteRow={handleDeleteRow}
+                    liquidacionId={liquidacionActual.id}
+                    mes={mes}
+                    anio={anio}
+                  />
+                </div>
               </div>
             )}
           </div>
         ) : loading ? (
           <div className="text-center py-12 text-gray-400">Cargando resúmenes...</div>
         ) : resumenesPorMedico.size === 0 && resumenesPorPrestador.length === 0 ? (
-          <div 
+          <div
             className="rounded-xl p-8 text-center"
             style={{
               background: 'rgba(255, 255, 255, 0.05)',
@@ -996,52 +955,53 @@ export default function ResumenesGinecologiaPage() {
                 return (
                   <div
                     key={medicoNombre}
-                    className="rounded-xl p-6"
-                    style={{
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      backdropFilter: 'blur(20px)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
-                    }}
+                    className="rounded-[32px] overflow-hidden bg-white/[0.02] border border-white/10 backdrop-blur-3xl p-1[px] group transition-all"
                   >
-                    <div className="flex items-center justify-between mb-4">
-                      <h2 className="text-2xl font-bold text-green-400">{medicoNombre}</h2>
-                      <Button
-                        onClick={() => handleExportarPDFMedico(medicoNombre, resumenes)}
-                        variant="outline"
-                        className="border-green-500/50 text-green-400 hover:bg-green-500/20"
-                      >
-                        <FileDown className="h-4 w-4 mr-2" />
-                        Exportar PDF
-                      </Button>
-                    </div>
+                    <div className="p-8 bg-black/40 rounded-[31px]">
+                      <div className="flex items-center justify-between mb-8">
+                        <div className="space-y-1">
+                          <span className="text-[10px] font-black text-[#00D1FF] tracking-[0.3em] uppercase">Profesional de Planta</span>
+                          <h2 className="text-4xl font-black text-white tracking-tighter italic uppercase">{medicoNombre}</h2>
+                        </div>
+                        <button
+                          onClick={() => handleExportarPDFMedico(medicoNombre, resumenes)}
+                          className="flex items-center gap-3 px-6 py-3 rounded-full bg-white/5 border border-white/10 hover:bg-[#00D1FF] hover:text-black transition-all font-bold text-xs tracking-tighter uppercase"
+                        >
+                          <FileDown className="h-4 w-4" />
+                          Generar Reporte
+                        </button>
+                      </div>
 
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b border-gray-700">
-                            <th className="px-4 py-3 text-left text-sm font-semibold text-green-400">Obra social</th>
-                            <th className="px-4 py-3 text-right text-sm font-semibold text-green-400">Cantidad</th>
-                            <th className="px-4 py-3 text-right text-sm font-semibold text-green-400">Valor unitario</th>
-                            <th className="px-4 py-3 text-right text-sm font-semibold text-green-400">Total</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {resumenes.map((resumen, idx) => (
-                            <tr key={idx} className="border-b border-gray-800 hover:bg-gray-800/50">
-                              <td className="px-4 py-3 text-sm text-gray-300">{resumen.obra_social}</td>
-                              <td className="px-4 py-3 text-sm text-gray-300 text-right">{resumen.cantidad}</td>
-                              <td className="px-4 py-3 text-sm text-gray-300 text-right">{formatearMoneda(resumen.valor_unitario)}</td>
-                              <td className="px-4 py-3 text-sm text-gray-300 text-right font-semibold">{formatearMoneda(resumen.total)}</td>
+                      <div className="overflow-hidden rounded-2xl border border-white/5 bg-white/[0.01]">
+                        <table className="w-full text-left">
+                          <thead>
+                            <tr className="bg-white/5 border-b border-white/5">
+                              <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-widest italic">Obra Social</th>
+                              <th className="px-6 py-4 text-xs font-black text-right text-gray-500 uppercase tracking-widest italic">Cantidad</th>
+                              <th className="px-6 py-4 text-xs font-black text-right text-gray-500 uppercase tracking-widest italic">Val. Unitario</th>
+                              <th className="px-6 py-4 text-xs font-black text-right text-[#00D1FF] uppercase tracking-widest italic">Consolidado</th>
                             </tr>
-                          ))}
-                          <tr className="bg-gray-800/50 font-bold">
-                            <td className="px-4 py-3 text-sm text-green-400">TOTAL</td>
-                            <td className="px-4 py-3 text-sm text-green-400 text-right">{totalCantidad}</td>
-                            <td className="px-4 py-3 text-sm text-green-400 text-right"></td>
-                            <td className="px-4 py-3 text-sm text-green-400 text-right">{formatearMoneda(total)}</td>
-                          </tr>
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody className="divide-y divide-white/5">
+                            {resumenes.map((resumen, idx) => (
+                              <tr key={idx} className="hover:bg-white/[0.03] transition-colors">
+                                <td className="px-6 py-4 text-sm font-bold text-gray-300">{resumen.obra_social}</td>
+                                <td className="px-6 py-4 text-sm text-center text-gray-400 font-mono italic">{resumen.cantidad}</td>
+                                <td className="px-6 py-4 text-sm text-right text-gray-400 font-mono">{formatearMoneda(resumen.valor_unitario)}</td>
+                                <td className="px-6 py-4 text-sm text-right font-black text-white">{formatearMoneda(resumen.total)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                          <tfoot>
+                            <tr className="bg-[#00D1FF]/5 border-t border-[#00D1FF]/20">
+                              <td className="px-6 py-4 text-sm font-black text-[#00D1FF] uppercase italic">Total Médico</td>
+                              <td className="px-6 py-4 text-sm text-center font-black text-[#00D1FF] font-mono italic">{totalCantidad}</td>
+                              <td className="px-6 py-4"></td>
+                              <td className="px-6 py-4 text-xl text-right font-black text-[#00D1FF] tracking-tighter font-mono">{formatearMoneda(total)}</td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
                     </div>
                   </div>
                 )
@@ -1069,52 +1029,46 @@ export default function ResumenesGinecologiaPage() {
                 </div>
 
                 <div
-                  className="rounded-xl p-6"
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    backdropFilter: 'blur(20px)',
-                    border: '1px solid rgba(34, 197, 94, 0.3)',
-                  }}
+                  className="rounded-[32px] overflow-hidden bg-white/[0.02] border border-white/10 backdrop-blur-3xl animate-in slide-in-from-bottom-4"
                 >
-                  <h2 className="text-2xl font-bold text-green-400 mb-4">Resumen por Prestador</h2>
+                  <div className="p-8 border-b border-white/5 flex items-center justify-between">
+                    <h2 className="text-3xl font-black text-white tracking-tighter italic uppercase underline decoration-[#00D1FF] decoration-4 underline-offset-8">Resumen de Prestadores</h2>
+                    <div className="px-4 py-1.5 rounded-full bg-[#00D1FF]/10 border border-[#00D1FF]/20 text-[#00D1FF] text-[10px] font-black tracking-widest uppercase">
+                      PROVIDER HUB
+                    </div>
+                  </div>
 
                   <div className="overflow-x-auto">
-                    <table className="w-full">
+                    <table className="w-full text-left">
                       <thead>
-                        <tr className="border-b border-gray-700">
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-green-400">Prestador</th>
-                          <th className="px-4 py-3 text-right text-sm font-semibold text-green-400">Cantidad</th>
-                          <th className="px-4 py-3 text-right text-sm font-semibold text-green-400">Total bruto</th>
-                          <th className="px-4 py-3 text-right text-sm font-semibold text-green-400">Retención 20%</th>
-                          <th className="px-4 py-3 text-right text-sm font-semibold text-green-400">Total Neto</th>
+                        <tr className="bg-white/5 border-b border-white/5">
+                          <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-widest italic">Prestador / Institución</th>
+                          <th className="px-6 py-4 text-xs font-black text-right text-gray-500 uppercase tracking-widest italic">Cantidad</th>
+                          <th className="px-6 py-4 text-xs font-black text-right text-gray-500 uppercase tracking-widest italic">Total Bruto</th>
+                          <th className="px-6 py-4 text-xs font-black text-right text-gray-500 uppercase tracking-widest italic">Retención 20%</th>
+                          <th className="px-6 py-4 text-xs font-black text-right text-[#00D1FF] uppercase tracking-widest italic">Total Neto</th>
                         </tr>
                       </thead>
-                      <tbody>
+                      <tbody className="divide-y divide-white/5">
                         {resumenesPorPrestador.map((resumen, idx) => (
-                          <tr key={idx} className="border-b border-gray-800 hover:bg-gray-800/50">
-                            <td className="px-4 py-3 text-sm text-gray-300 font-medium">{resumen.medico_nombre}</td>
-                            <td className="px-4 py-3 text-sm text-gray-300 text-right">{resumen.cantidad}</td>
-                            <td className="px-4 py-3 text-sm text-gray-300 text-right">{formatearMoneda(resumen.total_bruto)}</td>
-                            <td className="px-4 py-3 text-sm text-gray-300 text-right">{formatearMoneda(resumen.retencion_20)}</td>
-                            <td className="px-4 py-3 text-sm text-gray-300 text-right font-semibold">{formatearMoneda(resumen.total_neto)}</td>
+                          <tr key={idx} className="hover:bg-white/[0.03] transition-colors">
+                            <td className="px-6 py-4 text-sm font-bold text-gray-300">{resumen.medico_nombre}</td>
+                            <td className="px-6 py-4 text-sm text-right text-gray-400 font-mono italic">{resumen.cantidad}</td>
+                            <td className="px-6 py-4 text-sm text-right text-gray-400 font-mono">{formatearMoneda(resumen.total_bruto)}</td>
+                            <td className="px-6 py-4 text-sm text-right text-gray-400 font-mono">{formatearMoneda(resumen.retencion_20)}</td>
+                            <td className="px-6 py-4 text-sm text-right font-black text-white">{formatearMoneda(resumen.total_neto)}</td>
                           </tr>
                         ))}
-                        <tr className="bg-gray-800/50 font-bold">
-                          <td className="px-4 py-3 text-sm text-green-400">Total general</td>
-                          <td className="px-4 py-3 text-sm text-green-400 text-right">
-                            {resumenesPorPrestador.reduce((sum, r) => sum + r.cantidad, 0)}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-green-400 text-right">
-                            {formatearMoneda(resumenesPorPrestador.reduce((sum, r) => sum + r.total_bruto, 0))}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-green-400 text-right">
-                            {formatearMoneda(resumenesPorPrestador.reduce((sum, r) => sum + r.retencion_20, 0))}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-green-400 text-right">
-                            {formatearMoneda(resumenesPorPrestador.reduce((sum, r) => sum + r.total_neto, 0))}
-                          </td>
-                        </tr>
                       </tbody>
+                      <tfoot>
+                        <tr className="bg-[#00D1FF]/5 border-t border-[#00D1FF]/20">
+                          <td className="px-6 py-4 text-sm font-black text-[#00D1FF] uppercase italic">Total Consolidado</td>
+                          <td className="px-6 py-4 text-sm text-right font-black text-[#00D1FF] font-mono italic">{resumenesPorPrestador.reduce((sum, r) => sum + r.cantidad, 0)}</td>
+                          <td className="px-6 py-4 text-sm text-right font-black text-[#00D1FF] font-mono">{formatearMoneda(resumenesPorPrestador.reduce((sum, r) => sum + r.total_bruto, 0))}</td>
+                          <td className="px-6 py-4 text-sm text-right font-black text-[#00D1FF] font-mono">{formatearMoneda(resumenesPorPrestador.reduce((sum, r) => sum + r.retencion_20, 0))}</td>
+                          <td className="px-6 py-4 text-2xl text-right font-black text-[#00D1FF] tracking-tighter font-mono">{formatearMoneda(resumenesPorPrestador.reduce((sum, r) => sum + r.total_neto, 0))}</td>
+                        </tr>
+                      </tfoot>
                     </table>
                   </div>
                 </div>
@@ -1122,8 +1076,8 @@ export default function ResumenesGinecologiaPage() {
             )}
           </div>
         )}
-      </div>
-    </div>
+      </div >
+    </div >
   )
 }
 
@@ -1202,45 +1156,53 @@ function DetalleLiquidacion({ liquidacionId }: { liquidacionId: string }) {
   }
 
   return (
-    <div className="mt-4">
-      <h3 className="text-lg font-semibold text-green-400 mb-3">
-        Detalle de Consultas ({detalles.length} registros)
-      </h3>
-      <div className="overflow-x-auto max-h-96 overflow-y-auto">
-        <table className="w-full text-sm">
-          <thead className="sticky top-0 bg-gray-900">
-            <tr className="border-b border-gray-700">
-              <th className="px-3 py-2 text-left text-xs font-semibold text-green-400">Fecha</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold text-green-400">Hora</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold text-green-400">Médico</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold text-green-400">Paciente</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold text-green-400">Obra Social</th>
-              <th className="px-3 py-2 text-right text-xs font-semibold text-green-400">Monto Facturado</th>
-              <th className="px-3 py-2 text-right text-xs font-semibold text-green-400">Importe Calculado</th>
-              <th className="px-3 py-2 text-center text-xs font-semibold text-green-400">Horario Formativo</th>
-            </tr>
-          </thead>
-          <tbody>
-            {detalles.map((detalle) => (
-              <tr key={detalle.id} className="border-b border-gray-800 hover:bg-gray-800/30">
-                <td className="px-3 py-2 text-xs text-gray-300">{formatearFecha(detalle.fecha)}</td>
-                <td className="px-3 py-2 text-xs text-gray-300">{detalle.hora || '-'}</td>
-                <td className="px-3 py-2 text-xs text-gray-300">{detalle.medico_nombre || '-'}</td>
-                <td className="px-3 py-2 text-xs text-gray-300">{detalle.paciente || '-'}</td>
-                <td className="px-3 py-2 text-xs text-gray-300">{detalle.obra_social || '-'}</td>
-                <td className="px-3 py-2 text-xs text-gray-300 text-right">{formatearMoneda(detalle.monto_facturado)}</td>
-                <td className="px-3 py-2 text-xs text-gray-300 text-right font-semibold">{formatearMoneda(detalle.importe_calculado)}</td>
-                <td className="px-3 py-2 text-xs text-center">
-                  {detalle.es_horario_formativo ? (
-                    <span className="text-yellow-400">Sí</span>
-                  ) : (
-                    <span className="text-gray-500">No</span>
-                  )}
-                </td>
+    <div className="mt-8 animate-in slide-in-from-top-4">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="p-2 bg-[#00D1FF]/10 rounded-xl">
+          <FileSpreadsheet className="h-5 w-5 text-[#00D1FF]" />
+        </div>
+        <h3 className="text-xl font-black text-white tracking-tighter italic uppercase">
+          Análisis de Registros ({detalles.length})
+        </h3>
+      </div>
+
+      <div className="overflow-hidden rounded-[24px] border border-white/10 bg-black/40 backdrop-blur-3xl shadow-2xl">
+        <div className="overflow-x-auto max-h-[500px] no-scrollbar">
+          <table className="w-full text-left">
+            <thead className="sticky top-0 z-20 bg-black/80 backdrop-blur-md">
+              <tr className="border-b border-white/5">
+                <th className="px-4 py-4 text-[10px] font-black text-gray-500 uppercase tracking-widest italic">Fecha</th>
+                <th className="px-4 py-4 text-[10px] font-black text-gray-500 uppercase tracking-widest italic">Hora</th>
+                <th className="px-4 py-4 text-[10px] font-black text-gray-500 uppercase tracking-widest italic">Médico</th>
+                <th className="px-4 py-4 text-[10px] font-black text-gray-500 uppercase tracking-widest italic">Paciente</th>
+                <th className="px-4 py-4 text-[10px] font-black text-gray-500 uppercase tracking-widest italic">O. Social</th>
+                <th className="px-4 py-4 text-[10px] font-black text-right text-gray-500 uppercase tracking-widest italic">Bruto</th>
+                <th className="px-4 py-4 text-[10px] font-black text-right text-[#00D1FF] uppercase tracking-widest italic">Neto</th>
+                <th className="px-4 py-4 text-[10px] font-black text-center text-gray-500 uppercase tracking-widest italic">Form.</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {detalles.map((detalle) => (
+                <tr key={detalle.id} className="hover:bg-white/[0.03] transition-colors">
+                  <td className="px-4 py-3 text-[11px] font-mono text-gray-400">{formatearFecha(detalle.fecha)}</td>
+                  <td className="px-4 py-3 text-[11px] font-mono text-gray-400">{detalle.hora || '-'}</td>
+                  <td className="px-4 py-3 text-[11px] font-bold text-gray-300">{detalle.medico_nombre || '-'}</td>
+                  <td className="px-4 py-3 text-[11px] text-gray-400 uppercase tracking-tight truncate max-w-[120px]">{detalle.paciente || '-'}</td>
+                  <td className="px-4 py-3 text-[11px] text-gray-400 font-bold">{detalle.obra_social || '-'}</td>
+                  <td className="px-4 py-3 text-[11px] text-right font-mono text-gray-500">{formatearMoneda(detalle.monto_facturado)}</td>
+                  <td className="px-4 py-3 text-[11px] text-right font-black text-white font-mono">{formatearMoneda(detalle.importe_calculado)}</td>
+                  <td className="px-4 py-3 text-center">
+                    {detalle.es_horario_formativo ? (
+                      <span className="px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-400 text-[9px] font-black uppercase">SÍ</span>
+                    ) : (
+                      <span className="text-[9px] font-black text-gray-600 uppercase">NO</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )

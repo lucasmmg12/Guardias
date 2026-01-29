@@ -386,73 +386,100 @@ export default function ResumenesAdmisionesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#000000] text-white relative p-4 md:p-8 pb-20 overflow-x-hidden">
-      {/* GrowLabs Auras */}
-      <div className="fixed top-[-10%] right-[-10%] w-[500px] h-[500px] bg-[#00FF88]/10 rounded-full blur-[120px] pointer-events-none z-0"></div>
-      <div className="fixed bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-[#1E3A8A]/10 rounded-full blur-[120px] pointer-events-none z-0"></div>
+    <div className="min-h-screen bg-black text-white relative overflow-hidden">
+      {/* Fondo con auroras de servidor GrowLabs */}
+      <div className="fixed inset-0 z-0">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#00FF88]/10 rounded-full blur-[120px] animate-pulse"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#00FF88]/10 rounded-full blur-[120px] animate-pulse delay-700"></div>
+      </div>
 
-      <div className="max-w-7xl mx-auto space-y-10 relative z-10">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="max-w-7xl mx-auto px-6 py-12 relative z-10">
+        {/* Header Premium */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16 animate-in slide-in-from-top-4 duration-700">
           <div className="space-y-4">
-            <Button
-              onClick={() => router.push('/admisiones')}
-              variant="ghost"
-              className="text-gray-400 hover:text-[#00FF88] hover:bg-[#00FF88]/10 group transition-all rounded-full px-4"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2 group-hover:-translate-x-1 transition-transform" />
-              Regresar
-            </Button>
-            <h1 className="text-4xl md:text-5xl font-black tracking-tighter">
-              EXPLORADOR DE <span className="text-[#00FF88]">RESÚMENES</span>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#00FF88]/10 border border-[#00FF88]/20 text-[#00FF88] text-xs font-bold tracking-widest uppercase">
+              <History className="h-3 w-3" />
+              Intelligence Hub
+            </div>
+            <h1 className="text-6xl font-black tracking-tighter leading-none">
+              RESÚMENES<br />
+              <span className="text-[#00FF88] italic uppercase">Admisiones</span>
             </h1>
+            <p className="text-gray-400 text-lg max-w-md font-medium leading-relaxed">
+              Análisis profundo de liquidaciones por médico, prestador e histórico de producción.
+            </p>
           </div>
 
-          <div
-            className="flex items-center gap-4 p-2 bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-2xl"
-          >
-            <div className="flex flex-col px-4 border-r border-white/10">
-              <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Periodo</span>
-              <span className="text-sm font-bold text-[#00FF88]">{MESES[mes - 1].label} {anio}</span>
-            </div>
-            <select
-              value={mes}
-              onChange={(e) => setMes(parseInt(e.target.value, 10))}
-              className="bg-transparent text-sm font-bold focus:outline-none cursor-pointer hover:text-[#00FF88] transition-colors appearance-none"
+          <div className="flex flex-wrap gap-4">
+            <button
+              onClick={() => router.push('/admisiones')}
+              className="group flex items-center gap-3 px-6 py-3 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all font-bold text-sm tracking-tight"
             >
-              {MESES.map(m => <option key={m.value} value={m.value} className="bg-black text-white">{m.label.substring(0, 3)}</option>)}
-            </select>
-            <input
-              type="number"
-              value={anio}
-              onChange={(e) => setAnio(parseInt(e.target.value, 10) || anio)}
-              className="bg-transparent text-sm font-bold w-16 focus:outline-none hover:text-[#00FF88] transition-colors"
-              min="2020"
-              max="2100"
-            />
+              <ArrowLeft className="h-4 w-4 text-gray-400 group-hover:text-white group-hover:-translate-x-1 transition-all" />
+              VOLVER
+            </button>
+            <div className="flex bg-white/5 backdrop-blur-md border border-white/10 rounded-full p-1.5 gap-2">
+              <select
+                value={mes}
+                onChange={(e) => setMes(parseInt(e.target.value, 10))}
+                className="bg-transparent border-none text-white font-bold text-sm px-4 focus:outline-none cursor-pointer"
+              >
+                {MESES.map(m => (
+                  <option key={m.value} value={m.value} className="bg-black">{m.label}</option>
+                ))}
+              </select>
+              <input
+                type="number"
+                value={anio}
+                onChange={(e) => setAnio(parseInt(e.target.value, 10) || anio)}
+                className="bg-black border border-white/10 rounded-full w-24 py-1.5 px-4 text-sm font-bold focus:border-[#00FF88]/50 outline-none text-center"
+              />
+            </div>
           </div>
         </div>
 
-        {/* Action Tabs */}
-        <div className="flex flex-wrap gap-2 p-1.5 bg-white/[0.02] border border-white/5 rounded-2xl backdrop-blur-md">
-          {[
-            { id: 'medicos', label: 'Resumen Médico', icon: TrendingUp },
-            { id: 'prestadores', label: 'Resumen Prestador', icon: Eye },
-            { id: 'historial', label: 'Historial', icon: History },
-            { id: 'excel', label: 'Data Original', icon: FileSpreadsheet }
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setTabActiva(tab.id as any)}
-              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all ${tabActiva === tab.id
-                ? 'bg-[#00FF88] text-black shadow-[0_0_20px_rgba(0,255,136,0.3)]'
-                : 'text-gray-500 hover:text-white hover:bg-white/5'
-                }`}
-            >
-              <tab.icon className="h-4 w-4" />
-              {tab.label}
-            </button>
-          ))}
+        {/* Tabs Premium */}
+        <div className="flex overflow-x-auto gap-2 p-1.5 bg-white/5 backdrop-blur-md border border-white/10 rounded-full w-fit mb-12 animate-in fade-in slide-in-from-bottom-2 duration-1000 no-scrollbar">
+          <button
+            onClick={() => setTabActiva('medicos')}
+            className={`px-8 py-3 rounded-full font-black text-xs whitespace-nowrap tracking-tighter transition-all flex items-center gap-2 ${tabActiva === 'medicos'
+              ? 'bg-[#00FF88] text-black shadow-[0_0_20px_rgba(0,255,136,0.3)]'
+              : 'text-gray-400 hover:text-white hover:bg-white/5'
+              }`}
+          >
+            <TrendingUp className="h-4 w-4" />
+            RESUMEN MÉDICO
+          </button>
+          <button
+            onClick={() => setTabActiva('prestadores')}
+            className={`px-8 py-3 rounded-full font-black text-xs whitespace-nowrap tracking-tighter transition-all flex items-center gap-2 ${tabActiva === 'prestadores'
+              ? 'bg-[#00FF88] text-black shadow-[0_0_20px_rgba(0,255,136,0.3)]'
+              : 'text-gray-400 hover:text-white hover:bg-white/5'
+              }`}
+          >
+            <Eye className="h-4 w-4" />
+            RESUMEN PRESTADOR
+          </button>
+          <button
+            onClick={() => setTabActiva('historial')}
+            className={`px-8 py-3 rounded-full font-black text-xs whitespace-nowrap tracking-tighter transition-all flex items-center gap-2 ${tabActiva === 'historial'
+              ? 'bg-[#00FF88] text-black shadow-[0_0_20px_rgba(0,255,136,0.3)]'
+              : 'text-gray-400 hover:text-white hover:bg-white/5'
+              }`}
+          >
+            <History className="h-4 w-4" />
+            HISTORIAL
+          </button>
+          <button
+            onClick={() => setTabActiva('excel')}
+            className={`px-8 py-3 rounded-full font-black text-xs whitespace-nowrap tracking-tighter transition-all flex items-center gap-2 ${tabActiva === 'excel'
+              ? 'bg-[#00FF88] text-black shadow-[0_0_20px_rgba(0,255,136,0.3)]'
+              : 'text-gray-400 hover:text-white hover:bg-white/5'
+              }`}
+          >
+            <FileSpreadsheet className="h-4 w-4" />
+            DATA ORIGINAL
+          </button>
         </div>
 
         {/* Content Area */}

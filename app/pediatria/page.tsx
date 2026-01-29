@@ -411,81 +411,70 @@ export default function PediatriaPage() {
     }
 
     return (
-        <div className="min-h-screen relative p-8 pb-20 overflow-hidden">
-            {/* Efectos de luz verde */}
-            <div className="absolute top-20 left-20 w-96 h-96 bg-green-500/20 rounded-full blur-3xl animate-pulse"></div>
-            <div className="absolute bottom-20 right-20 w-96 h-96 bg-green-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="min-h-screen bg-black text-white relative overflow-hidden">
+            {/* Fondo con auroras de servidor GrowLabs */}
+            <div className="fixed inset-0 z-0">
+                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#00FF88]/10 rounded-full blur-[120px] animate-pulse"></div>
+                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#00FF88]/10 rounded-full blur-[120px] animate-pulse delay-700"></div>
+            </div>
 
-            <div className="max-w-6xl mx-auto space-y-8 relative z-10">
-                {/* Header con Logo */}
-                <div className="flex items-center justify-between mb-8">
-                    <div className="flex items-center gap-4">
-                        <Button
-                            onClick={() => router.push('/')}
-                            variant="outline"
-                            className="border-green-500/50 text-green-400 hover:bg-green-500/20"
-                        >
-                            <ArrowLeft className="h-4 w-4 mr-2" />
-                            Volver
-                        </Button>
-                    </div>
-                    <div>
-                        <div className="flex items-center gap-4 mb-4">
-                            <Link href="/" className="hover:opacity-80 transition-opacity">
-                                <img
-                                    src="/logogrow.png"
-                                    alt="Grow Labs"
-                                    className="h-16 w-auto drop-shadow-2xl"
-                                    style={{
-                                        filter: 'drop-shadow(0 0 20px rgba(34, 197, 94, 0.5))'
-                                    }}
-                                />
-                            </Link>
-                            <div>
-                                <h1 className="text-4xl font-bold mb-2 tracking-tight">
-                                    <span className="bg-gradient-to-r from-green-400 to-emerald-300 bg-clip-text text-transparent">
-                                        Módulo Pediatría
-                                    </span>
-                                </h1>
-                                <p className="text-gray-400 flex items-center gap-2">
-                                    <Sparkles className="h-4 w-4 text-green-400" />
-                                    Procesamiento de liquidaciones por producción
-                                </p>
-                            </div>
+            <div className="max-w-7xl mx-auto px-6 py-12 relative z-10">
+                {/* Header Premium */}
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16 animate-in slide-in-from-top-4 duration-700">
+                    <div className="space-y-4">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#00FF88]/10 border border-[#00FF88]/20 text-[#00FF88] text-xs font-bold tracking-widest uppercase">
+                            <Sparkles className="h-3 w-3" />
+                            Premium Powerhouse
                         </div>
+                        <h1 className="text-6xl font-black tracking-tighter leading-none">
+                            MÓDULO<br />
+                            <span className="text-[#00FF88] italic uppercase">Pediatría</span>
+                        </h1>
+                        <p className="text-gray-400 text-lg max-w-md font-medium leading-relaxed">
+                            Gestión avanzada de liquidaciones por producción con motor de retención automatizado.
+                        </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-4">
+                        <button
+                            onClick={() => router.push('/')}
+                            className="group flex items-center gap-3 px-6 py-3 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all font-bold text-sm tracking-tight"
+                        >
+                            <ArrowLeft className="h-4 w-4 text-gray-400 group-hover:text-white group-hover:-translate-x-1 transition-all" />
+                            VOLVER
+                        </button>
+                        <button
+                            onClick={() => router.push('/pediatria/resumenes')}
+                            className="flex items-center gap-3 px-8 py-4 rounded-full bg-[#00FF88] text-black font-black text-sm tracking-tighter hover:scale-105 transition-all shadow-[0_0_30px_rgba(0,255,136,0.3)]"
+                        >
+                            <FileText className="h-5 w-5" />
+                            VER RESÚMENES
+                        </button>
                     </div>
                 </div>
 
-                {/* Pestañas */}
-                <div className="flex gap-4 mb-6">
+                {/* Tabs Premium */}
+                <div className="flex gap-4 mb-12 p-1.5 bg-white/5 backdrop-blur-md border border-white/10 rounded-full w-fit animate-in fade-in slide-in-from-bottom-2 duration-1000">
                     <button
                         onClick={() => setActiveTab('configuracion')}
-                        className={`px-6 py-3 rounded-lg font-semibold transition-all flex items-center gap-2 ${activeTab === 'configuracion'
-                            ? 'bg-green-600 text-white shadow-lg'
-                            : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                        className={`px-8 py-3 rounded-full font-black text-xs tracking-tighter transition-all flex items-center gap-2 ${activeTab === 'configuracion'
+                            ? 'bg-[#00FF88] text-black shadow-[0_0_20px_rgba(0,255,136,0.3)]'
+                            : 'text-gray-400 hover:text-white hover:bg-white/5'
                             }`}
                     >
-                        <Settings className="h-5 w-5" />
-                        Configuración Mensual
+                        <Settings className="h-4 w-4" />
+                        CONFIGURACIÓN MENSUAL
                     </button>
                     <button
                         onClick={() => setActiveTab('procesamiento')}
-                        className={`px-6 py-3 rounded-lg font-semibold transition-all flex items-center gap-2 ${activeTab === 'procesamiento'
-                            ? 'bg-green-600 text-white shadow-lg'
-                            : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                        className={`px-8 py-3 rounded-full font-black text-xs tracking-tighter transition-all flex items-center gap-2 ${activeTab === 'procesamiento'
+                            ? 'bg-[#00FF88] text-black shadow-[0_0_20px_rgba(0,255,136,0.3)]'
+                            : 'text-gray-400 hover:text-white hover:bg-white/5'
                             }`}
                     >
-                        <Upload className="h-5 w-5" />
-                        Procesar Liquidación
+                        <Upload className="h-4 w-4" />
+                        PROCESAR LIQUIDACIÓN
                     </button>
-                    <Button
-                        onClick={() => router.push('/pediatria/resumenes')}
-                        variant="outline"
-                        className="border-green-500/50 text-green-400 hover:bg-green-500/20 flex items-center gap-2"
-                    >
-                        <FileText className="h-5 w-5" />
-                        Ver Resúmenes
-                    </Button>
                 </div>
 
                 {/* Contenido según Pestaña */}
@@ -493,46 +482,43 @@ export default function PediatriaPage() {
                     <div className="space-y-6 animate-in fade-in duration-500">
                         {/* Selector de Mes/Año de Configuración */}
                         <div
-                            className="p-6 rounded-xl"
+                            className="p-8 rounded-3xl animate-in zoom-in-95 duration-500"
                             style={{
-                                background: 'rgba(255, 255, 255, 0.1)',
-                                backdropFilter: 'blur(20px)',
-                                border: '1px solid rgba(34, 197, 94, 0.3)',
+                                background: 'rgba(255, 255, 255, 0.03)',
+                                backdropFilter: 'blur(12px)',
+                                border: '1px solid rgba(255, 255, 255, 0.08)',
                             }}
                         >
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                                <div className="flex items-center gap-2">
-                                    <label className="text-sm text-gray-300 font-semibold">Mes a gestionar:</label>
-                                    <select
-                                        value={mesConfig}
-                                        onChange={(e) => setMesConfig(Number(e.target.value))}
-                                        className="px-3 py-2 bg-gray-800 border border-green-500/50 rounded-lg text-white focus:border-green-400 focus:outline-none"
-                                    >
-                                        {MESES.map(m => (
-                                            <option key={m.value} value={m.value}>{m.label}</option>
-                                        ))}
-                                    </select>
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+                                <div className="space-y-1.5 flex-1">
+                                    <label className="text-[10px] font-black tracking-[0.2em] text-[#00FF88] uppercase">PERIODO DE GESTIÓN</label>
+                                    <div className="flex items-center gap-3">
+                                        <select
+                                            value={mesConfig}
+                                            onChange={(e) => setMesConfig(Number(e.target.value))}
+                                            className="px-4 py-2.5 bg-black border border-white/10 rounded-xl text-white font-bold text-sm focus:border-[#00FF88]/50 outline-none appearance-none cursor-pointer hover:bg-white/5 transition-all"
+                                        >
+                                            {MESES.map(m => (
+                                                <option key={m.value} value={m.value}>{m.label}</option>
+                                            ))}
+                                        </select>
+                                        <input
+                                            type="number"
+                                            value={anioConfig}
+                                            onChange={(e) => setAnioConfig(Number(e.target.value))}
+                                            className="px-4 py-2.5 bg-black border border-white/10 rounded-xl text-white font-bold text-sm w-28 focus:border-[#00FF88]/50 outline-none hover:bg-white/5 transition-all"
+                                        />
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <label className="text-sm text-gray-300 font-semibold">Año:</label>
-                                    <input
-                                        type="number"
-                                        value={anioConfig}
-                                        onChange={(e) => setAnioConfig(Number(e.target.value))}
-                                        className="px-3 py-2 bg-gray-800 border border-green-500/50 rounded-lg text-white w-24 focus:border-green-400 focus:outline-none"
-                                    />
-                                </div>
-                                <div className="sm:ml-auto">
-                                    <Button
-                                        onClick={handleCopiarMesAnterior}
-                                        disabled={loadingConfig}
-                                        variant="outline"
-                                        className="border-green-500/50 text-green-400 hover:bg-green-500/20 flex items-center gap-2"
-                                    >
-                                        <Copy className="h-4 w-4" />
-                                        Copiar mes anterior
-                                    </Button>
-                                </div>
+                                <Button
+                                    onClick={handleCopiarMesAnterior}
+                                    disabled={loadingConfig}
+                                    variant="outline"
+                                    className="rounded-full border-[#00FF88]/20 bg-[#00FF88]/5 text-[#00FF88] hover:bg-[#00FF88] hover:text-black font-black text-xs tracking-tighter"
+                                >
+                                    <Copy className="h-4 w-4 mr-2" />
+                                    COPIAR MES ANTERIOR
+                                </Button>
                             </div>
                         </div>
 
@@ -540,44 +526,50 @@ export default function PediatriaPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {/* Panel Guardia Estándar */}
                             <div
-                                className="p-6 rounded-xl space-y-4"
+                                className="p-8 rounded-3xl space-y-6"
                                 style={{
-                                    background: 'rgba(255, 255, 255, 0.1)',
-                                    backdropFilter: 'blur(20px)',
-                                    border: '1px solid rgba(34, 197, 94, 0.3)',
+                                    background: 'rgba(255, 255, 255, 0.03)',
+                                    backdropFilter: 'blur(12px)',
+                                    border: '1px solid rgba(255, 255, 255, 0.08)',
                                 }}
                             >
-                                <div className="flex items-center justify-between font-bold">
-                                    <div className="flex items-center gap-2 text-green-400">
-                                        <h3 className="text-lg">Guardia Estándar</h3>
-                                        <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 border border-green-500/30">
+                                <div className="flex items-center justify-between">
+                                    <div className="space-y-1">
+                                        <h3 className="text-xl font-black text-white tracking-tighter uppercase italic">Guardia Estándar</h3>
+                                        <p className="text-[10px] text-gray-500 font-bold tracking-widest leading-none">VALOR BASE BASE CONSULTA</p>
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                        <span className="text-xl font-mono text-[#00FF88] font-black bg-[#00FF88]/10 px-3 py-1 rounded-lg">
                                             {grupoEstandar.length}
                                         </span>
+                                        <button
+                                            onClick={() => {
+                                                setGrupoSeleccionado('GUARDIA_ESTANDAR')
+                                                setShowMedicoSelector(true)
+                                            }}
+                                            className="w-10 h-10 rounded-full bg-[#00FF88] text-black flex items-center justify-center hover:scale-110 transition-all shadow-[0_0_15px_rgba(0,255,136,0.3)]"
+                                        >
+                                            <Plus className="h-6 w-6" />
+                                        </button>
                                     </div>
-                                    <Button
-                                        size="sm"
-                                        onClick={() => {
-                                            setGrupoSeleccionado('GUARDIA_ESTANDAR')
-                                            setShowMedicoSelector(true)
-                                        }}
-                                        className="bg-green-600 hover:bg-green-500 text-white"
-                                    >
-                                        <Plus className="h-4 w-4 mr-1" /> Agregar
-                                    </Button>
                                 </div>
-                                <p className="text-xs text-gray-400">Médicos que cobran el valor base de consulta de guardia.</p>
                                 <div className="space-y-2 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
                                     {grupoEstandar.length === 0 ? (
-                                        <div className="text-center py-8 text-gray-500 text-sm italic">Sin médicos asignados</div>
+                                        <div className="text-center py-12 border-2 border-dashed border-white/5 rounded-2xl">
+                                            <p className="text-gray-600 text-xs font-bold tracking-widest italic uppercase">Sin médicos asignados</p>
+                                        </div>
                                     ) : (
                                         grupoEstandar.map(g => {
                                             const m = medicos.find(med => med.id === g.doctor_id)
                                             return (
-                                                <div key={g.id} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 group animate-in slide-in-from-left duration-300">
-                                                    <span className="text-sm font-medium text-gray-200">{m?.nombre || 'Desconocido'}</span>
+                                                <div key={g.id} className="flex items-center justify-between p-4 bg-white/[0.02] hover:bg-white/[0.05] rounded-2xl border border-white/5 group transition-all">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-sm font-black text-gray-200 tracking-tight">{m?.nombre || 'Desconocido'}</span>
+                                                        <span className="text-[10px] text-gray-500 font-mono italic">ID: {g.doctor_id.substring(0, 8)}</span>
+                                                    </div>
                                                     <button
                                                         onClick={() => handleEliminarDeGrupo(g.id)}
-                                                        className="p-1 hover:bg-red-500/20 rounded text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        className="p-2 hover:bg-red-500/20 rounded-xl text-red-500 opacity-0 group-hover:opacity-100 transition-all"
                                                     >
                                                         <Trash2 className="h-4 w-4" />
                                                     </button>
@@ -590,44 +582,50 @@ export default function PediatriaPage() {
 
                             {/* Panel Especialista / Neonatal */}
                             <div
-                                className="p-6 rounded-xl space-y-4"
+                                className="p-8 rounded-3xl space-y-6"
                                 style={{
-                                    background: 'rgba(255, 255, 255, 0.1)',
-                                    backdropFilter: 'blur(20px)',
-                                    border: '1px solid rgba(34, 197, 94, 0.3)',
+                                    background: 'rgba(255, 255, 255, 0.03)',
+                                    backdropFilter: 'blur(12px)',
+                                    border: '1px solid rgba(255, 255, 255, 0.08)',
                                 }}
                             >
-                                <div className="flex items-center justify-between font-bold">
-                                    <div className="flex items-center gap-2 text-green-400">
-                                        <h3 className="text-lg">Especialista / Neonatal</h3>
-                                        <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 border border-green-500/30">
+                                <div className="flex items-center justify-between">
+                                    <div className="space-y-1">
+                                        <h3 className="text-xl font-black text-white tracking-tighter uppercase italic">Especialista / Neonatal</h3>
+                                        <p className="text-[10px] text-gray-500 font-bold tracking-widest leading-none">VALOR DIFERENCIADO</p>
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                        <span className="text-xl font-mono text-[#00FF88] font-black bg-[#00FF88]/10 px-3 py-1 rounded-lg">
                                             {grupoEspecialista.length}
                                         </span>
+                                        <button
+                                            onClick={() => {
+                                                setGrupoSeleccionado('ESPECIALISTA')
+                                                setShowMedicoSelector(true)
+                                            }}
+                                            className="w-10 h-10 rounded-full bg-[#00FF88] text-black flex items-center justify-center hover:scale-110 transition-all shadow-[0_0_15px_rgba(0,255,136,0.3)]"
+                                        >
+                                            <Plus className="h-6 w-6" />
+                                        </button>
                                     </div>
-                                    <Button
-                                        size="sm"
-                                        onClick={() => {
-                                            setGrupoSeleccionado('ESPECIALISTA')
-                                            setShowMedicoSelector(true)
-                                        }}
-                                        className="bg-green-600 hover:bg-green-500 text-white"
-                                    >
-                                        <Plus className="h-4 w-4 mr-1" /> Agregar
-                                    </Button>
                                 </div>
-                                <p className="text-xs text-gray-400">Médicos que cobran el valor diferenciado de neonatología/especialista.</p>
                                 <div className="space-y-2 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
                                     {grupoEspecialista.length === 0 ? (
-                                        <div className="text-center py-8 text-gray-500 text-sm italic">Sin médicos asignados</div>
+                                        <div className="text-center py-12 border-2 border-dashed border-white/5 rounded-2xl">
+                                            <p className="text-gray-600 text-xs font-bold tracking-widest italic uppercase">Sin médicos asignados</p>
+                                        </div>
                                     ) : (
                                         grupoEspecialista.map(g => {
                                             const m = medicos.find(med => med.id === g.doctor_id)
                                             return (
-                                                <div key={g.id} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10 group animate-in slide-in-from-right duration-300">
-                                                    <span className="text-sm font-medium text-gray-200">{m?.nombre || 'Desconocido'}</span>
+                                                <div key={g.id} className="flex items-center justify-between p-4 bg-white/[0.02] hover:bg-white/[0.05] rounded-2xl border border-white/5 group transition-all">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-sm font-black text-gray-200 tracking-tight">{m?.nombre || 'Desconocido'}</span>
+                                                        <span className="text-[10px] text-gray-500 font-mono italic">ID: {g.doctor_id.substring(0, 8)}</span>
+                                                    </div>
                                                     <button
                                                         onClick={() => handleEliminarDeGrupo(g.id)}
-                                                        className="p-1 hover:bg-red-500/20 rounded text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        className="p-2 hover:bg-red-500/20 rounded-xl text-red-500 opacity-0 group-hover:opacity-100 transition-all"
                                                     >
                                                         <Trash2 className="h-4 w-4" />
                                                     </button>
@@ -705,37 +703,31 @@ export default function PediatriaPage() {
                     <div className="space-y-8 animate-in fade-in duration-500">
                         {/* Upload Excel Card */}
                         <div
-                            className="relative rounded-2xl shadow-2xl overflow-hidden p-8"
+                            className="p-12 rounded-[40px] relative overflow-hidden group"
                             style={{
-                                background: 'rgba(255, 255, 255, 0.1)',
-                                backdropFilter: 'blur(20px)',
-                                border: '1px solid rgba(34, 197, 94, 0.3)',
-                                boxShadow: '0 8px 32px 0 rgba(34, 197, 94, 0.3)',
+                                background: 'rgba(255, 255, 255, 0.03)',
+                                backdropFilter: 'blur(12px)',
+                                border: '1px solid rgba(255, 255, 255, 0.08)',
                             }}
                         >
-                            <div
-                                className="absolute inset-0 rounded-2xl"
-                                style={{
-                                    background: 'linear-gradient(45deg, transparent, rgba(34, 197, 94, 0.3), transparent)',
-                                    animation: 'borderGlow 3s ease-in-out infinite',
-                                }}
-                            ></div>
-                            <div className="relative">
-                                <div className="flex items-center justify-between mb-6">
-                                    <h2 className="text-2xl font-bold text-green-400 flex items-center gap-2">
-                                        <Upload className="h-6 w-6" />
-                                        Cargar Liquidación
-                                    </h2>
+                            <div className="absolute top-0 right-0 p-8">
+                                <Upload className="h-12 w-12 text-[#00FF88]/20 group-hover:text-[#00FF88]/40 transition-all duration-500" />
+                            </div>
+
+                            <div className="relative space-y-8">
+                                <div className="space-y-2">
+                                    <h2 className="text-4xl font-black text-white tracking-tighter italic uppercase">Cargar Liquidación</h2>
+                                    <p className="text-gray-500 font-bold tracking-widest text-xs">SISTEMA AUTOMATIZADO DE PROCESAMIENTO PEDIÁTRICO</p>
                                 </div>
 
                                 <UploadExcel onUpload={handleUpload} isProcessing={isProcessing} />
 
                                 {error && (
-                                    <div className="mt-6 bg-red-500/10 border border-red-500/30 rounded-lg p-4 flex items-start gap-3 text-red-400">
-                                        <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" />
-                                        <div>
-                                            <h3 className="font-semibold">Error de Procesamiento</h3>
-                                            <p className="text-sm opacity-90">{error}</p>
+                                    <div className="mt-6 bg-red-500/10 border border-red-500/20 rounded-2xl p-6 flex items-start gap-4 text-red-400 animate-in shake duration-500">
+                                        <XCircle className="w-6 h-6 shrink-0" />
+                                        <div className="space-y-1">
+                                            <h3 className="font-black italic tracking-tight">ERROR DE SISTEMA</h3>
+                                            <p className="text-sm font-medium opacity-80">{error}</p>
                                         </div>
                                     </div>
                                 )}

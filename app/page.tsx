@@ -1,427 +1,220 @@
 import Link from 'next/link'
-import { Sparkles, Stethoscope, Baby, Upload, User, DollarSign, Hospital, BarChart3, Plus, BookOpen, ClipboardList, Scissors, Linkedin, Instagram, MessageCircle, Globe } from 'lucide-react'
+import { Sparkles, Stethoscope, Baby, Upload, User, DollarSign, Hospital, BarChart3, Plus, BookOpen, ClipboardList, Scissors, Linkedin, Instagram, MessageCircle, Globe, ArrowLeft } from 'lucide-react'
 
 export default function HomePage() {
     return (
-        <div className="min-h-screen relative flex flex-col items-center justify-center p-8 overflow-hidden">
-            {/* Efectos de luz verde */}
-            <div className="absolute top-20 left-20 w-96 h-96 bg-green-500/20 rounded-full blur-3xl animate-pulse"></div>
-            <div className="absolute bottom-20 right-20 w-96 h-96 bg-green-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-green-500/10 rounded-full blur-3xl animate-pulse delay-500"></div>
+        <div className="min-h-screen bg-black text-white relative flex flex-col items-center justify-center p-6 overflow-hidden">
+            {/* Fondo con auroras de servidor GrowLabs */}
+            <div className="fixed inset-0 z-0">
+                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#00FF88]/10 rounded-full blur-[120px] animate-pulse"></div>
+                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#00FF88]/10 rounded-full blur-[120px] animate-pulse delay-700"></div>
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] h-[60%] bg-[#1E3A8A]/5 rounded-full blur-[150px] animate-pulse delay-1000"></div>
+            </div>
 
-            <div className="max-w-4xl w-full space-y-8 relative z-10">
-                {/* Logo y Título */}
-                <div className="text-center space-y-4">
-                    <div className="flex justify-center mb-6">
-                        <img
-                            src="/logogrow.png"
-                            alt="Grow Labs"
-                            className="h-32 w-auto drop-shadow-2xl animate-float"
-                            style={{
-                                filter: 'drop-shadow(0 0 20px rgba(34, 197, 94, 0.5))'
-                            }}
-                        />
+            <div className="max-w-6xl w-full space-y-20 relative z-10 pt-12 pb-24">
+                {/* Logo y Título Premium */}
+                <div className="text-center space-y-8 animate-in fade-in slide-in-from-top-8 duration-1000">
+                    <div className="flex justify-center flex-col items-center gap-6">
+                        <div className="relative group">
+                            <img
+                                src="/logogrow.png"
+                                alt="Grow Labs"
+                                className="h-40 w-auto drop-shadow-[0_0_30px_rgba(0,255,136,0.4)] transition-transform duration-700 group-hover:scale-110"
+                            />
+                            <div className="absolute inset-0 bg-[#00FF88]/20 blur-3xl rounded-full scale-75 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        </div>
+                        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#00FF88]/10 border border-[#00FF88]/20 text-[#00FF88] text-[10px] font-black tracking-[0.3em] uppercase">
+                            <Sparkles className="h-3 w-3" />
+                            Premium Human Intelligence
+                        </div>
                     </div>
 
-                    <h1 className="text-5xl font-bold mb-2 tracking-tight">
-                        <span className="bg-gradient-to-r from-green-400 to-emerald-300 bg-clip-text text-transparent">
-                            Sistema de Liquidaciones
-                        </span>
-                    </h1>
-                    <p className="text-xl text-gray-300 flex items-center justify-center gap-2">
-                        <Sparkles className="h-5 w-5 text-green-400" />
-                        Guardias Médicas - Grow Labs
-                    </p>
+                    <div className="space-y-4">
+                        <h1 className="text-8xl font-black tracking-tighter leading-[0.85] uppercase italic">
+                            SISTEMA DE <br />
+                            <span className="text-[#00FF88] not-italic">LIQUIDACIONES</span>
+                        </h1>
+                        <p className="text-gray-500 text-xl font-bold tracking-tight max-w-2xl mx-auto leading-relaxed">
+                            Motor avanzado de gestión para guardias médicas.<br />
+                            Arquitectura <span className="text-white">Grow Labs Ultra-Dark</span>.
+                        </p>
+                    </div>
                 </div>
 
-                {/* Cards de Módulos */}
-                <div className="flex flex-col gap-6 mt-12">
+                {/* Grid de Módulos High-Tech */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
                     {/* Módulo Pediatría */}
-                    <Link href="/pediatria">
-                        <div
-                            className="relative rounded-2xl shadow-2xl overflow-hidden p-6 hover:scale-[1.02] transition-all duration-300 cursor-pointer group"
-                            style={{
-                                background: 'rgba(255, 255, 255, 0.1)',
-                                backdropFilter: 'blur(20px)',
-                                border: '1px solid rgba(34, 197, 94, 0.3)',
-                                boxShadow: '0 8px 32px 0 rgba(34, 197, 94, 0.3)',
-                            }}
-                        >
-                            {/* Borde brillante animado */}
-                            <div
-                                className="absolute inset-0 rounded-2xl"
-                                style={{
-                                    background: 'linear-gradient(45deg, transparent, rgba(34, 197, 94, 0.3), transparent)',
-                                    animation: 'borderGlow 3s ease-in-out infinite',
-                                }}
-                            ></div>
-                            <div className="relative flex items-center gap-6">
-                                <div className="flex-shrink-0">
-                                    <Stethoscope className="h-16 w-16 text-green-400" />
+                    <Link href="/pediatria" className="group">
+                        <div className="relative h-full rounded-[32px] overflow-hidden p-8 bg-white/[0.03] border border-white/10 hover:border-[#00FF88]/50 hover:bg-[#00FF88]/5 transition-all duration-500 scale-100 hover:scale-[1.02] shadow-2xl">
+                            <div className="flex items-start justify-between">
+                                <div className="space-y-6">
+                                    <div className="w-16 h-16 rounded-2xl bg-[#00FF88]/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-500 border border-[#00FF88]/20">
+                                        <Baby className="h-8 w-8 text-[#00FF88]" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-4xl font-black tracking-tighter uppercase italic text-white group-hover:text-[#00FF88] transition-colors">Pediatría</h2>
+                                        <p className="text-gray-400 font-medium mt-2">Producción + Retenciones 30%</p>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[9px] font-black text-gray-500 uppercase tracking-widest">Auto-Retención</span>
+                                        <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[9px] font-black text-gray-500 uppercase tracking-widest">PDF Engine</span>
+                                    </div>
                                 </div>
-                                <div className="flex-1">
-                                    <h2 className="text-2xl font-bold text-green-400 mb-2">Pediatría</h2>
-                                    <p className="text-gray-300 mb-3">
-                                        Pago por producción con retención del 30%
-                                    </p>
-                                    <ul className="text-sm text-gray-400 space-y-1 flex flex-wrap gap-x-4">
-                                        <li>✓ Cálculo automático de retenciones</li>
-                                        <li>✓ Adicionales por Obra Social</li>
-                                        <li>✓ Generación de PDFs</li>
-                                    </ul>
-                                </div>
-                                <div className="flex-shrink-0 text-green-400 group-hover:translate-x-2 transition-transform flex items-center gap-2">
-                                    Procesar liquidación
-                                    <span className="group-hover:translate-x-1 transition-transform">→</span>
+                                <div className="p-4 bg-white/5 rounded-full opacity-0 group-hover:opacity-100 -translate-x-4 group-hover:translate-x-0 transition-all duration-500 shadow-[0_0_20px_rgba(0,255,136,0.3)]">
+                                    <ArrowLeft className="h-6 w-6 text-[#00FF88] rotate-180" />
                                 </div>
                             </div>
                         </div>
                     </Link>
 
                     {/* Módulo Ginecología */}
-                    <Link href="/ginecologia">
-                        <div
-                            className="relative rounded-2xl shadow-2xl overflow-hidden p-6 hover:scale-[1.02] transition-all duration-300 cursor-pointer group"
-                            style={{
-                                background: 'rgba(255, 255, 255, 0.1)',
-                                backdropFilter: 'blur(20px)',
-                                border: '1px solid rgba(59, 130, 246, 0.3)',
-                                boxShadow: '0 8px 32px 0 rgba(59, 130, 246, 0.3)',
-                            }}
-                        >
-                            {/* Borde brillante animado */}
-                            <div
-                                className="absolute inset-0 rounded-2xl"
-                                style={{
-                                    background: 'linear-gradient(45deg, transparent, rgba(59, 130, 246, 0.3), transparent)',
-                                    animation: 'borderGlow 3s ease-in-out infinite',
-                                }}
-                            ></div>
-                            <div className="relative flex items-center gap-6">
-                                <div className="flex-shrink-0">
-                                    <Baby className="h-16 w-16 text-blue-400" />
+                    <Link href="/ginecologia" className="group">
+                        <div className="relative h-full rounded-[32px] overflow-hidden p-8 bg-white/[0.03] border border-white/10 hover:border-[#00D1FF]/50 hover:bg-[#00D1FF]/5 transition-all duration-500 scale-100 hover:scale-[1.02] shadow-2xl">
+                            <div className="flex items-start justify-between">
+                                <div className="space-y-6">
+                                    <div className="w-16 h-16 rounded-2xl bg-[#00D1FF]/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-500 border border-[#00D1FF]/20">
+                                        <Stethoscope className="h-8 w-8 text-[#00D1FF]" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-4xl font-black tracking-tighter uppercase italic text-white group-hover:text-[#00D1FF] transition-colors">Ginecología</h2>
+                                        <p className="text-gray-400 font-medium mt-2">Horas + Reglas Residentes</p>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[9px] font-black text-gray-500 uppercase tracking-widest">Time Tracking</span>
+                                        <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[9px] font-black text-gray-500 uppercase tracking-widest">Resident Logic</span>
+                                    </div>
                                 </div>
-                                <div className="flex-1">
-                                    <h2 className="text-2xl font-bold text-blue-400 mb-2">Ginecología</h2>
-                                    <p className="text-gray-300 mb-3">
-                                        Pago por hora con reglas de residentes
-                                    </p>
-                                    <ul className="text-sm text-gray-400 space-y-1 flex flex-wrap gap-x-4">
-                                        <li>✓ Horario formativo (07:30-15:00)</li>
-                                        <li>✓ Diferenciación residentes/planta</li>
-                                        <li>✓ Cálculo por horas trabajadas</li>
-                                    </ul>
-                                </div>
-                                <div className="flex-shrink-0 text-blue-400 group-hover:translate-x-2 transition-transform flex items-center gap-2">
-                                    Procesar liquidación
-                                    <span className="group-hover:translate-x-1 transition-transform">→</span>
+                                <div className="p-4 bg-white/5 rounded-full opacity-0 group-hover:opacity-100 -translate-x-4 group-hover:translate-x-0 transition-all duration-500 shadow-[0_0_20px_rgba(0,209,255,0.3)]">
+                                    <ArrowLeft className="h-6 w-6 text-[#00D1FF] rotate-180" />
                                 </div>
                             </div>
                         </div>
                     </Link>
 
-                    {/* Módulo Admisiones Clínicas */}
-                    <Link href="/admisiones">
-                        <div
-                            className="relative rounded-2xl shadow-2xl overflow-hidden p-6 hover:scale-[1.02] transition-all duration-300 cursor-pointer group"
-                            style={{
-                                background: 'rgba(255, 255, 255, 0.1)',
-                                backdropFilter: 'blur(20px)',
-                                border: '1px solid rgba(168, 85, 247, 0.3)',
-                                boxShadow: '0 8px 32px 0 rgba(168, 85, 247, 0.3)',
-                            }}
-                        >
-                            {/* Borde brillante animado */}
-                            <div
-                                className="absolute inset-0 rounded-2xl"
-                                style={{
-                                    background: 'linear-gradient(45deg, transparent, rgba(168, 85, 247, 0.3), transparent)',
-                                    animation: 'borderGlow 3s ease-in-out infinite',
-                                }}
-                            ></div>
-                            <div className="relative flex items-center gap-6">
-                                <div className="flex-shrink-0">
-                                    <ClipboardList className="h-16 w-16 text-purple-400" />
+                    {/* Módulo Admisiones */}
+                    <Link href="/admisiones" className="group">
+                        <div className="relative h-full rounded-[32px] overflow-hidden p-8 bg-white/[0.03] border border-white/10 hover:border-[#FACC15]/50 hover:bg-[#FACC15]/5 transition-all duration-500 scale-100 hover:scale-[1.02] shadow-2xl">
+                            <div className="flex items-start justify-between">
+                                <div className="space-y-6">
+                                    <div className="w-16 h-16 rounded-2xl bg-[#FACC15]/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-500 border border-[#FACC15]/20">
+                                        <ClipboardList className="h-8 w-8 text-[#FACC15]" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-4xl font-black tracking-tighter uppercase italic text-white group-hover:text-[#FACC15] transition-colors">Admisiones</h2>
+                                        <p className="text-gray-400 font-medium mt-2">Pago Fijo + Deduplicación</p>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[9px] font-black text-gray-500 uppercase tracking-widest">Value: $12.000</span>
+                                        <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[9px] font-black text-gray-500 uppercase tracking-widest">Anti-Duplicate</span>
+                                    </div>
                                 </div>
-                                <div className="flex-1">
-                                    <h2 className="text-2xl font-bold text-purple-400 mb-2">Admisiones Clínicas</h2>
-                                    <p className="text-gray-300 mb-3">
-                                        Pago fijo por admisión con deduplicación
-                                    </p>
-                                    <ul className="text-sm text-gray-400 space-y-1 flex flex-wrap gap-x-4">
-                                        <li>✓ Valor fijo: $10,000</li>
-                                        <li>✓ Regla FCFS (First Come First Served)</li>
-                                        <li>✓ Deduplicación automática</li>
-                                    </ul>
-                                </div>
-                                <div className="flex-shrink-0 text-purple-400 group-hover:translate-x-2 transition-transform flex items-center gap-2">
-                                    Procesar liquidación
-                                    <span className="group-hover:translate-x-1 transition-transform">→</span>
+                                <div className="p-4 bg-white/5 rounded-full opacity-0 group-hover:opacity-100 -translate-x-4 group-hover:translate-x-0 transition-all duration-500 shadow-[0_0_20px_rgba(250,204,21,0.3)]">
+                                    <ArrowLeft className="h-6 w-6 text-[#FACC15] rotate-180" />
                                 </div>
                             </div>
                         </div>
                     </Link>
 
                     {/* Módulo Guardias Clínicas */}
-                    <Link href="/guardias-clinicas">
-                        <div
-                            className="relative rounded-2xl shadow-2xl overflow-hidden p-6 hover:scale-[1.02] transition-all duration-300 cursor-pointer group"
-                            style={{
-                                background: 'rgba(255, 255, 255, 0.1)',
-                                backdropFilter: 'blur(20px)',
-                                border: '1px solid rgba(236, 72, 153, 0.3)',
-                                boxShadow: '0 8px 32px 0 rgba(236, 72, 153, 0.3)',
-                            }}
-                        >
-                            {/* Borde brillante animado */}
-                            <div
-                                className="absolute inset-0 rounded-2xl"
-                                style={{
-                                    background: 'linear-gradient(45deg, transparent, rgba(236, 72, 153, 0.3), transparent)',
-                                    animation: 'borderGlow 3s ease-in-out infinite',
-                                }}
-                            ></div>
-                            <div className="relative flex items-center gap-6">
-                                <div className="flex-shrink-0">
-                                    <Hospital className="h-16 w-16 text-pink-400" />
+                    <Link href="/guardias-clinicas" className="group">
+                        <div className="relative h-full rounded-[32px] overflow-hidden p-8 bg-white/[0.03] border border-white/10 hover:border-[#FF3131]/50 hover:bg-[#FF3131]/5 transition-all duration-500 scale-100 hover:scale-[1.02] shadow-2xl">
+                            <div className="flex items-start justify-between">
+                                <div className="space-y-6">
+                                    <div className="w-16 h-16 rounded-2xl bg-[#FF3131]/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-500 border border-[#FF3131]/20">
+                                        <Hospital className="h-8 w-8 text-[#FF3131]" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-4xl font-black tracking-tighter uppercase italic text-white group-hover:text-[#FF3131] transition-colors">Clínica</h2>
+                                        <p className="text-gray-400 font-medium mt-2">Consultas + Horas + Garantía</p>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[9px] font-black text-gray-500 uppercase tracking-widest">Hybrid Engine</span>
+                                        <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[9px] font-black text-gray-500 uppercase tracking-widest">Min. Guarantee</span>
+                                    </div>
                                 </div>
-                                <div className="flex-1">
-                                    <h2 className="text-2xl font-bold text-pink-400 mb-2">Guardias Clínicas</h2>
-                                    <p className="text-gray-300 mb-3">
-                                        Liquidación por consultas y horas trabajadas
-                                    </p>
-                                    <ul className="text-sm text-gray-400 space-y-1 flex flex-wrap gap-x-4">
-                                        <li>✓ Grupos 70% y 50%</li>
-                                        <li>✓ Cálculo por horas y consultas</li>
-                                        <li>✓ Garantía mínima por hora</li>
-                                    </ul>
-                                </div>
-                                <div className="flex-shrink-0 text-pink-400 group-hover:translate-x-2 transition-transform flex items-center gap-2">
-                                    Procesar liquidación
-                                    <span className="group-hover:translate-x-1 transition-transform">→</span>
+                                <div className="p-4 bg-white/5 rounded-full opacity-0 group-hover:opacity-100 -translate-x-4 group-hover:translate-x-0 transition-all duration-500 shadow-[0_0_20px_rgba(255,49,49,0.3)]">
+                                    <ArrowLeft className="h-6 w-6 text-[#FF3131] rotate-180" />
                                 </div>
                             </div>
                         </div>
                     </Link>
 
-                    {/* Módulo Instrumentadores */}
-                    <a
-                        href="https://liquidaciones-osde.vercel.app/"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                    >
-                        <div
-                            className="relative rounded-2xl shadow-2xl overflow-hidden p-6 hover:scale-[1.02] transition-all duration-300 cursor-pointer group"
-                            style={{
-                                background: 'rgba(255, 255, 255, 0.1)',
-                                backdropFilter: 'blur(20px)',
-                                border: '1px solid rgba(251, 146, 60, 0.3)',
-                                boxShadow: '0 8px 32px 0 rgba(251, 146, 60, 0.3)',
-                            }}
-                        >
-                            {/* Borde brillante animado */}
-                            <div
-                                className="absolute inset-0 rounded-2xl"
-                                style={{
-                                    background: 'linear-gradient(45deg, transparent, rgba(251, 146, 60, 0.3), transparent)',
-                                    animation: 'borderGlow 3s ease-in-out infinite',
-                                }}
-                            ></div>
-                            <div className="relative flex items-center gap-6">
-                                <div className="flex-shrink-0">
-                                    <Scissors className="h-16 w-16 text-orange-400" />
+                    {/* Módulo Instrumentadores (External) */}
+                    <a href="https://liquidaciones-osde.vercel.app/" target="_blank" rel="noopener noreferrer" className="group md:col-span-2">
+                        <div className="relative rounded-[32px] overflow-hidden p-8 bg-gradient-to-r from-orange-500/10 to-orange-600/5 animate-shimmer border border-white/5 hover:border-orange-500/30 transition-all duration-700">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-8">
+                                    <div className="w-20 h-20 rounded-2xl bg-orange-500 flex items-center justify-center group-hover:rotate-12 transition-transform duration-500 shadow-[0_10px_40px_rgba(249,115,22,0.4)]">
+                                        <Scissors className="h-10 w-10 text-black" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-4xl font-black tracking-tighter uppercase italic text-white">Quirúrgico</h2>
+                                        <p className="text-gray-400 font-medium">Liquidación Integral de Instrumentadores</p>
+                                    </div>
                                 </div>
-                                <div className="flex-1">
-                                    <h2 className="text-2xl font-bold text-orange-400 mb-2">Instrumentadores</h2>
-                                    <p className="text-gray-300 mb-3">
-                                        Liquidaciones de procedimientos quirúrgicos
-                                    </p>
-                                    <ul className="text-sm text-gray-400 space-y-1 flex flex-wrap gap-x-4">
-                                        <li>✓ Múltiples obras sociales</li>
-                                        <li>✓ Gestión de nomencladores</li>
-                                        <li>✓ Sistema integral</li>
-                                    </ul>
-                                </div>
-                                <div className="flex-shrink-0 text-orange-400 group-hover:translate-x-2 transition-transform flex items-center gap-2">
-                                    Ir al módulo
-                                    <span className="group-hover:translate-x-1 transition-transform">→</span>
+                                <div className="hidden sm:flex items-center gap-4">
+                                    <span className="text-[10px] font-black text-orange-500 tracking-[0.3em] uppercase">Vercel Deployment</span>
+                                    <div className="p-4 bg-orange-500 rounded-full text-black hover:scale-110 transition-transform">
+                                        <Globe className="h-6 w-6" />
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </a>
                 </div>
 
-                {/* Manual de Usuario */}
-                <div
-                    className="relative rounded-2xl shadow-2xl overflow-hidden p-6 mt-8"
-                    style={{
-                        background: 'rgba(34, 197, 94, 0.15)',
-                        backdropFilter: 'blur(20px)',
-                        border: '2px solid rgba(34, 197, 94, 0.5)',
-                        boxShadow: '0 8px 32px 0 rgba(34, 197, 94, 0.3)',
-                    }}
-                >
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-full bg-green-500/30 flex items-center justify-center">
-                                <BookOpen className="h-6 w-6 text-green-400" />
-                            </div>
-                            <div>
-                                <h3 className="text-xl font-semibold text-green-400">Manual de Usuario</h3>
-                                <p className="text-sm text-gray-400">Aprende a usar el sistema paso a paso</p>
-                            </div>
-                        </div>
-                        <Link href="/manual">
-                            <button
-                                className="px-6 py-3 bg-green-600 hover:bg-green-500 text-white rounded-lg font-semibold transition-all duration-300 hover:scale-105 flex items-center gap-2"
-                            >
-                                Abrir Manual
-                                <span>→</span>
-                            </button>
-                        </Link>
-                    </div>
-                </div>
-
-                {/* Acceso Rápido */}
-                <div
-                    className="relative rounded-2xl shadow-2xl overflow-hidden p-6 mt-8"
-                    style={{
-                        background: 'rgba(255, 255, 255, 0.1)',
-                        backdropFilter: 'blur(20px)',
-                        border: '1px solid rgba(255, 255, 255, 0.2)',
-                        boxShadow: '0 8px 32px 0 rgba(34, 197, 94, 0.2)',
-                    }}
-                >
-                    <h3 className="text-lg font-semibold text-gray-200 mb-4">Acceso Rápido</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                        <Link
-                            href="/admin/medicos"
-                            className="text-center p-4 rounded-lg transition-all duration-300 hover:scale-105"
-                            style={{
-                                background: 'rgba(0, 0, 0, 0.2)',
-                                border: '1px solid rgba(34, 197, 94, 0.2)',
-                            }}
-                        >
-                            <div className="mb-2 flex justify-center">
-                                <User className="h-8 w-8 text-green-400" />
-                            </div>
-                            <div className="text-sm text-gray-300">Médicos</div>
-                        </Link>
-                        <Link
-                            href="/admin/tarifas"
-                            className="text-center p-4 rounded-lg transition-all duration-300 hover:scale-105"
-                            style={{
-                                background: 'rgba(0, 0, 0, 0.2)',
-                                border: '1px solid rgba(34, 197, 94, 0.2)',
-                            }}
-                        >
-                            <div className="mb-2 flex justify-center">
-                                <DollarSign className="h-8 w-8 text-green-400" />
-                            </div>
-                            <div className="text-sm text-gray-300">Tarifas</div>
-                        </Link>
-                        <Link
-                            href="/admin/adicionales"
-                            className="text-center p-4 rounded-lg transition-all duration-300 hover:scale-105"
-                            style={{
-                                background: 'rgba(0, 0, 0, 0.2)',
-                                border: '1px solid rgba(34, 197, 94, 0.2)',
-                            }}
-                        >
-                            <div className="mb-2 flex justify-center">
-                                <Plus className="h-8 w-8 text-green-400" />
-                            </div>
-                            <div className="text-sm text-gray-300">Adicionales</div>
-                        </Link>
-                        <Link
-                            href="/admin/valores-consultas"
-                            className="text-center p-4 rounded-lg transition-all duration-300 hover:scale-105"
-                            style={{
-                                background: 'rgba(0, 0, 0, 0.2)',
-                                border: '1px solid rgba(34, 197, 94, 0.2)',
-                            }}
-                        >
-                            <div className="mb-2 flex justify-center">
-                                <Hospital className="h-8 w-8 text-green-400" />
-                            </div>
-                            <div className="text-sm text-gray-300">Valores Consultas</div>
-                        </Link>
-                        <Link
-                            href="/liquidaciones"
-                            className="text-center p-4 rounded-lg transition-all duration-300 hover:scale-105"
-                            style={{
-                                background: 'rgba(0, 0, 0, 0.2)',
-                                border: '1px solid rgba(34, 197, 94, 0.2)',
-                            }}
-                        >
-                            <div className="mb-2 flex justify-center">
-                                <BarChart3 className="h-8 w-8 text-green-400" />
-                            </div>
-                            <div className="text-sm text-gray-300">Historial</div>
-                        </Link>
-                    </div>
-                </div>
-
-                {/* Footer */}
-                <div className="mt-16 pt-8 border-t border-white/10">
-                    <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                        {/* Redes Sociales */}
-                        <div className="flex items-center gap-3">
-                            <a
-                                href="https://www.linkedin.com/in/lucas-marinero-182521308/"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="w-10 h-10 rounded-lg bg-green-500/10 border border-green-500/30 flex items-center justify-center hover:bg-green-500/20 hover:border-green-500/50 transition-all duration-300 hover:scale-110"
-                                aria-label="LinkedIn"
-                            >
-                                <Linkedin className="h-5 w-5 text-green-400" />
-                            </a>
-                            <a
-                                href="https://www.instagram.com/growsanjuan/"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="w-10 h-10 rounded-lg bg-green-500/10 border border-green-500/30 flex items-center justify-center hover:bg-green-500/20 hover:border-green-500/50 transition-all duration-300 hover:scale-110"
-                                aria-label="Instagram"
-                            >
-                                <Instagram className="h-5 w-5 text-green-400" />
-                            </a>
-                            <a
-                                href="https://api.whatsapp.com/send/?phone=5492643229503&text&type=phone_number&app_absent=0"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="w-10 h-10 rounded-lg bg-green-500/10 border border-green-500/30 flex items-center justify-center hover:bg-green-500/20 hover:border-green-500/50 transition-all duration-300 hover:scale-110"
-                                aria-label="WhatsApp"
-                            >
-                                <MessageCircle className="h-5 w-5 text-green-400" />
-                            </a>
-                            <a
-                                href="https://www.growsanjuan.com"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="w-10 h-10 rounded-lg bg-green-500/10 border border-green-500/30 flex items-center justify-center hover:bg-green-500/20 hover:border-green-500/50 transition-all duration-300 hover:scale-110"
-                                aria-label="Sitio Web"
-                            >
-                                <Globe className="h-5 w-5 text-green-400" />
-                            </a>
+                {/* Footer y Acciones Secundarias Premium */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-12 border-t border-white/10 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-500">
+                    <div className="md:col-span-2 flex flex-col justify-between space-y-8">
+                        <div className="flex flex-wrap gap-4">
+                            <Link href="/admin/medicos" className="flex items-center gap-3 px-6 py-3 rounded-full bg-white/5 border border-white/10 hover:bg-[#00FF88]/10 hover:border-[#00FF88]/30 transition-all text-xs font-black tracking-widest text-gray-400 hover:text-white uppercase">
+                                <User className="h-4 w-4" /> médicos
+                            </Link>
+                            <Link href="/admin/adicionales" className="flex items-center gap-3 px-6 py-3 rounded-full bg-white/5 border border-white/10 hover:bg-[#00FF88]/10 hover:border-[#00FF88]/30 transition-all text-xs font-black tracking-widest text-gray-400 hover:text-white uppercase">
+                                <Plus className="h-4 w-4" /> adicionales
+                            </Link>
+                            <Link href="/admin/valores-consultas" className="flex items-center gap-3 px-6 py-3 rounded-full bg-white/5 border border-white/10 hover:bg-[#00FF88]/10 hover:border-[#00FF88]/30 transition-all text-xs font-black tracking-widest text-gray-400 hover:text-white uppercase">
+                                <DollarSign className="h-4 w-4" /> tarifas
+                            </Link>
+                            <Link href="/manual" className="flex items-center gap-3 px-6 py-3 rounded-full bg-[#00FF88] text-black hover:scale-105 transition-all text-xs font-black tracking-widest uppercase shadow-[0_0_20px_rgba(0,255,136,0.2)]">
+                                <BookOpen className="h-4 w-4" /> manual de uso
+                            </Link>
                         </div>
 
-                        {/* Texto del Footer */}
-                        <div className="text-center md:text-right text-gray-300 text-sm">
-                            <p>
-                                © 2025 Grow Labs. Todos los derechos reservados. | Powered by{' '}
-                                <span className="text-green-400 font-semibold">Grow Labs Technology</span>
+                        <div className="space-y-4">
+                            <p className="text-gray-500 text-xs font-mono uppercase tracking-[0.2em] leading-relaxed">
+                                © 2025 GROW LABS TECHNOLOGY. ALL RIGHTS RESERVED.<br />
+                                POWERED BY <span className="text-white">ULTRA-DARK ENGINE v2.5</span>
                             </p>
+                            <div className="flex gap-4">
+                                <a href="https://www.linkedin.com/in/lucas-marinero-182521308/" target="_blank" className="text-gray-600 hover:text-[#00FF88] transition-colors"><Linkedin className="h-5 w-5" /></a>
+                                <a href="https://www.instagram.com/growsanjuan/" target="_blank" className="text-gray-600 hover:text-[#00FF88] transition-colors"><Instagram className="h-5 w-5" /></a>
+                                <a href="https://api.whatsapp.com/send/?phone=5492643229503" target="_blank" className="text-gray-600 hover:text-[#00FF88] transition-colors"><MessageCircle className="h-5 w-5" /></a>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                {/* Decoración inferior */}
-                <div className="mt-8 flex justify-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                    <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse delay-150"></div>
-                    <div className="w-2 h-2 rounded-full bg-green-300 animate-pulse delay-300"></div>
+                    <div className="p-8 rounded-[32px] bg-white/[0.02] border border-white/5 flex flex-col items-center text-center justify-center space-y-4 group">
+                        <div className="w-16 h-16 rounded-full bg-[#00FF88]/10 flex items-center justify-center border border-[#00FF88]/20 group-hover:scale-110 transition-transform">
+                            <BarChart3 className="h-8 w-8 text-[#00FF88]" />
+                        </div>
+                        <h3 className="text-lg font-black uppercase tracking-tighter italic">Intelligence Hub</h3>
+                        <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">Monitor de rendimiento global activo</p>
+                    </div>
                 </div>
             </div>
+
+            {/* Custom Animation Styles */}
+            <style jsx global>{`
+                @keyframes shimmer {
+                    0% { background-position: -200% 0; }
+                    100% { background-position: 200% 0; }
+                }
+                .animate-shimmer {
+                    background-size: 200% auto;
+                    animation: shimmer 10s linear infinite;
+                }
+            `}</style>
         </div>
     )
 }

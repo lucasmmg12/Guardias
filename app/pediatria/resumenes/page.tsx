@@ -501,108 +501,97 @@ export default function ResumenesPediatriaPage() {
   }, [resumenesPorMedico])
 
   return (
-    <div className="min-h-screen relative p-8 pb-20 overflow-hidden">
-      {/* Efectos de luz verde */}
-      <div className="absolute top-20 left-20 w-96 h-96 bg-green-500/20 rounded-full blur-3xl animate-pulse"></div>
-      <div className="absolute bottom-20 right-20 w-96 h-96 bg-green-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+    <div className="min-h-screen bg-black text-white relative overflow-hidden">
+      {/* Fondo con auroras de servidor GrowLabs */}
+      <div className="fixed inset-0 z-0">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#00FF88]/10 rounded-full blur-[120px] animate-pulse"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#00FF88]/10 rounded-full blur-[120px] animate-pulse delay-700"></div>
+      </div>
 
-      <div className="max-w-7xl mx-auto space-y-8 relative z-10">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <Button
-              onClick={() => router.push('/pediatria')}
-              variant="outline"
-              className="border-green-500/50 text-green-400 hover:bg-green-500/20"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Volver
-            </Button>
-          </div>
-          <div>
-            <h1 className="text-4xl font-bold mb-2 tracking-tight">
-              <span className="bg-gradient-to-r from-green-400 to-emerald-300 bg-clip-text text-transparent">
-                Resúmenes - Pediatría
-              </span>
+      <div className="max-w-7xl mx-auto px-6 py-12 relative z-10">
+        {/* Header Premium */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16 animate-in slide-in-from-top-4 duration-700">
+          <div className="space-y-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#00FF88]/10 border border-[#00FF88]/20 text-[#00FF88] text-xs font-bold tracking-widest uppercase">
+              <History className="h-3 w-3" />
+              Intelligence Hub
+            </div>
+            <h1 className="text-6xl font-black tracking-tighter leading-none">
+              RESÚMENES<br />
+              <span className="text-[#00FF88] italic uppercase">Pediatría</span>
             </h1>
-            <p className="text-gray-400">Resúmenes de liquidaciones por médico y prestador</p>
+            <p className="text-gray-400 text-lg max-w-md font-medium leading-relaxed">
+              Análisis profundo de liquidaciones por médico, prestador e histórico de producción.
+            </p>
           </div>
-        </div>
 
-        {/* Selectores de mes/año */}
-        <div
-          className="p-6 rounded-xl"
-          style={{
-            background: 'rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(34, 197, 94, 0.3)',
-          }}
-        >
-          <div className="flex items-center gap-4">
-            <div>
-              <label className="text-sm text-gray-400 mb-1 block">Mes</label>
+          <div className="flex flex-wrap gap-4">
+            <button
+              onClick={() => router.push('/pediatria')}
+              className="group flex items-center gap-3 px-6 py-3 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all font-bold text-sm tracking-tight"
+            >
+              <ArrowLeft className="h-4 w-4 text-gray-400 group-hover:text-white group-hover:-translate-x-1 transition-all" />
+              VOLVER
+            </button>
+            <div className="flex bg-white/5 backdrop-blur-md border border-white/10 rounded-full p-1.5 gap-2">
               <select
                 value={mes}
                 onChange={(e) => setMes(parseInt(e.target.value))}
-                className="bg-gray-900/50 border border-green-500/30 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="bg-transparent border-none text-white font-bold text-sm px-4 focus:outline-none cursor-pointer"
               >
                 {MESES.map(m => (
-                  <option key={m.value} value={m.value}>{m.label}</option>
+                  <option key={m.value} value={m.value} className="bg-black">{m.label}</option>
                 ))}
               </select>
-            </div>
-            <div>
-              <label className="text-sm text-gray-400 mb-1 block">Año</label>
               <input
                 type="number"
                 value={anio}
                 onChange={(e) => setAnio(parseInt(e.target.value))}
-                className="bg-gray-900/50 border border-green-500/30 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-500 w-32"
-                min="2020"
+                className="bg-black border border-white/10 rounded-full w-24 py-1.5 px-4 text-sm font-bold focus:border-[#00FF88]/50 outline-none text-center"
               />
             </div>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-2 border-b border-white/10">
+        {/* Tabs Premium */}
+        <div className="flex overflow-x-auto gap-2 p-1.5 bg-white/5 backdrop-blur-md border border-white/10 rounded-full w-fit mb-12 animate-in fade-in slide-in-from-bottom-2 duration-1000 no-scrollbar">
           <button
             onClick={() => setTabActiva('medicos')}
-            className={`px-4 py-2 font-semibold transition-colors ${tabActiva === 'medicos'
-              ? 'text-green-400 border-b-2 border-green-400'
-              : 'text-gray-400 hover:text-gray-300'
+            className={`px-8 py-3 rounded-full font-black text-xs whitespace-nowrap tracking-tighter transition-all flex items-center gap-2 ${tabActiva === 'medicos'
+              ? 'bg-[#00FF88] text-black shadow-[0_0_20px_rgba(0,255,136,0.3)]'
+              : 'text-gray-400 hover:text-white hover:bg-white/5'
               }`}
           >
-            Por Médico y Obra Social
+            POR MÉDICO Y OBRA SOCIAL
           </button>
           <button
             onClick={() => setTabActiva('prestadores')}
-            className={`px-4 py-2 font-semibold transition-colors ${tabActiva === 'prestadores'
-              ? 'text-green-400 border-b-2 border-green-400'
-              : 'text-gray-400 hover:text-gray-300'
+            className={`px-8 py-3 rounded-full font-black text-xs whitespace-nowrap tracking-tighter transition-all flex items-center gap-2 ${tabActiva === 'prestadores'
+              ? 'bg-[#00FF88] text-black shadow-[0_0_20px_rgba(0,255,136,0.3)]'
+              : 'text-gray-400 hover:text-white hover:bg-white/5'
               }`}
           >
-            Por Prestador
+            POR PRESTADOR
           </button>
           <button
             onClick={() => setTabActiva('historial')}
-            className={`px-4 py-2 font-semibold transition-colors flex items-center gap-2 ${tabActiva === 'historial'
-              ? 'text-green-400 border-b-2 border-green-400'
-              : 'text-gray-400 hover:text-gray-300'
+            className={`px-8 py-3 rounded-full font-black text-xs whitespace-nowrap tracking-tighter transition-all flex items-center gap-2 ${tabActiva === 'historial'
+              ? 'bg-[#00FF88] text-black shadow-[0_0_20px_rgba(0,255,136,0.3)]'
+              : 'text-gray-400 hover:text-white hover:bg-white/5'
               }`}
           >
             <History className="h-4 w-4" />
-            Historial
+            HISTORIAL
           </button>
           <button
             onClick={() => setTabActiva('excel')}
-            className={`px-4 py-2 font-semibold transition-colors flex items-center gap-2 ${tabActiva === 'excel'
-              ? 'text-green-400 border-b-2 border-green-400'
-              : 'text-gray-400 hover:text-gray-300'
+            className={`px-8 py-3 rounded-full font-black text-xs whitespace-nowrap tracking-tighter transition-all flex items-center gap-2 ${tabActiva === 'excel'
+              ? 'bg-[#00FF88] text-black shadow-[0_0_20px_rgba(0,255,136,0.3)]'
+              : 'text-gray-400 hover:text-white hover:bg-white/5'
               }`}
           >
             <FileSpreadsheet className="h-4 w-4" />
-            Excel
+            VISUALIZADOR EXCEL
           </button>
         </div>
 

@@ -214,247 +214,180 @@ export default function GinecologiaPage() {
     // La edición se hace desde la página de Resúmenes
 
     return (
-        <div className="min-h-screen relative p-8 pb-20 overflow-hidden">
-            {/* Efectos de luz verde */}
-            <div className="absolute top-20 left-20 w-96 h-96 bg-green-500/20 rounded-full blur-3xl animate-pulse"></div>
-            <div className="absolute bottom-20 right-20 w-96 h-96 bg-green-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="min-h-screen bg-black text-white relative overflow-hidden">
+            {/* Fondo con auroras de servidor GrowLabs */}
+            <div className="fixed inset-0 z-0">
+                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#00D1FF]/10 rounded-full blur-[120px] animate-pulse"></div>
+                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#1E3A8A]/15 rounded-full blur-[120px] animate-pulse delay-700"></div>
+            </div>
 
-            <div className="max-w-6xl mx-auto space-y-8 relative z-10">
-                {/* Header con Logo */}
-                <div className="flex items-center justify-between mb-8">
-                    <div className="flex items-center gap-4">
-                        <Button
-                            onClick={() => router.push('/')}
-                            variant="outline"
-                            className="border-green-500/50 text-green-400 hover:bg-green-500/20"
-                        >
-                            <ArrowLeft className="h-4 w-4 mr-2" />
-                            Volver
-                        </Button>
-                    </div>
-                    <div>
-                        <div className="flex items-center gap-4 mb-4">
-                            <Link href="/" className="hover:opacity-80 transition-opacity">
-                                <img
-                                    src="/logogrow.png"
-                                    alt="Grow Labs"
-                                    className="h-16 w-auto drop-shadow-2xl"
-                                    style={{
-                                        filter: 'drop-shadow(0 0 20px rgba(34, 197, 94, 0.5))'
-                                    }}
-                                />
-                            </Link>
-                            <div>
-                                <h1 className="text-4xl font-bold mb-2 tracking-tight">
-                                    <span className="bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">
-                                        Módulo Ginecología
-                                    </span>
-                                </h1>
-                                <p className="text-gray-400 flex items-center gap-2">
-                                    <Sparkles className="h-4 w-4 text-blue-400" />
-                                    Procesamiento de liquidaciones por hora
-                                </p>
-                            </div>
+            <div className="max-w-7xl mx-auto px-6 py-12 relative z-10">
+                {/* Header Premium */}
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16 animate-in slide-in-from-top-4 duration-700">
+                    <div className="space-y-4">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#00D1FF]/10 border border-[#00D1FF]/20 text-[#00D1FF] text-xs font-bold tracking-widest uppercase">
+                            <Sparkles className="h-3 w-3" />
+                            Premium Powerhouse
                         </div>
+                        <h1 className="text-6xl font-black tracking-tighter leading-none">
+                            MÓDULO<br />
+                            <span className="text-[#00D1FF] italic">GINECOLOGÍA</span>
+                        </h1>
+                        <p className="text-gray-400 text-lg max-w-md font-medium leading-relaxed">
+                            Sistema de liquidación horaria de alta precisión con motor de reglas dinámico.
+                        </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-4">
+                        <button
+                            onClick={() => router.push('/')}
+                            className="group flex items-center gap-3 px-6 py-3 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all font-bold text-sm tracking-tight"
+                        >
+                            <ArrowLeft className="h-4 w-4 text-gray-400 group-hover:text-white group-hover:-translate-x-1 transition-all" />
+                            VOLVER
+                        </button>
+                        <button
+                            onClick={() => router.push('/ginecologia/resumenes')}
+                            className="flex items-center gap-3 px-8 py-4 rounded-full bg-[#00D1FF] text-black font-black text-sm tracking-tighter hover:scale-105 transition-all shadow-[0_0_30px_rgba(0,209,255,0.3)]"
+                        >
+                            <FileText className="h-5 w-5" />
+                            VER RESÚMENES
+                        </button>
                     </div>
                 </div>
 
-                {/* Upload Excel Card */}
+                {/* Upload Excel Card Premium */}
                 <div
-                    className="relative rounded-2xl shadow-2xl overflow-hidden p-8"
+                    className="p-12 rounded-[40px] relative overflow-hidden group mb-12 animate-in zoom-in-95 duration-500"
                     style={{
-                        background: 'rgba(255, 255, 255, 0.1)',
-                        backdropFilter: 'blur(20px)',
-                        border: '1px solid rgba(59, 130, 246, 0.3)',
-                        boxShadow: '0 8px 32px 0 rgba(59, 130, 246, 0.3)',
+                        background: 'rgba(255, 255, 255, 0.03)',
+                        backdropFilter: 'blur(12px)',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
                     }}
                 >
-                    {/* Borde brillante animado */}
-                    <div
-                        className="absolute inset-0 rounded-2xl"
-                        style={{
-                            background: 'linear-gradient(45deg, transparent, rgba(59, 130, 246, 0.3), transparent)',
-                            animation: 'borderGlow 3s ease-in-out infinite',
-                        }}
-                    ></div>
-                    <div className="relative">
-                        <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-2xl font-bold text-blue-400 flex items-center gap-2">
-                                <Upload className="h-6 w-6" />
-                                Cargar Liquidación
-                            </h2>
-                            <Button
-                                onClick={() => router.push('/ginecologia/resumenes')}
-                                variant="outline"
-                                className="border-blue-500/50 text-blue-400 hover:bg-blue-500/20"
-                            >
-                                Ver Resúmenes
-                            </Button>
+                    <div className="absolute top-0 right-0 p-8">
+                        <Upload className="h-12 w-12 text-[#00D1FF]/20 group-hover:text-[#00D1FF]/40 transition-all duration-500" />
+                    </div>
+
+                    <div className="relative space-y-8">
+                        <div className="space-y-2">
+                            <h2 className="text-4xl font-black text-white tracking-tighter italic uppercase underline decoration-[#00D1FF] decoration-4 underline-offset-8">Cargar Liquidación</h2>
+                            <p className="text-gray-500 font-bold tracking-widest text-xs">SISTEMA DE PROCESAMIENTO GINECOLÓGICO</p>
                         </div>
 
                         <UploadExcel onUpload={handleUpload} isProcessing={isProcessing} />
 
-                        {/* Mensaje de error */}
                         {error && (
-                            <div className="mt-6 bg-red-500/10 border border-red-500/30 rounded-lg p-4 flex items-start gap-3 text-red-400">
-                                <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" />
-                                <div>
-                                    <h3 className="font-semibold">Error de Procesamiento</h3>
-                                    <p className="text-sm opacity-90">{error}</p>
+                            <div className="mt-6 bg-red-500/10 border border-red-500/20 rounded-2xl p-6 flex items-start gap-4 text-red-400 animate-in shake duration-500">
+                                <XCircle className="w-6 h-6 shrink-0" />
+                                <div className="space-y-1">
+                                    <h3 className="font-black italic tracking-tight">ERROR DE SISTEMA</h3>
+                                    <p className="text-sm font-medium opacity-80">{error}</p>
                                 </div>
                             </div>
                         )}
                     </div>
                 </div>
 
-
-                {/* Reglas de Negocio */}
+                {/* Reglas de Negocio Premium */}
                 <div
-                    className="p-8 rounded-2xl"
+                    className="p-12 rounded-[40px] animate-in slide-in-from-bottom-4 duration-1000"
                     style={{
-                        background: 'linear-gradient(145deg, rgba(20, 20, 25, 0.9), rgba(10, 10, 15, 0.95))',
-                        backdropFilter: 'blur(20px)',
-                        border: '1px solid rgba(255, 255, 255, 0.08)',
-                        boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+                        background: 'rgba(255, 255, 255, 0.02)',
+                        backdropFilter: 'blur(12px)',
+                        border: '1px solid rgba(255, 255, 255, 0.05)',
                     }}
                 >
-                    <div className="flex items-center gap-3 mb-8 pb-4 border-b border-white/10">
-                        <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 shadow-inner">
-                            <FileText className="h-6 w-6 text-blue-400" />
-                        </div>
-                        <div>
-                            <h3 className="text-xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-                                Reglas de Liquidación Vigentes
-                            </h3>
-                            <p className="text-xs text-gray-500 uppercase tracking-widest font-medium">Ginecología</p>
-                        </div>
+                    <div className="flex items-center gap-4 mb-12">
+                        <div className="w-2 h-12 bg-[#00D1FF] rounded-full"></div>
+                        <h3 className="text-3xl font-black text-white tracking-tighter uppercase italic">Reglas Vigentes</h3>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                         {/* Pago por Consulta */}
-                        <div className="relative group overflow-hidden rounded-xl bg-gradient-to-b from-white/5 to-transparent p-5 border border-white/5 transition-all hover:border-white/10">
-                            <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/10 rounded-full blur-2xl -mr-10 -mt-10 group-hover:bg-green-500/20 transition-all"></div>
-
-                            <div className="text-xs font-bold text-green-400 uppercase tracking-wider mb-2 flex items-center gap-2">
-                                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
-                                Pago por Consulta
+                        <div className="p-8 rounded-3xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all group">
+                            <div className="w-12 h-12 rounded-2xl bg-[#00FF88]/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-all">
+                                <Activity className="h-6 w-6 text-[#00FF88]" />
                             </div>
-                            <div className="text-2xl font-bold text-white mb-1">Valor Variable</div>
-                            <p className="text-sm text-gray-400 leading-relaxed">
-                                Se abona un valor fijo por cada consulta realizada. El importe depende exclusivamente de la <span className="text-white font-medium">Obra Social</span> del paciente, según la tabla de valores vigente para el mes.
+                            <h4 className="text-xl font-black text-white tracking-tight mb-2 uppercase italic">Valor Variable</h4>
+                            <p className="text-gray-500 text-sm font-medium leading-relaxed">
+                                Se abona un valor fijo por cada consulta realizada, dictaminado por la <span className="text-[#00FF88] font-bold">Obra Social</span> del paciente.
                             </p>
                         </div>
 
                         {/* Médicos de Planta */}
-                        <div className="relative group overflow-hidden rounded-xl bg-gradient-to-b from-white/5 to-transparent p-5 border border-white/5 transition-all hover:border-white/10">
-                            <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl -mr-10 -mt-10 group-hover:bg-blue-500/20 transition-all"></div>
-
-                            <div className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-2 flex items-center gap-2">
-                                <User className="h-3 w-3" />
-                                Médicos de Planta
+                        <div className="p-8 rounded-3xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all group">
+                            <div className="w-12 h-12 rounded-2xl bg-[#00D1FF]/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-all">
+                                <User className="h-6 w-6 text-[#00D1FF]" />
                             </div>
-                            <div className="text-2xl font-bold text-white mb-1">100% Abonable</div>
-                            <p className="text-sm text-gray-400 leading-relaxed">
-                                Los médicos de planta (no residentes) cobran <span className="text-white font-medium">siempre el 100%</span> del valor de la consulta, sin importar el día ni el horario en que se realice.
+                            <h4 className="text-xl font-black text-white tracking-tight mb-2 uppercase italic">100% Abonable</h4>
+                            <p className="text-gray-500 text-sm font-medium leading-relaxed">
+                                Médicos de planta perciben el total del valor de consulta <span className="text-[#00D1FF] font-bold">sin restricciones</span> de horario o día.
                             </p>
                         </div>
                     </div>
 
-                    {/* Regla de Residentes */}
-                    <div className="mt-6 rounded-xl overflow-hidden border border-white/5 bg-gradient-to-b from-[#1a1b26] to-[#13141c]">
-                        <div className="p-4 bg-white/[0.03] border-b border-white/5 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <AlertCircle className="h-4 w-4 text-purple-400" />
-                                <span className="font-semibold text-gray-200">Regla de Residentes en Horario Formativo</span>
-                            </div>
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20 font-medium">
-                                Condición Especial
-                            </span>
-                        </div>
-
-                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="space-y-4">
-                                <div className="flex items-start gap-3">
-                                    <div className="mt-1 p-1 rounded-md bg-red-500/10 text-red-500">
-                                        <X className="h-4 w-4" />
-                                    </div>
-                                    <div>
-                                        <div className="font-bold text-white mb-0.5"> NO SE PAGA (Horario Formativo)</div>
-                                        <p className="text-sm text-gray-400 leading-snug">
-                                            Si la consulta cumple las 3 condiciones:
-                                        </p>
-                                        <ul className="mt-2 space-y-2 text-sm text-gray-400">
-                                            <li className="flex items-center gap-2">
-                                                <span className="w-1 h-1 bg-red-500 rounded-full"></span>
-                                                Día <strong className="text-gray-300">Lunes a Sábado</strong>
-                                            </li>
-                                            <li className="flex items-center gap-2">
-                                                <span className="w-1 h-1 bg-red-500 rounded-full"></span>
-                                                Horario entre <strong className="text-gray-300">07:00 y 15:00</strong>
-                                            </li>
-                                            <li className="flex items-center gap-2">
-                                                <span className="w-1 h-1 bg-red-500 rounded-full"></span>
-                                                El médico es <strong className="text-gray-300">Residente</strong>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="space-y-4">
-                                <div className="flex items-start gap-3">
-                                    <div className="mt-1 p-1 rounded-md bg-green-500/10 text-green-500">
-                                        <CheckCircle2 className="h-4 w-4" />
-                                    </div>
-                                    <div>
-                                        <div className="font-bold text-white mb-0.5"> SÍ SE PAGA (Guardia)</div>
-                                        <p className="text-sm text-gray-400 leading-snug">
-                                            En cualquier otro caso:
-                                        </p>
-                                        <ul className="mt-2 space-y-2 text-sm text-gray-400">
-                                            <li className="flex items-center gap-2">
-                                                <span className="w-1 h-1 bg-green-500 rounded-full"></span>
-                                                <strong className="text-gray-300">Domingos</strong> (todo el día)
-                                            </li>
-                                            <li className="flex items-center gap-2">
-                                                <span className="w-1 h-1 bg-green-500 rounded-full"></span>
-                                                <strong className="text-gray-300">Feriados</strong> (todo el día)
-                                            </li>
-                                            <li className="flex items-center gap-2">
-                                                <span className="w-1 h-1 bg-green-500 rounded-full"></span>
-                                                Lunes a Sab. fuera de horario (ej: <strong className="text-gray-300">16:00, 20:00</strong>)
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>
+                    {/* Regla de Residentes Premium */}
+                    <div className="rounded-[32px] overflow-hidden border border-white/5 bg-gradient-to-br from-white/[0.03] to-transparent">
+                        <div className="p-6 bg-white/[0.03] border-b border-white/5 flex items-center justify-between">
+                            <span className="text-xs font-black tracking-widest text-purple-400 uppercase">Condición Especial: Residentes</span>
+                            <div className="flex gap-1">
+                                <div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse"></div>
+                                <div className="w-2 h-2 rounded-full bg-purple-500/50"></div>
                             </div>
                         </div>
 
-                        {/* Ejemplos Visuales con Timeline */}
-                        <div className="px-6 pb-6 pt-2 border-t border-white/5">
-                            <div className="text-xs font-semibold text-gray-500 uppercase mb-4 tracking-wider">Línea de Tiempo (Lunes - Sábado)</div>
-                            <div className="relative h-12 flex items-center w-full bg-gray-800/50 rounded-lg overflow-hidden border border-white/5">
-                                {/* Zona Formativa (07:00 - 15:00) */}
-                                <div className="absolute left-[30%] width-[33%] h-full bg-red-500/10 border-x border-red-500/20 flex items-center justify-center" style={{ width: '33.33%' }}>
-                                    <span className="text-[10px] font-bold text-red-400 uppercase tracking-tight">Formativo</span>
+                        <div className="p-10 grid grid-cols-1 md:grid-cols-2 gap-12">
+                            <div className="space-y-6">
+                                <div className="flex items-center gap-3">
+                                    <XCircle className="h-5 w-5 text-red-500" />
+                                    <span className="text-lg font-black text-white italic uppercase tracking-tighter">Zona Excluida</span>
                                 </div>
-
-                                {/* Marcadores de hora */}
-                                <div className="absolute left-[30%] -top-1 h-3 w-px bg-gray-600"></div>
-                                <div className="absolute left-[30%] top-8 text-[10px] text-gray-500 font-mono -ml-3">07:00</div>
-
-                                <div className="absolute left-[63.33%] -top-1 h-3 w-px bg-gray-600"></div>
-                                <div className="absolute left-[63.33%] top-8 text-[10px] text-gray-500 font-mono -ml-3">15:00</div>
-
-                                {/* Zona Guardia */}
-                                <div className="w-full flex justify-between px-4 text-[10px] text-gray-400 font-mono uppercase">
-                                    <span>00:00</span>
-                                    <span>24:00</span>
-                                </div>
+                                <ul className="space-y-4">
+                                    <li className="flex items-center gap-4 text-gray-400 font-bold text-sm">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div>
+                                        Lunes a Sábado
+                                    </li>
+                                    <li className="flex items-center gap-4 text-gray-400 font-bold text-sm">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div>
+                                        07:00 a 15:00 HS
+                                    </li>
+                                </ul>
                             </div>
-                            <div className="flex justify-between mt-2 text-[10px] text-gray-500">
-                                <span className="flex items-center gap-1"><span className="w-2 h-2 bg-red-500/20 border border-red-500/50 rounded-sm"></span> No se paga</span>
-                                <span className="flex items-center gap-1"><span className="w-2 h-2 bg-gray-800 border border-gray-600 rounded-sm"></span> Se paga (Guardia)</span>
+
+                            <div className="space-y-6">
+                                <div className="flex items-center gap-3">
+                                    <CheckCircle2 className="h-5 w-5 text-[#00FF88]" />
+                                    <span className="text-lg font-black text-white italic uppercase tracking-tighter">Zona Liquidable</span>
+                                </div>
+                                <ul className="space-y-4">
+                                    <li className="flex items-center gap-4 text-gray-400 font-bold text-sm">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-[#00FF88]"></div>
+                                        Domingos y Feriados
+                                    </li>
+                                    <li className="flex items-center gap-4 text-gray-400 font-bold text-sm">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-[#00FF88]"></div>
+                                        Horario Nocturno / Tarde
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        {/* Timeline GrowLabs */}
+                        <div className="p-8 border-t border-white/5">
+                            <p className="text-[10px] font-black tracking-widest text-gray-500 uppercase mb-6">Visual Timeline (Lunes - Sábado)</p>
+                            <div className="relative h-4 bg-white/5 rounded-full overflow-hidden border border-white/10">
+                                <div className="absolute left-[29%] w-[33%] h-full bg-gradient-to-r from-red-500/20 via-red-500/40 to-red-500/20 border-x border-red-500/50"></div>
+                                <div className="absolute left-[29%] -top-1 h-6 w-[1px] bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]"></div>
+                                <div className="absolute left-[62%] -top-1 h-6 w-[1px] bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]"></div>
+                            </div>
+                            <div className="flex justify-between mt-4">
+                                <span className="text-[10px] font-bold text-gray-600 font-mono">00:00</span>
+                                <div className="flex gap-12">
+                                    <span className="text-[10px] font-black text-red-500 font-mono">07:00</span>
+                                    <span className="text-[10px] font-black text-red-500 font-mono">15:00</span>
+                                </div>
+                                <span className="text-[10px] font-bold text-gray-600 font-mono">24:00</span>
                             </div>
                         </div>
                     </div>

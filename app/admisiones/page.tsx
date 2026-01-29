@@ -207,44 +207,45 @@ export default function AdmisionesPage() {
     }
 
     return (
-        <div className="min-h-screen bg-[#000000] text-white relative p-4 md:p-8 pb-20 overflow-x-hidden">
-            {/* GrowLabs Ultra-Dark Auras */}
-            <div className="fixed top-[-10%] right-[-10%] w-[500px] h-[500px] bg-[#00FF88]/10 rounded-full blur-[120px] pointer-events-none z-0 animate-pulse"></div>
-            <div className="fixed bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-[#1E3A8A]/15 rounded-full blur-[120px] pointer-events-none z-0 animate-pulse delay-700"></div>
+        <div className="min-h-screen bg-black text-white relative overflow-hidden">
+            {/* Fondo con auroras de servidor GrowLabs */}
+            <div className="fixed inset-0 z-0">
+                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#00FF88]/10 rounded-full blur-[120px] animate-pulse"></div>
+                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#00FF88]/10 rounded-full blur-[120px] animate-pulse delay-700"></div>
+            </div>
 
-            <div className="max-w-6xl mx-auto space-y-10 relative z-10">
-                {/* Header Section */}
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div className="max-w-7xl mx-auto px-6 py-12 relative z-10">
+                {/* Header Premium */}
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16 animate-in slide-in-from-top-4 duration-700">
                     <div className="space-y-4">
-                        <Button
-                            onClick={() => router.push('/')}
-                            variant="ghost"
-                            className="text-gray-400 hover:text-[#00FF88] hover:bg-[#00FF88]/10 group transition-all rounded-full px-4"
-                        >
-                            <ArrowLeft className="h-4 w-4 mr-2 group-hover:-translate-x-1 transition-transform" />
-                            Regresar
-                        </Button>
-                        <div className="flex items-center gap-6">
-                            <div className="relative">
-                                <Link href="/" className="block relative z-10">
-                                    <img
-                                        src="/logogrow.png"
-                                        alt="Grow Labs"
-                                        className="h-20 w-auto drop-shadow-[0_0_15px_rgba(0,255,136,0.3)]"
-                                    />
-                                </Link>
-                                <div className="absolute inset-0 bg-[#00FF88]/20 blur-2xl rounded-full scale-75"></div>
-                            </div>
-                            <div>
-                                <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-none">
-                                    ADMISIONES <span className="text-[#00FF88]">CLÍNICAS</span>
-                                </h1>
-                                <p className="text-gray-500 font-mono text-sm mt-2 flex items-center gap-2">
-                                    <Sparkles className="h-4 w-4 text-[#00FF88] animate-pulse" />
-                                    PREMIUM POWERHOUSE • LIQUIDATION ENGINE v2.0
-                                </p>
-                            </div>
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#00FF88]/10 border border-[#00FF88]/20 text-[#00FF88] text-xs font-bold tracking-widest uppercase">
+                            <Sparkles className="h-3 w-3" />
+                            Premium Powerhouse
                         </div>
+                        <h1 className="text-6xl font-black tracking-tighter leading-none">
+                            MÓDULO<br />
+                            <span className="text-[#00FF88] italic uppercase">Admisiones</span>
+                        </h1>
+                        <p className="text-gray-400 text-lg max-w-md font-medium leading-relaxed">
+                            Gestión avanzada de admisiones clínicas con motor de deduplicación inteligente.
+                        </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-4">
+                        <button
+                            onClick={() => router.push('/')}
+                            className="group flex items-center gap-3 px-6 py-3 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all font-bold text-sm tracking-tight"
+                        >
+                            <ArrowLeft className="h-4 w-4 text-gray-400 group-hover:text-white group-hover:-translate-x-1 transition-all" />
+                            VOLVER
+                        </button>
+                        <button
+                            onClick={() => router.push('/admisiones/resumenes')}
+                            className="flex items-center gap-3 px-8 py-4 rounded-full bg-[#00FF88] text-black font-black text-sm tracking-tighter hover:scale-105 transition-all shadow-[0_0_30px_rgba(0,255,136,0.3)]"
+                        >
+                            <FileText className="h-5 w-5" />
+                            VER RESÚMENES
+                        </button>
                     </div>
                 </div>
 

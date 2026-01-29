@@ -234,139 +234,104 @@ export default function MedicosPage() {
   }, [])
 
   return (
-    <div className="min-h-screen relative p-8 pb-20 overflow-hidden">
-      {/* Efectos de luz verde */}
-      <div className="absolute top-20 left-20 w-96 h-96 bg-green-500/20 rounded-full blur-3xl animate-pulse"></div>
-      <div className="absolute bottom-20 right-20 w-96 h-96 bg-green-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+    <div className="min-h-screen bg-black text-white relative overflow-hidden">
+      {/* Fondo con auroras de servidor GrowLabs */}
+      <div className="fixed inset-0 z-0 text-white">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-green-500/10 rounded-full blur-[120px] animate-pulse"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-500/10 rounded-full blur-[120px] animate-pulse delay-700"></div>
+      </div>
 
-      <div className="max-w-7xl mx-auto space-y-8 relative z-10">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <Button
-              onClick={() => router.push('/')}
-              variant="outline"
-              className="border-green-500/50 text-green-400 hover:bg-green-500/20"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Volver
-            </Button>
-            <Link href="/" className="hover:opacity-80 transition-opacity">
-              <img
-                src="/logogrow.png"
-                alt="Grow Labs"
-                className="h-16 w-auto drop-shadow-2xl"
-                style={{
-                  filter: 'drop-shadow(0 0 20px rgba(34, 197, 94, 0.5))'
-                }}
-              />
-            </Link>
-            <div>
-              <h1 className="text-4xl font-bold mb-2 tracking-tight">
-                <span className="bg-gradient-to-r from-green-400 to-emerald-300 bg-clip-text text-transparent">
-                  Administración de Médicos
-                </span>
-              </h1>
-              <p className="text-gray-400 flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-green-400" />
-                Gestión de prestadores para Pediatría y Ginecología
-              </p>
+      <div className="max-w-7xl mx-auto px-6 py-12 relative z-10">
+        {/* Header Premium */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16 animate-in slide-in-from-top-4 duration-700">
+          <div className="space-y-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20 text-[#00FF88] text-xs font-bold tracking-widest uppercase">
+              <Users className="h-3 w-3" />
+              Staff Intelligence
             </div>
+            <h1 className="text-6xl font-black tracking-tighter leading-none">
+              GESTIÓN DE<br />
+              <span className="text-[#00FF88] italic">MÉDICOS</span>
+            </h1>
+            <p className="text-gray-400 text-lg max-w-md font-medium leading-relaxed">
+              Administración centralizada de prestadores y perfiles profesionales por especialidad.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-4">
+            <button
+              onClick={() => router.push('/')}
+              className="group flex items-center gap-3 px-6 py-3 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all font-bold text-sm tracking-tight"
+            >
+              <ArrowLeft className="h-4 w-4 text-gray-400 group-hover:text-white group-hover:-translate-x-1 transition-all" />
+              VOLVER
+            </button>
+            <button
+              onClick={() => setShowFormModal(true)}
+              className="flex items-center gap-3 px-8 py-4 rounded-full bg-[#00FF88] text-black font-black text-sm tracking-tighter hover:scale-105 transition-all shadow-[0_0_30px_rgba(0,255,136,0.3)]"
+            >
+              <Plus className="h-5 w-5" />
+              AGREGAR MÉDICO
+            </button>
           </div>
         </div>
 
-        {/* Barra de acciones */}
+        {/* Barra de acciones Ultra-Dark */}
         <div
-          className="p-4 sm:p-6 rounded-xl overflow-hidden"
-          style={{
-            background: 'rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(34, 197, 94, 0.3)',
-            boxShadow: '0 8px 32px 0 rgba(34, 197, 94, 0.2)',
-          }}
+          className="p-1.5 bg-white/5 backdrop-blur-md border border-white/10 rounded-full mb-12 animate-in fade-in slide-in-from-bottom-2 duration-1000"
         >
-          <div className="flex flex-col xl:flex-row gap-4 items-stretch xl:items-center justify-between w-full">
-            {/* Búsqueda y filtros */}
-            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center flex-1 min-w-0">
-              <div className="relative flex-1 sm:max-w-md">
-                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 flex items-center pointer-events-none z-10">
-                  <Search className="h-4 w-4 text-gray-400" />
-                </div>
-                <Input
-                  type="text"
-                  placeholder="Todas las especialidades"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-full bg-black/30 border-gray-600 text-white placeholder-gray-400 h-10"
-                />
-              </div>
+          <div className="flex flex-col md:flex-row gap-2 items-center">
+            <div className="relative flex-1 px-4">
+              <Search className="absolute left-8 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+              <input
+                type="text"
+                placeholder="BUSCAR PRESTADOR..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-transparent border-none text-white placeholder-gray-500 h-12 pl-12 focus:outline-none font-bold text-sm tracking-tight"
+              />
+            </div>
+
+            <div className="flex gap-2 pr-1.5">
               <select
                 value={filterEspecialidad}
                 onChange={(e) => setFilterEspecialidad(e.target.value)}
-                className="px-4 py-2 rounded-lg bg-black/30 border border-gray-600 text-white text-sm h-10 sm:min-w-[180px] w-full sm:w-auto"
+                className="bg-white/5 border border-white/10 text-white text-xs font-bold rounded-full px-6 h-11 focus:outline-none focus:border-[#00FF88]/50 appearance-none cursor-pointer"
               >
-                <option value="all">Todas las especialidades</option>
+                <option value="all" className="bg-black">ESPECIALIDAD: TODAS</option>
                 {especialidades.map(esp => (
-                  <option key={esp} value={esp}>{esp}</option>
+                  <option key={esp} value={esp} className="bg-black uppercase">{esp}</option>
                 ))}
               </select>
-              <select
-                value={filterActivo}
-                onChange={(e) => setFilterActivo(e.target.value)}
-                className="px-4 py-2 rounded-lg bg-black/30 border border-gray-600 text-white text-sm h-10 sm:min-w-[120px] w-full sm:w-auto"
-              >
-                <option value="all">Todos</option>
-                <option value="activo">Activos</option>
-                <option value="inactivo">Inactivos</option>
-              </select>
 
-              {/* Botón toggle para filtrar residentes */}
               <button
                 onClick={handleToggleResidente}
                 className={cn(
-                  "px-4 py-2 rounded-lg border text-sm h-10 whitespace-nowrap transition-all duration-200 flex items-center gap-2",
+                  "px-8 py-3 rounded-full font-black text-xs tracking-tighter transition-all flex items-center gap-2",
                   filterResidente
-                    ? "bg-blue-600/30 border-blue-500 text-blue-400 hover:bg-blue-600/40"
-                    : "bg-black/30 border-gray-600 text-gray-300 hover:bg-black/40 hover:border-gray-500"
+                    ? "bg-[#00D1FF] text-black shadow-[0_0_20px_rgba(0,209,255,0.3)]"
+                    : "text-gray-400 hover:text-white hover:bg-white/5"
                 )}
-                title={filterResidente ? 'Mostrar todos los médicos' : 'Mostrar solo residentes'}
               >
-                <Users className="h-4 w-4" />
-                <span className="hidden sm:inline">
-                  {filterResidente ? 'Solo Residentes' : 'Todos'}
-                </span>
-                <span className="sm:hidden">
-                  {filterResidente ? 'Residentes' : 'Todos'}
-                </span>
+                {filterResidente ? 'SOLO RESIDENTES' : 'TODOS LOS PERFILES'}
               </button>
-            </div>
 
-            {/* Botones de acción */}
-            <div className="flex flex-col sm:flex-row gap-3 shrink-0 w-full sm:w-auto">
-              <Button
-                onClick={() => setShowFormModal(true)}
-                className="bg-green-600 hover:bg-green-500 text-white h-10 whitespace-nowrap w-full sm:w-auto"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Agregar Médico
-              </Button>
-              <Button
+              <button
                 onClick={() => setShowImportModal(true)}
-                variant="outline"
-                className="border-green-500 text-green-400 hover:bg-green-500/20 h-10 whitespace-nowrap w-full sm:w-auto"
+                className="p-3 rounded-full bg-white/5 border border-white/10 text-gray-400 hover:text-[#00FF88] hover:border-[#00FF88]/50 transition-all"
+                title="Importar Excel"
               >
-                <Upload className="h-4 w-4 mr-2" />
-                Importar Excel
-              </Button>
-              <Button
+                <Upload className="h-5 w-5" />
+              </button>
+
+              <button
                 onClick={handleExport}
-                variant="outline"
-                className="border-green-500 text-green-400 hover:bg-green-500/20 h-10 whitespace-nowrap w-full sm:w-auto"
+                className="p-3 rounded-full bg-white/5 border border-white/10 text-gray-400 hover:text-[#00FF88] hover:border-[#00FF88]/50 transition-all"
+                title="Exportar Excel"
                 disabled={medicos.length === 0}
               >
-                <Download className="h-4 w-4 mr-2" />
-                Exportar Excel
-              </Button>
+                <Download className="h-5 w-5" />
+              </button>
             </div>
           </div>
         </div>
@@ -437,8 +402,8 @@ export default function MedicosPage() {
                         <button
                           onClick={() => handleToggleResidente_DB(medico)}
                           className={`px-2 py-1 text-xs rounded transition-colors whitespace-nowrap ${medico.es_residente
-                              ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
-                              : 'bg-gray-500/20 text-gray-400 hover:bg-gray-500/30'
+                            ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
+                            : 'bg-gray-500/20 text-gray-400 hover:bg-gray-500/30'
                             }`}
                         >
                           {medico.es_residente ? 'Sí' : 'No'}
@@ -448,8 +413,8 @@ export default function MedicosPage() {
                         <button
                           onClick={() => handleToggleActivo(medico)}
                           className={`px-2 py-1 text-xs rounded transition-colors whitespace-nowrap ${medico.activo
-                              ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
-                              : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                            ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
+                            : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
                             }`}
                         >
                           {medico.activo ? 'Activo' : 'Inactivo'}

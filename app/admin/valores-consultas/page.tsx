@@ -514,94 +514,111 @@ export default function ValoresConsultasPage() {
   }
 
   return (
-    <div className="min-h-screen p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-green-400">
-            Valores de Consultas por Obra Social
-          </h1>
+    <div className="min-h-screen bg-black text-white relative overflow-hidden">
+      {/* Fondo con auroras de servidor GrowLabs */}
+      <div className="fixed inset-0 z-0 text-white">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-green-500/10 rounded-full blur-[120px] animate-pulse"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-500/10 rounded-full blur-[120px] animate-pulse delay-700"></div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-6 py-12 relative z-10">
+        {/* Header Premium */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16 animate-in slide-in-from-top-4 duration-700">
+          <div className="space-y-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20 text-[#00FF88] text-xs font-bold tracking-widest uppercase">
+              <Lightbulb className="h-3 w-3" />
+              Resource Management
+            </div>
+            <h1 className="text-6xl font-black tracking-tighter leading-none">
+              VALORES DE<br />
+              <span className="text-[#00FF88] italic uppercase">CONSULTAS</span>
+            </h1>
+            <p className="text-gray-400 text-lg max-w-md font-medium leading-relaxed">
+              Configuración tarifaria mensual por obra social y tipo de prestación asistencial.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-4">
+            <button
+              onClick={() => router.push('/')}
+              className="group flex items-center gap-3 px-6 py-3 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all font-bold text-sm tracking-tight"
+            >
+              <ArrowLeft className="h-4 w-4 text-gray-400 group-hover:text-white group-hover:-translate-x-1 transition-all" />
+              VOLVER
+            </button>
+            <div className="flex bg-white/5 backdrop-blur-md border border-white/10 rounded-full p-1.5 gap-2">
+              <select
+                value={mes}
+                onChange={(e) => setMes(parseInt(e.target.value))}
+                className="bg-transparent border-none text-white font-bold text-sm px-4 focus:outline-none cursor-pointer"
+              >
+                {MESES.map(m => (
+                  <option key={m.value} value={m.value} className="bg-black">{m.label}</option>
+                ))}
+              </select>
+              <input
+                type="number"
+                value={anio}
+                onChange={(e) => setAnio(parseInt(e.target.value))}
+                className="bg-black border border-white/10 rounded-full w-24 py-1.5 px-4 text-sm font-bold focus:border-[#00FF88]/50 outline-none"
+              />
+            </div>
+          </div>
         </div>
 
-        {/* Sección de Instrucciones */}
+        {/* Sección de Instrucciones Stylized */}
         <div
-          className="p-4 rounded-xl"
+          className="p-8 rounded-[32px] mb-12 animate-in fade-in slide-in-from-bottom-4 duration-1000"
           style={{
-            background: 'rgba(255, 255, 255, 0.05)',
+            background: 'rgba(34, 197, 94, 0.03)',
             backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(34, 197, 94, 0.3)',
+            border: '1px solid rgba(0, 255, 136, 0.1)',
           }}
         >
-          <div className="flex items-start gap-3">
-            <div className="flex items-center gap-2 text-yellow-400">
-              <Lightbulb className="h-5 w-5" />
-              <Star className="h-4 w-4" />
-            </div>
-            <div className="flex-1 text-sm text-gray-300 space-y-1">
-              <p className="font-semibold text-green-400 mb-2">
-                ¿Cómo funcionan los valores mensuales?
-              </p>
-              <ul className="space-y-1 list-disc list-inside">
-                <li>
-                  <strong>Primer mes:</strong> Importe el archivo Excel con los valores (botón "Importar Excel")
-                </li>
-                <li>
-                  <strong>Meses siguientes:</strong> Use "Copiar desde mes anterior" o "Copiar con aumento %"
-                </li>
-                <li>
-                  <strong>Histórico:</strong> Cada mes mantiene sus propios valores para consultas históricas
-                </li>
-                <li>
-                  <strong>Edición:</strong> Puede editar valores haciendo clic en la celda
-                </li>
-              </ul>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className="space-y-6">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-2xl bg-[#00FF88]/10 border border-[#00FF88]/20">
+                  <Star className="h-6 w-6 text-[#00FF88]" />
+                </div>
+                <h3 className="text-2xl font-black tracking-tight text-white uppercase italic">
+                  Guía de Operación
+                </h3>
+              </div>
 
-              <div className="mt-6 pt-4 border-t border-white/5 space-y-3">
-                <p className="text-xs text-gray-400 font-medium uppercase tracking-wider flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                  Formato de Excel requerido (Fila 2: Encabezados, Fila 3: Datos)
-                </p>
-                <div className="relative rounded-lg overflow-hidden border border-white/10 bg-black/20 p-1">
-                  <img
-                    src="/Excel.png"
-                    alt="Ejemplo formato Excel"
-                    className="w-full max-w-3xl rounded shadow-2xl opacity-90 hover:opacity-100 transition-opacity"
-                  />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {[
+                  { title: "Primer Mes", desc: "Importe los valores iniciales desde un archivo Excel." },
+                  { title: "Carga Mensual", desc: "Utilice 'Copiar mes anterior' para replicar tarifas." },
+                  { title: "Ajuste Masivo", desc: "Aplique aumentos porcentuales a toda la cartilla." },
+                  { title: "Edición Directa", desc: "Haga clic en cualquier celda para ajuste manual." }
+                ].map((item, i) => (
+                  <div key={i} className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all group">
+                    <div className="text-[#00FF88] text-xs font-black mb-1 uppercase tracking-widest">{item.title}</div>
+                    <div className="text-gray-400 text-sm font-medium leading-relaxed group-hover:text-gray-200 transition-colors">{item.desc}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Format Template (Rows 2/3)</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 border border-green-500/20">V. 2.4</span>
+              </div>
+              <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-black group">
+                <img
+                  src="/Excel.png"
+                  alt="Ejemplo formato Excel"
+                  className="w-full rounded shadow-2xl opacity-60 group-hover:opacity-100 transition-opacity duration-700"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-100 group-hover:opacity-0 transition-opacity pointer-events-none"></div>
+                <div className="absolute bottom-4 left-4 flex items-center gap-2 pointer-events-none">
+                  <FileDown className="h-4 w-4 text-[#00FF88]" />
+                  <span className="text-[10px] font-black uppercase text-white tracking-widest">Hover to View Details</span>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Selector de Mes y Año */}
-        <div
-          className="flex items-center gap-4 p-4 rounded-xl"
-          style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-          }}
-        >
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-300">Mes a gestionar:</label>
-            <select
-              value={mes}
-              onChange={(e) => setMes(Number(e.target.value))}
-              className="px-3 py-2 bg-gray-800 border border-green-500/50 rounded-lg text-white focus:border-green-400 focus:outline-none"
-            >
-              {MESES.map(m => (
-                <option key={m.value} value={m.value}>{m.label}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-300">Año:</label>
-            <input
-              type="number"
-              value={anio}
-              onChange={(e) => setAnio(Number(e.target.value))}
-              className="px-3 py-2 bg-gray-800 border border-green-500/50 rounded-lg text-white w-24 focus:border-green-400 focus:outline-none"
-            />
           </div>
         </div>
 
