@@ -34,7 +34,7 @@ export function reconstruirExcelDataDesdeDetalles(
     'Cliente', // Usar "Cliente" como default para que funcione la detección en pediatría
     'Responsable'
   ]
-  
+
   // Agregar "Adicional" e "Importe" a los headers si no están presentes
   if (!headers.includes('Adicional')) {
     headers.push('Adicional')
@@ -46,28 +46,34 @@ export function reconstruirExcelDataDesdeDetalles(
   // Reconstruir filas desde los detalles
   const rows: ExcelRow[] = detallesOrdenados.map(detalle => {
     const row: ExcelRow = {}
-    
+
     // Almacenar fila_excel como metadata en el row (usando una clave especial)
     // Esto nos permite acceder al fila_excel cuando necesitamos eliminar
     if (detalle.fila_excel !== null && detalle.fila_excel !== undefined) {
-      ;(row as any).__fila_excel = detalle.fila_excel
+      ; (row as any).__fila_excel = detalle.fila_excel
     }
-    
+
     // Mapear campos de detalle_guardia a columnas del Excel
     headers.forEach(header => {
       const headerLower = header.toLowerCase().trim()
-      
+
       if (headerLower.includes('fecha') || headerLower.includes('date')) {
         // Formatear fecha de ISO a DD/MM/YYYY
         if (detalle.fecha) {
-          const date = new Date(detalle.fecha)
-          if (!isNaN(date.getTime())) {
-            const day = String(date.getDate()).padStart(2, '0')
-            const month = String(date.getMonth() + 1).padStart(2, '0')
-            const year = date.getFullYear()
-            row[header] = `${day}/${month}/${year}`
+          // Si la fecha viene en formato YYYY-MM-DD, la parseamos manualmente para evitar desfases
+          if (typeof detalle.fecha === 'string' && detalle.fecha.includes('-') && !detalle.fecha.includes('T')) {
+            const [year, month, day] = detalle.fecha.split('-')
+            row[header] = `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`
           } else {
-            row[header] = detalle.fecha
+            const date = new Date(detalle.fecha)
+            if (!isNaN(date.getTime())) {
+              const day = String(date.getUTCDate()).padStart(2, '0')
+              const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+              const year = date.getUTCFullYear()
+              row[header] = `${day}/${month}/${year}`
+            } else {
+              row[header] = detalle.fecha
+            }
           }
         } else {
           row[header] = null
@@ -93,7 +99,7 @@ export function reconstruirExcelDataDesdeDetalles(
         row[header] = null
       }
     })
-    
+
     return row
   })
 
@@ -104,18 +110,18 @@ export function reconstruirExcelDataDesdeDetalles(
       .map(d => d.fecha ? new Date(d.fecha) : null)
       .filter((d): d is Date => d !== null && !isNaN(d.getTime()))
       .sort((a, b) => a.getTime() - b.getTime())
-    
+
     if (fechas.length > 0) {
       const desde = fechas[0]
       const hasta = fechas[fechas.length - 1]
-      
+
       const formatearFecha = (date: Date) => {
-        const day = String(date.getDate()).padStart(2, '0')
-        const month = String(date.getMonth() + 1).padStart(2, '0')
-        const year = date.getFullYear()
+        const day = String(date.getUTCDate()).padStart(2, '0')
+        const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+        const year = date.getUTCFullYear()
         return `${day}/${month}/${year}`
       }
-      
+
       periodo = {
         desde: formatearFecha(desde),
         hasta: formatearFecha(hasta)
@@ -221,16 +227,16 @@ export function reconstruirExcelDataDesdeDetallesHoras(
   // Reconstruir filas desde los detalles
   const rows: ExcelRow[] = detallesOrdenados.map(detalle => {
     const row: ExcelRow = {}
-    
+
     // Almacenar fila_excel como metadata
     if (detalle.fila_excel !== null && detalle.fila_excel !== undefined) {
-      ;(row as any).__fila_excel = detalle.fila_excel
+      ; (row as any).__fila_excel = detalle.fila_excel
     }
-    
+
     // Mapear campos de detalle_horas_guardia a columnas del Excel
     headers.forEach(header => {
       const headerLower = header.toLowerCase().trim()
-      
+
       if (headerLower.includes('responsable') || headerLower.includes('medico')) {
         row[header] = detalle.medico_nombre || null
       } else if (headerLower.includes('8 a 16') || headerLower.includes('8-16')) {
@@ -247,7 +253,7 @@ export function reconstruirExcelDataDesdeDetallesHoras(
         row[header] = null
       }
     })
-    
+
     return row
   })
 
