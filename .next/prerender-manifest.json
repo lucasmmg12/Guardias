@@ -16,7 +16,6 @@
       "initialRevalidateSeconds": false,
       "srcRoute": "/_global-error",
       "dataRoute": "/_global-error.rsc",
-      "prefetchDataRoute": null,
       "allowHeader": [
         "host",
         "x-matched-path",
@@ -42,7 +41,6 @@
       "initialRevalidateSeconds": false,
       "srcRoute": "/_not-found",
       "dataRoute": "/_not-found.rsc",
-      "prefetchDataRoute": null,
       "allowHeader": [
         "host",
         "x-matched-path",
@@ -67,7 +65,6 @@
       "initialRevalidateSeconds": false,
       "srcRoute": "/admin/adicionales",
       "dataRoute": "/admin/adicionales.rsc",
-      "prefetchDataRoute": null,
       "allowHeader": [
         "host",
         "x-matched-path",
@@ -92,7 +89,6 @@
       "initialRevalidateSeconds": false,
       "srcRoute": "/admin/medicos",
       "dataRoute": "/admin/medicos.rsc",
-      "prefetchDataRoute": null,
       "allowHeader": [
         "host",
         "x-matched-path",
@@ -117,7 +113,6 @@
       "initialRevalidateSeconds": false,
       "srcRoute": "/admin/valores-consultas",
       "dataRoute": "/admin/valores-consultas.rsc",
-      "prefetchDataRoute": null,
       "allowHeader": [
         "host",
         "x-matched-path",
@@ -142,7 +137,6 @@
       "initialRevalidateSeconds": false,
       "srcRoute": "/admisiones",
       "dataRoute": "/admisiones.rsc",
-      "prefetchDataRoute": null,
       "allowHeader": [
         "host",
         "x-matched-path",
@@ -167,7 +161,6 @@
       "initialRevalidateSeconds": false,
       "srcRoute": "/admisiones/resumenes",
       "dataRoute": "/admisiones/resumenes.rsc",
-      "prefetchDataRoute": null,
       "allowHeader": [
         "host",
         "x-matched-path",
@@ -192,7 +185,6 @@
       "initialRevalidateSeconds": false,
       "srcRoute": "/ginecologia",
       "dataRoute": "/ginecologia.rsc",
-      "prefetchDataRoute": null,
       "allowHeader": [
         "host",
         "x-matched-path",
@@ -217,7 +209,6 @@
       "initialRevalidateSeconds": false,
       "srcRoute": "/ginecologia/resumenes",
       "dataRoute": "/ginecologia/resumenes.rsc",
-      "prefetchDataRoute": null,
       "allowHeader": [
         "host",
         "x-matched-path",
@@ -242,7 +233,6 @@
       "initialRevalidateSeconds": false,
       "srcRoute": "/guardias-clinicas",
       "dataRoute": "/guardias-clinicas.rsc",
-      "prefetchDataRoute": null,
       "allowHeader": [
         "host",
         "x-matched-path",
@@ -267,7 +257,6 @@
       "initialRevalidateSeconds": false,
       "srcRoute": "/guardias-clinicas/resumenes",
       "dataRoute": "/guardias-clinicas/resumenes.rsc",
-      "prefetchDataRoute": null,
       "allowHeader": [
         "host",
         "x-matched-path",
@@ -292,7 +281,6 @@
       "initialRevalidateSeconds": false,
       "srcRoute": "/manual",
       "dataRoute": "/manual.rsc",
-      "prefetchDataRoute": null,
       "allowHeader": [
         "host",
         "x-matched-path",
@@ -317,7 +305,6 @@
       "initialRevalidateSeconds": false,
       "srcRoute": "/",
       "dataRoute": "/index.rsc",
-      "prefetchDataRoute": null,
       "allowHeader": [
         "host",
         "x-matched-path",
@@ -342,7 +329,6 @@
       "initialRevalidateSeconds": false,
       "srcRoute": "/pediatria",
       "dataRoute": "/pediatria.rsc",
-      "prefetchDataRoute": null,
       "allowHeader": [
         "host",
         "x-matched-path",
@@ -367,7 +353,6 @@
       "initialRevalidateSeconds": false,
       "srcRoute": "/pediatria/resumenes",
       "dataRoute": "/pediatria/resumenes.rsc",
-      "prefetchDataRoute": null,
       "allowHeader": [
         "host",
         "x-matched-path",
@@ -381,8 +366,8 @@
   "dynamicRoutes": {},
   "notFoundRoutes": [],
   "preview": {
-    "previewModeId": "c5aff2ae5a1b00ba55e97644a3d76b32",
-    "previewModeSigningKey": "746b1a4ef70b86f9623680639647cce17b13f91ec939dfeceded676fdcb30a64",
-    "previewModeEncryptionKey": "d440c2f2da75ef52ab4cab07a41c4b2f98a0f74ea1d31b27d386da97a5be6903"
+    "previewModeId": "d8bd3f3b589a6215ccf971ecbd882117",
+    "previewModeSigningKey": "6e0330b537dd1b6612ede5dfddb09295acd4f83bd8a58d5be11b06517623b0e4",
+    "previewModeEncryptionKey": "8002b3ee2edbb1fa258f4d8a737619ebaf73d34fef45d060d9dc7b31e82d0f21"
   }
 }

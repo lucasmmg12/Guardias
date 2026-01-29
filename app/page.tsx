@@ -1,3 +1,5 @@
+'use client'
+
 import Link from 'next/link'
 import { Sparkles, Stethoscope, Baby, Upload, User, DollarSign, Hospital, BarChart3, Plus, BookOpen, ClipboardList, Scissors, Linkedin, Instagram, MessageCircle, Globe, ArrowLeft } from 'lucide-react'
 
