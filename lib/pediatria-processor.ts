@@ -611,6 +611,11 @@ export async function procesarExcelPediatria(
     // Set para detectar duplicados (mismo Paciente + Fecha/Hora + Médico)
     const duplicados = new Set<string>()
 
+    // Calcular el offset real de las filas en el Excel para reportar errores correctamente
+    // Si headerRowIndex es 0 (fila 1), la primera data (i=0) es la fila 2.
+    // Si headerRowIndex es 9 (fila 10), la primera data (i=0) es la fila 11.
+    const rowIndexOffset = (excelData.headerRowIndex ?? 0) + 2
+
     for (let i = 0; i < excelData.rows.length; i++) {
       const row = excelData.rows[i]
 
@@ -694,7 +699,7 @@ export async function procesarExcelPediatria(
         if (!esPediatria) {
           filasNoPediatria++
           resultado.filasExcluidas.push({
-            numeroFila: 2 + i, // Los datos comienzan en la fila 2 del Excel (fila 1 = headers)
+            numeroFila: rowIndexOffset + i,
             razon: 'no_pediatria',
             datos: row
           })
@@ -736,7 +741,7 @@ export async function procesarExcelPediatria(
         if (!fecha) {
           filasSinFecha++
           resultado.filasExcluidas.push({
-            numeroFila: 2 + i, // Los datos comienzan en la fila 2 del Excel (fila 1 = headers)
+            numeroFila: rowIndexOffset + i,
             razon: 'sin_fecha',
             datos: row
           })
@@ -748,11 +753,11 @@ export async function procesarExcelPediatria(
         if (fechaAnio < 2020 || fechaAnio > 2100) {
           filasFechaInvalida++
           resultado.filasExcluidas.push({
-            numeroFila: 2 + i, // Los datos comienzan en la fila 2 del Excel (fila 1 = headers)
+            numeroFila: rowIndexOffset + i,
             razon: 'fecha_invalida',
             datos: row
           })
-          resultado.advertencias.push(`Fila ${2 + i}: Fecha fuera de rango (${fecha}), se omite`)
+          resultado.advertencias.push(`Fila ${rowIndexOffset + i}: Fecha fuera de rango (${fecha}), se omite`)
           continue
         }
 
@@ -769,7 +774,7 @@ export async function procesarExcelPediatria(
         if (duplicados.has(firmaDuplicado)) {
           filasDuplicadas++
           resultado.filasExcluidas.push({
-            numeroFila: 2 + i, // Los datos comienzan en la fila 2 del Excel (fila 1 = headers)
+            numeroFila: rowIndexOffset + i,
             razon: 'duplicado',
             datos: row
           })
@@ -846,7 +851,7 @@ export async function procesarExcelPediatria(
         // Solo registrar advertencia si NO es PARTICULARES y no tiene valor
         if (valorUnitario === 0 && obraSocialFinal !== 'PARTICULARES' && obraSocialFinal !== '042 - PARTICULARES') {
           // Intentar una vez más con un log detallado
-          resultado.advertencias.push(`Fila ${i + 1}: No valor para "${obraSocialFinal}" (${tipoConsultaUsar}). Cod: ${obraSocialFinal.match(/^(\d+)/)?.[1] || 'N/A'}`)
+          resultado.advertencias.push(`Fila ${rowIndexOffset + i}: No valor para "${obraSocialFinal}" (${tipoConsultaUsar}). Cod: ${obraSocialFinal.match(/^(\d+)/)?.[1] || 'N/A'}`)
         }
 
         // Calcular montos
@@ -901,7 +906,7 @@ export async function procesarExcelPediatria(
 
       } catch (error: any) {
         const errorMsg = error.message || 'Error desconocido'
-        resultado.errores.push(`Fila ${i + 1}: ${errorMsg}`)
+        resultado.errores.push(`Fila ${rowIndexOffset + i}: ${errorMsg}`)
         console.error(`Error procesando fila ${i + 1}:`, error)
         console.error('Datos de la fila:', row)
       }

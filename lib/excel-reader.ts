@@ -11,6 +11,7 @@ export interface ExcelData {
   } | null
   headers: string[]
   rows: ExcelRow[]
+  headerRowIndex?: number // Índice de la fila de headers (0-indexed)
 }
 
 /**
@@ -57,24 +58,31 @@ export async function readExcelFile(file: File): Promise<ExcelData> {
 
     const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1')
 
-    // Intentar leer el período de la fila 2 (índice 1) si existe
-    const row2: any[] = []
-    for (let col = 0; col <= Math.min(range.e.c, 50); col++) {
-      const cellAddress = XLSX.utils.encode_cell({ r: 1, c: col })
-      const cell = worksheet[cellAddress]
-      row2.push(cell ? cell.v : null)
+    // Intentar leer el período de las filas 2 o 3 (índice 1 o 2)
+    let periodo = null
+    for (let r = 1; r <= 3; r++) {
+      const rowData: any[] = []
+      for (let col = 0; col <= Math.min(range.e.c, 50); col++) {
+        const cellAddress = XLSX.utils.encode_cell({ r, c: col })
+        const cell = worksheet[cellAddress]
+        rowData.push(cell ? cell.v : null)
+      }
+      const p = extractPeriodo(rowData)
+      if (p) {
+        periodo = p
+        break
+      }
     }
-    const periodo = extractPeriodo(row2)
 
-    // Leer la fila 1 (índice 0) para los headers
+    // Leer la fila 10 (índice 9) para los headers
     // IMPORTANTE: Leer TODAS las columnas, incluso las vacías, para mantener la correspondencia exacta
     const headers: Array<{ name: string; colIndex: number }> = []
     const maxCols = Math.min(range.e.c + 1, 50) // Limitar a 50 columnas máximo para evitar problemas
 
-    // Primero, encontrar la última columna con un header válido
+    // Primero, encontrar la última columna con un header válido en la fila 10
     let lastHeaderCol = -1
     for (let col = 0; col < maxCols; col++) {
-      const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col })
+      const cellAddress = XLSX.utils.encode_cell({ r: 9, c: col }) // Fila 10 = índice 9
       const cell = worksheet[cellAddress]
       if (cell && cell.v !== null && cell.v !== undefined) {
         const headerValue = String(cell.v).trim()
@@ -84,14 +92,30 @@ export async function readExcelFile(file: File): Promise<ExcelData> {
       }
     }
 
-    // Si no encontramos headers, lanzar error
+    // Si no encontramos headers en la fila 10, intentar como fallback en la fila 1
+    let headerRowIndex = 9
     if (lastHeaderCol === -1) {
-      throw new Error('No se encontraron headers en la fila 1')
+      for (let col = 0; col < maxCols; col++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col })
+        const cell = worksheet[cellAddress]
+        if (cell && cell.v !== null && cell.v !== undefined) {
+          const headerValue = String(cell.v).trim()
+          if (headerValue !== '') {
+            lastHeaderCol = col
+            headerRowIndex = 0
+          }
+        }
+      }
+    }
+
+    // Si aún no encontramos headers, lanzar error
+    if (lastHeaderCol === -1) {
+      throw new Error('No se encontraron headers en la fila 1 ni en la fila 10')
     }
 
     // Leer todos los headers desde la columna 0 hasta la última con header válido
     for (let col = 0; col <= lastHeaderCol; col++) {
-      const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col })
+      const cellAddress = XLSX.utils.encode_cell({ r: headerRowIndex, c: col })
       const cell = worksheet[cellAddress]
 
       if (cell && cell.v !== null && cell.v !== undefined) {
@@ -113,10 +137,10 @@ export async function readExcelFile(file: File): Promise<ExcelData> {
     // Filtrar headers vacíos solo para la visualización, pero mantener la estructura
     const headerNames = headers.map(h => h.name).filter(name => !name.startsWith('Columna'))
 
-    // Leer datos manualmente desde la fila 2 (índice 1) en adelante
+    // Leer datos manualmente desde la fila siguiente a los headers
     const rows: ExcelRow[] = []
 
-    for (let rowIndex = 1; rowIndex <= range.e.r; rowIndex++) {
+    for (let rowIndex = headerRowIndex + 1; rowIndex <= range.e.r; rowIndex++) {
       const row: ExcelRow = {}
       let hasData = false
 
@@ -188,8 +212,9 @@ export async function readExcelFile(file: File): Promise<ExcelData> {
 
     return {
       periodo,
-      headers: headerNames, // Usar solo los headers con nombre válido para la visualización
-      rows
+      headers: headerNames,
+      rows,
+      headerRowIndex
     }
   } catch (error) {
     if (error instanceof Error) {
@@ -342,7 +367,8 @@ export async function readExcelFileGinecologia(file: File): Promise<ExcelData> {
     return {
       periodo,
       headers: headerNames,
-      rows
+      rows,
+      headerRowIndex: 9
     }
   } catch (error) {
     if (error instanceof Error) {
@@ -476,7 +502,8 @@ export async function readExcelFileAdmisiones(file: File): Promise<ExcelData> {
     return {
       periodo,
       headers: headerNames,
-      rows
+      rows,
+      headerRowIndex: 9
     }
   } catch (error) {
     if (error instanceof Error) {
@@ -651,7 +678,8 @@ export async function readExcelFileHorasGuardiasClinicas(file: File): Promise<Ex
     return {
       periodo,
       headers: headerNames,
-      rows
+      rows,
+      headerRowIndex: 3
     }
   } catch (error) {
     if (error instanceof Error) {
