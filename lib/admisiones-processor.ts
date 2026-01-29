@@ -19,7 +19,7 @@ interface ProcesamientoResult {
 }
 
 // Valor fijo por admisión (según el prompt)
-const ADMISSION_VALUE = 10000
+const ADMISSION_VALUE = 12000
 
 /**
  * Normaliza el nombre de una columna para búsqueda flexible

@@ -12,7 +12,7 @@ export interface ResumenPorMedico {
 
 /**
  * Calcula el resumen por médico para Admisiones Clínicas
- * Agrupa por médico y cuenta las admisiones, con valor fijo de $10,000
+ * Agrupa por médico y cuenta las admisiones, con valor fijo de $12,000
  */
 export async function calcularResumenPorMedico(
   mes: number,
@@ -66,14 +66,14 @@ export async function calcularResumenPorMedico(
           medico_nombre: medicoNombre,
           medico_matricula: medicoMatricula,
           cantidad: 0,
-          valor_unitario: 10000, // Valor fijo por admisión
+          valor_unitario: 12000, // Valor fijo por admisión
           total: 0
         })
       }
 
       const resumen = resumenesMap.get(medicoId)!
       resumen.cantidad += 1
-      resumen.total += detalle.importe_calculado || detalle.monto_facturado || 10000
+      resumen.total += detalle.importe_calculado || detalle.monto_facturado || 12000
     }
 
     // Convertir a array y ordenar alfabéticamente por nombre
@@ -117,7 +117,7 @@ export interface ResumenPorPrestador {
 
 /**
  * Calcula el resumen por prestador (agrupado por médico)
- * Para Admisiones Clínicas: valor fijo de $10,000 por admisión, sin retenciones
+ * Para Admisiones Clínicas: valor fijo de $12,000 por admisión, sin retenciones
  */
 export async function calcularResumenPorPrestador(
   mes: number,

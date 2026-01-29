@@ -50,8 +50,8 @@ export default function AdmisionesPage() {
     // Función para detectar mes y año desde las fechas del Excel
     const detectarMesAnio = (data: ExcelData): { mes: number | null; anio: number | null } => {
         // Buscar en las fechas de las filas
-        const fechaColumn = data.headers.find(h => 
-            h.toLowerCase().includes('fecha') || 
+        const fechaColumn = data.headers.find(h =>
+            h.toLowerCase().includes('fecha') ||
             h.toLowerCase().includes('date')
         )
 
@@ -119,7 +119,7 @@ export default function AdmisionesPage() {
         try {
             const data = await readExcelFileAdmisiones(file)
             setExcelData(data)
-            
+
             // Detectar mes y año automáticamente
             const { mes, anio } = detectarMesAnio(data)
             if (mes && anio) {
@@ -159,9 +159,9 @@ export default function AdmisionesPage() {
 
                 // Guardar resultado del procesamiento para mostrar filas excluidas
                 setResultadoProcesamiento(resultado)
-                
+
                 if (resultado.errores.length > 0) {
-                    const mensajeError = resultado.errores.length > 0 
+                    const mensajeError = resultado.errores.length > 0
                         ? `Se procesaron ${resultado.procesadas} filas. Errores: ${resultado.errores.slice(0, 3).join('; ')}${resultado.errores.length > 3 ? '...' : ''}`
                         : `Se procesaron ${resultado.procesadas} filas. Errores: ${resultado.errores.length}`
                     showNotification(
@@ -228,9 +228,9 @@ export default function AdmisionesPage() {
                     <div>
                         <div className="flex items-center gap-4 mb-4">
                             <Link href="/" className="hover:opacity-80 transition-opacity">
-                                <img 
-                                    src="/logogrow.png" 
-                                    alt="Grow Labs" 
+                                <img
+                                    src="/logogrow.png"
+                                    alt="Grow Labs"
                                     className="h-16 w-auto drop-shadow-2xl"
                                     style={{
                                         filter: 'drop-shadow(0 0 20px rgba(168, 85, 247, 0.5))'
@@ -253,7 +253,7 @@ export default function AdmisionesPage() {
                 </div>
 
                 {/* Upload Excel Card */}
-                <div 
+                <div
                     className="relative rounded-2xl shadow-2xl overflow-hidden p-8"
                     style={{
                         background: 'rgba(255, 255, 255, 0.1)',
@@ -263,7 +263,7 @@ export default function AdmisionesPage() {
                     }}
                 >
                     {/* Borde brillante animado */}
-                    <div 
+                    <div
                         className="absolute inset-0 rounded-2xl"
                         style={{
                             background: 'linear-gradient(45deg, transparent, rgba(168, 85, 247, 0.3), transparent)',
@@ -273,9 +273,9 @@ export default function AdmisionesPage() {
                     <div className="relative">
                         <div className="flex items-center justify-between mb-6">
                             <h2 className="text-2xl font-bold text-purple-400 flex items-center gap-2">
-                            <Upload className="h-6 w-6" />
-                            Cargar Liquidación
-                        </h2>
+                                <Upload className="h-6 w-6" />
+                                Cargar Liquidación
+                            </h2>
                             <Button
                                 onClick={() => router.push('/admisiones/resumenes')}
                                 variant="outline"
@@ -285,24 +285,24 @@ export default function AdmisionesPage() {
                             </Button>
                         </div>
 
-                    <UploadExcel onUpload={handleUpload} isProcessing={isProcessing} />
+                        <UploadExcel onUpload={handleUpload} isProcessing={isProcessing} />
 
-                    {/* Mensaje de error */}
-                    {error && (
-                        <div className="mt-6 bg-red-500/10 border border-red-500/30 rounded-lg p-4 flex items-start gap-3 text-red-400">
-                            <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" />
-                            <div>
-                                <h3 className="font-semibold">Error de Procesamiento</h3>
-                                <p className="text-sm opacity-90">{error}</p>
+                        {/* Mensaje de error */}
+                        {error && (
+                            <div className="mt-6 bg-red-500/10 border border-red-500/30 rounded-lg p-4 flex items-start gap-3 text-red-400">
+                                <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" />
+                                <div>
+                                    <h3 className="font-semibold">Error de Procesamiento</h3>
+                                    <p className="text-sm opacity-90">{error}</p>
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        )}
                     </div>
                 </div>
 
 
                 {/* Reglas de Negocio */}
-                <div 
+                <div
                     className="p-6 rounded-xl"
                     style={{
                         background: 'rgba(255, 255, 255, 0.1)',
@@ -311,65 +311,65 @@ export default function AdmisionesPage() {
                         boxShadow: '0 8px 32px 0 rgba(168, 85, 247, 0.2)',
                     }}
                 >
-                        <h3 className="text-xl font-semibold text-gray-200 mb-4 flex items-center gap-2">
-                            <FileText className="h-5 w-5" />
-                            Reglas Vigentes
-                        </h3>
-                        <div className="space-y-4 text-sm text-gray-300">
-                            <div className="p-3 bg-white/5 rounded-lg border border-white/5">
-                                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Valor por Admisión</div>
-                                <div className="font-semibold text-white">$10,000</div>
-                                <div className="text-xs text-gray-400">Valor fijo por cada admisión procesada</div>
-                            </div>
+                    <h3 className="text-xl font-semibold text-gray-200 mb-4 flex items-center gap-2">
+                        <FileText className="h-5 w-5" />
+                        Reglas Vigentes
+                    </h3>
+                    <div className="space-y-4 text-sm text-gray-300">
+                        <div className="p-3 bg-white/5 rounded-lg border border-white/5">
+                            <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Valor por Admisión</div>
+                            <div className="font-semibold text-white">$12,000</div>
+                            <div className="text-xs text-gray-400">Valor fijo por cada admisión procesada</div>
+                        </div>
 
-                            <div className="p-3 bg-white/5 rounded-lg border border-white/5">
-                                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">
-                                    <AlertTriangle className="h-3 w-3" />
-                                    Regla A: Auto-Duplicados
-                                </div>
-                                <div className="text-sm mt-2">
-                                    <div className="text-gray-300">
-                                        Si el mismo <strong>Doctor</strong> admite al mismo <strong>Paciente</strong> en la misma <strong>Fecha</strong> múltiples veces, se cuenta como <strong className="text-purple-400">1 admisión</strong>.
-                                    </div>
+                        <div className="p-3 bg-white/5 rounded-lg border border-white/5">
+                            <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">
+                                <AlertTriangle className="h-3 w-3" />
+                                Regla A: Auto-Duplicados
+                            </div>
+                            <div className="text-sm mt-2">
+                                <div className="text-gray-300">
+                                    Si el mismo <strong>Doctor</strong> admite al mismo <strong>Paciente</strong> en la misma <strong>Fecha</strong> múltiples veces, se cuenta como <strong className="text-purple-400">1 admisión</strong>.
                                 </div>
                             </div>
+                        </div>
 
-                            <div className="p-3 bg-white/5 rounded-lg border border-white/5">
-                                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">
-                                    <AlertCircle className="h-3 w-3" />
-                                    Regla B: First Come First Served (FCFS)
-                                </div>
-                                <div className="text-sm mt-2 space-y-2">
-                                    <div className="text-gray-300">
-                                        Si un <strong>Paciente</strong> aparece en la misma <strong>Fecha</strong> pero con <strong className="text-red-400">DIFERENTES Doctores</strong>:
-                                    </div>
-                                    <ul className="text-xs space-y-1 ml-2 text-gray-300">
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-purple-400">•</span>
-                                            <span>Se mantiene el <strong>primer registro</strong> encontrado en el archivo</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-purple-400">•</span>
-                                            <span>Se descartan los registros posteriores (marcados como duplicados)</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-purple-400">•</span>
-                                            <span className="text-red-400">NO se suman</span> - Solo un doctor recibe el pago por paciente/día
-                                        </li>
-                                    </ul>
-                                </div>
+                        <div className="p-3 bg-white/5 rounded-lg border border-white/5">
+                            <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">
+                                <AlertCircle className="h-3 w-3" />
+                                Regla B: First Come First Served (FCFS)
                             </div>
+                            <div className="text-sm mt-2 space-y-2">
+                                <div className="text-gray-300">
+                                    Si un <strong>Paciente</strong> aparece en la misma <strong>Fecha</strong> pero con <strong className="text-red-400">DIFERENTES Doctores</strong>:
+                                </div>
+                                <ul className="text-xs space-y-1 ml-2 text-gray-300">
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-purple-400">•</span>
+                                        <span>Se mantiene el <strong>primer registro</strong> encontrado en el archivo</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-purple-400">•</span>
+                                        <span>Se descartan los registros posteriores (marcados como duplicados)</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="text-purple-400">•</span>
+                                        <span className="text-red-400">NO se suman</span> - Solo un doctor recibe el pago por paciente/día
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
 
-                            <div className="p-3 bg-white/5 rounded-lg border border-white/5">
-                                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Formato del Archivo</div>
-                                <div className="text-xs text-gray-400 space-y-1">
-                                    <div>• Filas 1-9: Metadata (se ignoran automáticamente)</div>
-                                    <div>• Fila 10: Headers (Paciente, Fecha Visita, Responsable, etc.)</div>
-                                    <div>• Desde fila 11: Datos a procesar</div>
-                                </div>
+                        <div className="p-3 bg-white/5 rounded-lg border border-white/5">
+                            <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Formato del Archivo</div>
+                            <div className="text-xs text-gray-400 space-y-1">
+                                <div>• Filas 1-9: Metadata (se ignoran automáticamente)</div>
+                                <div>• Fila 10: Headers (Paciente, Fecha Visita, Responsable, etc.)</div>
+                                <div>• Desde fila 11: Datos a procesar</div>
                             </div>
+                        </div>
                     </div>
-            </div>
+                </div>
             </div>
 
             {/* Modal de selección de mes */}
@@ -402,7 +402,7 @@ export default function AdmisionesPage() {
             {/* Sección de filas excluidas */}
             {resultadoProcesamiento && resultadoProcesamiento.filasExcluidas && resultadoProcesamiento.filasExcluidas.length > 0 && excelData && (
                 <div className="max-w-6xl mx-auto mt-8 relative z-10">
-                    <div 
+                    <div
                         className="rounded-2xl shadow-2xl overflow-hidden p-6 mb-6"
                         style={{
                             background: 'rgba(239, 68, 68, 0.15)',
@@ -423,7 +423,7 @@ export default function AdmisionesPage() {
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm border-collapse">
                                 <thead>
