@@ -669,10 +669,10 @@ export default function GuardiasClinicasPage() {
                                 <select
                                     value={mesConfig}
                                     onChange={(e) => setMesConfig(Number(e.target.value))}
-                                    className="bg-black border border-white/10 rounded-full py-2 px-6 text-sm font-bold text-white focus:border-[#00FF88]/50 outline-none cursor-pointer appearance-none min-w-[140px]"
+                                    className="bg-transparent border-none text-white font-bold text-xs px-6 focus:outline-none cursor-pointer uppercase tracking-widest"
                                 >
                                     {MESES.map(m => (
-                                        <option key={m.value} value={m.value}>{m.label}</option>
+                                        <option key={m.value} value={m.value} className="text-black bg-white">{m.label}</option>
                                     ))}
                                 </select>
                                 <input

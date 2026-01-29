@@ -537,10 +537,10 @@ export default function ResumenesPediatriaPage() {
               <select
                 value={mes}
                 onChange={(e) => setMes(parseInt(e.target.value))}
-                className="bg-transparent border-none text-white font-bold text-sm px-4 focus:outline-none cursor-pointer"
+                className="bg-transparent border-none text-white font-bold text-xs px-6 focus:outline-none cursor-pointer uppercase tracking-widest"
               >
                 {MESES.map(m => (
-                  <option key={m.value} value={m.value} className="bg-black">{m.label}</option>
+                  <option key={m.value} value={m.value} className="text-black bg-white">{m.label}</option>
                 ))}
               </select>
               <input

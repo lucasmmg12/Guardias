@@ -421,11 +421,11 @@ export default function ResumenesAdmisionesPage() {
             <div className="flex bg-white/5 backdrop-blur-md border border-white/10 rounded-full p-1.5 gap-2">
               <select
                 value={mes}
-                onChange={(e) => setMes(parseInt(e.target.value, 10))}
-                className="bg-transparent border-none text-white font-bold text-sm px-4 focus:outline-none cursor-pointer"
+                onChange={(e) => setMes(parseInt(e.target.value))}
+                className="bg-transparent border-none text-white font-bold text-xs px-6 focus:outline-none cursor-pointer uppercase tracking-widest"
               >
                 {MESES.map(m => (
-                  <option key={m.value} value={m.value} className="bg-black">{m.label}</option>
+                  <option key={m.value} value={m.value} className="text-black bg-white">{m.label}</option>
                 ))}
               </select>
               <input

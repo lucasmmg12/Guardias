@@ -296,11 +296,11 @@ export default function MedicosPage() {
               <select
                 value={filterEspecialidad}
                 onChange={(e) => setFilterEspecialidad(e.target.value)}
-                className="bg-white/5 border border-white/10 text-white text-xs font-bold rounded-full px-6 h-11 focus:outline-none focus:border-[#00FF88]/50 appearance-none cursor-pointer"
+                className="bg-transparent border-none text-white font-bold text-xs px-6 focus:outline-none cursor-pointer uppercase tracking-widest"
               >
-                <option value="all" className="bg-black">ESPECIALIDAD: TODAS</option>
+                <option value="all" className="text-black bg-white">ESPECIALIDAD: TODAS</option>
                 {especialidades.map(esp => (
-                  <option key={esp} value={esp} className="bg-black uppercase">{esp}</option>
+                  <option key={esp} value={esp} className="text-black bg-white uppercase">{esp}</option>
                 ))}
               </select>
 

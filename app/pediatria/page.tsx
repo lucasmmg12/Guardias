@@ -496,10 +496,10 @@ export default function PediatriaPage() {
                                         <select
                                             value={mesConfig}
                                             onChange={(e) => setMesConfig(Number(e.target.value))}
-                                            className="px-4 py-2.5 bg-black border border-white/10 rounded-xl text-white font-bold text-sm focus:border-[#00FF88]/50 outline-none appearance-none cursor-pointer hover:bg-white/5 transition-all"
+                                            className="bg-transparent border-none text-white font-bold text-xs px-6 focus:outline-none cursor-pointer uppercase tracking-widest"
                                         >
                                             {MESES.map(m => (
-                                                <option key={m.value} value={m.value}>{m.label}</option>
+                                                <option key={m.value} value={m.value} className="text-black bg-white">{m.label}</option>
                                             ))}
                                         </select>
                                         <input
