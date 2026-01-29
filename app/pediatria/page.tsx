@@ -7,7 +7,7 @@ import { MesSelectorModal } from '@/components/custom/MesSelectorModal'
 import { NotificationModal, NotificationType } from '@/components/custom/NotificationModal'
 import { readExcelFile, ExcelData } from '@/lib/excel-reader'
 import { procesarExcelPediatria } from '@/lib/pediatria-processor'
-import { AlertCircle, Sparkles, ArrowLeft, XCircle, X, AlertTriangle, Upload, FileText, Settings, Users, Plus, Trash2, Copy, Search } from 'lucide-react'
+import { AlertCircle, Sparkles, ArrowLeft, XCircle, X, AlertTriangle, Upload, FileText, Settings, Users, Plus, Trash2, Copy, Search, Activity } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase/client'
@@ -734,51 +734,70 @@ export default function PediatriaPage() {
                             </div>
                         </div>
 
-                        {/* Reglas de Negocio */}
+                        {/* Reglas de Negocio Premium */}
                         <div
-                            className="p-6 rounded-xl"
+                            className="p-12 rounded-[40px] animate-in slide-in-from-bottom-4 duration-1000"
                             style={{
-                                background: 'rgba(255, 255, 255, 0.1)',
-                                backdropFilter: 'blur(20px)',
-                                border: '1px solid rgba(255, 255, 255, 0.2)',
-                                boxShadow: '0 8px 32px 0 rgba(34, 197, 94, 0.2)',
+                                background: 'rgba(255, 255, 255, 0.02)',
+                                backdropFilter: 'blur(12px)',
+                                border: '1px solid rgba(255, 255, 255, 0.05)',
                             }}
                         >
-                            <h3 className="text-xl font-semibold text-gray-200 mb-4 flex items-center gap-2">
-                                <FileText className="h-5 w-5" />
-                                Reglas Vigentes
-                            </h3>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-300">
-                                <div className="p-3 bg-white/5 rounded-lg border border-white/5">
-                                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Retención</div>
-                                    <div className="font-semibold text-white">30%</div>
-                                    <div className="text-xs text-gray-400">Sobre monto facturado</div>
+                            <div className="flex items-center gap-4 mb-12">
+                                <div className="w-2 h-12 bg-[#00FF88] rounded-full"></div>
+                                <h3 className="text-3xl font-black text-white tracking-tighter uppercase italic">Reglas Vigentes</h3>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                {/* Retención */}
+                                <div className="p-8 rounded-3xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all group">
+                                    <div className="w-12 h-12 rounded-2xl bg-red-500/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-all">
+                                        <Activity className="h-6 w-6 text-red-500" />
+                                    </div>
+                                    <h4 className="text-xl font-black text-white tracking-tight mb-2 uppercase italic">Retención Estructural</h4>
+                                    <div className="text-4xl font-black text-[#00FF88] mb-2">30%</div>
+                                    <p className="text-gray-500 text-sm font-medium leading-relaxed">
+                                        Deducción fija aplicada sobre el <span className="text-white font-bold">monto facturado</span> de cada consulta procesada.
+                                    </p>
                                 </div>
 
-                                <div className="p-3 bg-white/5 rounded-lg border border-white/5">
-                                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Diferenciación</div>
-                                    <div className="text-xs text-gray-400 mb-2">
-                                        Consulta Guardia vs Especialista
+                                {/* Diferenciación */}
+                                <div className="p-8 rounded-3xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all group">
+                                    <div className="w-12 h-12 rounded-2xl bg-[#00D1FF]/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-all">
+                                        <Users className="h-6 w-6 text-[#00D1FF]" />
                                     </div>
-                                    <div className="text-xs text-green-400">
-                                        Configurable por grupo mensual
-                                    </div>
+                                    <h4 className="text-xl font-black text-white tracking-tight mb-2 uppercase italic">Grupos Prestadores</h4>
+                                    <div className="text-sm font-bold text-[#00D1FF] mb-4 uppercase tracking-widest">Guardia vs Especialista</div>
+                                    <p className="text-gray-500 text-sm font-medium leading-relaxed">
+                                        El valor base se determina por la categoría del profesional: <span className="text-white">Estándar</span> o <span className="text-white">Especialista</span>.
+                                    </p>
                                 </div>
 
-                                <div className="p-3 bg-white/5 rounded-lg border border-white/5">
-                                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Adicionales</div>
-                                    <div className="text-xs text-gray-400 mb-2">
-                                        DAMSU y PROVINCIA configurables
+                                {/* Adicionales */}
+                                <div className="p-8 rounded-3xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all group">
+                                    <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-all">
+                                        <Plus className="h-6 w-6 text-amber-500" />
                                     </div>
-                                    <div className="text-xs text-gray-400">
-                                        Admin → Adicionales
+                                    <h4 className="text-xl font-black text-white tracking-tight mb-2 uppercase italic">Incentivos Adicionales</h4>
+                                    <div className="flex gap-2 mb-4">
+                                        <span className="px-2 py-1 rounded-md bg-white/5 text-[10px] font-bold text-gray-400 border border-white/10 uppercase">DAMSU</span>
+                                        <span className="px-2 py-1 rounded-md bg-white/5 text-[10px] font-bold text-gray-400 border border-white/10 uppercase">PROVINCIA</span>
                                     </div>
+                                    <p className="text-gray-500 text-sm font-medium leading-relaxed">
+                                        Montos extra configurables por Obra Social gestionados desde el panel de <span className="text-white underline decoration-amber-500/50">Administración</span>.
+                                    </p>
                                 </div>
+                            </div>
 
-                                <div className="p-3 bg-white/5 rounded-lg border border-white/5">
-                                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Fórmula</div>
-                                    <div className="font-mono text-[10px] text-gray-400">
-                                        (Valor Grupo - 30%) + Adícl.
+                            {/* Fórmula Premium */}
+                            <div className="mt-12 p-8 rounded-[32px] bg-gradient-to-r from-[#00FF88]/5 to-transparent border border-[#00FF88]/10 flex flex-col md:flex-row items-center justify-between gap-8">
+                                <div>
+                                    <span className="text-xs font-black tracking-[0.3em] text-[#00FF88] uppercase italic">Algoritmo de Liquidación</span>
+                                    <h4 className="text-2xl font-black text-white italic tracking-tighter mt-1">CÁLCULO DE IMPORTE NETO</h4>
+                                </div>
+                                <div className="flex items-center gap-4 bg-black/50 px-8 py-4 rounded-2xl border border-white/5 shadow-2xl">
+                                    <div className="font-mono text-xl md:text-2xl text-gray-400 tracking-tighter">
+                                        (<span className="text-white font-bold">Valor Grupo</span> - <span className="text-[#00FF88] font-bold">30%</span>) + <span className="text-amber-500 font-bold">Adic.</span>
                                     </div>
                                 </div>
                             </div>
