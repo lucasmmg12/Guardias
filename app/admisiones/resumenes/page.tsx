@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { calcularResumenPorMedico, calcularTotalGeneral, ResumenPorMedico, calcularResumenPorPrestador, obtenerDetallePacientesPorPrestador, ResumenPorPrestador } from '@/lib/admisiones-resumenes'
@@ -9,7 +9,7 @@ import { exportPDFResumenPrestadorIndividual } from '@/lib/pdf-exporter-resumen-
 import { DetalleGuardia } from '@/lib/types'
 import { LiquidacionGuardia } from '@/lib/types'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, FileDown, Download, History, Eye, FileSpreadsheet } from 'lucide-react'
+import { ArrowLeft, FileDown, Download, History, Eye, FileSpreadsheet, Calendar, TrendingUp } from 'lucide-react'
 import { ExcelDataTable } from '@/components/custom/ExcelDataTable'
 import { cargarExcelDataDesdeBD } from '@/lib/excel-reconstructor'
 import { ExcelData } from '@/lib/excel-reader'
@@ -31,7 +31,7 @@ const MESES = [
 
 export default function ResumenesAdmisionesPage() {
   const router = useRouter()
-  
+
   const [mes, setMes] = useState(() => {
     if (typeof window !== 'undefined') {
       const savedMes = localStorage.getItem('admisiones_resumenes_mes')
@@ -39,7 +39,7 @@ export default function ResumenesAdmisionesPage() {
     }
     return new Date().getMonth() + 1
   })
-  
+
   const [anio, setAnio] = useState(() => {
     if (typeof window !== 'undefined') {
       const savedAnio = localStorage.getItem('admisiones_resumenes_anio')
@@ -61,7 +61,159 @@ export default function ResumenesAdmisionesPage() {
   const [liquidacionActual, setLiquidacionActual] = useState<LiquidacionGuardia | null>(null)
   const [loadingExcel, setLoadingExcel] = useState(false)
 
-  // Guardar mes y año en localStorage cuando cambian
+  // Refs para cambios pendientes y timer de guardado
+  const cambiosPendientesRef = useRef<Map<string, { liquidacionId: string; filaExcel: number; columna: string; valor: any }>>(new Map())
+  const saveTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  const handleCellUpdate = useCallback(async (rowIndex: number, column: string, newValue: any) => {
+    if (!liquidacionActual || !excelData) return
+
+    // Obtener la fila_excel (ID real en BD)
+    const filaExcel = (excelData.rows[rowIndex] as any).__fila_excel ?? (rowIndex + 1)
+
+    // Actualizar ExcelData local inmediatamente (optimista)
+    if (excelData.rows[rowIndex]) {
+      excelData.rows[rowIndex][column] = newValue
+      setExcelData({ ...excelData })
+    }
+
+    // Guardar cambio pendiente
+    const key = `${liquidacionActual.id}-${filaExcel}-${column}`
+    cambiosPendientesRef.current.set(key, {
+      liquidacionId: liquidacionActual.id,
+      filaExcel,
+      columna: column,
+      valor: newValue
+    })
+
+    // Cancelar timer anterior
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current)
+    }
+
+    // Programar guardado automático (500ms de debounce)
+    saveTimerRef.current = setTimeout(async () => {
+      await guardarCambiosPendientes()
+    }, 500)
+  }, [liquidacionActual, excelData])
+
+  const guardarCambiosPendientes = async () => {
+    if (cambiosPendientesRef.current.size === 0 || !liquidacionActual) return
+
+    const cambios = Array.from(cambiosPendientesRef.current.values())
+
+    try {
+      const promesas = cambios.map(async (cambio) => {
+        const updateData: any = {}
+        const col = cambio.columna.toLowerCase().trim()
+
+        // Mapear columnas de Admisiones a BD
+        if (col.includes('responsable') || col.includes('medico')) {
+          updateData.medico_nombre = cambio.valor
+        } else if (col.includes('paciente')) {
+          updateData.paciente = cambio.valor
+        }
+
+        updateData.updated_at = new Date().toISOString()
+
+        // @ts-ignore
+        const { error } = await (supabase.from('detalle_guardia') as any)
+          .update(updateData)
+          .eq('liquidacion_id', liquidacionActual.id)
+          .eq('fila_excel', cambio.filaExcel)
+
+        if (error) throw error
+      })
+
+      await Promise.all(promesas)
+      cambiosPendientesRef.current.clear()
+    } catch (error) {
+      console.error('Error guardando cambios:', error)
+    }
+  }
+
+  const handleDeleteRow = useCallback(async (rowIndex: number) => {
+    if (!liquidacionActual || !excelData) return
+
+    const row = excelData.rows[rowIndex]
+    if (!row) return
+    const filaExcel = (row as any).__fila_excel ?? (rowIndex + 1)
+
+    try {
+      const { error } = await supabase
+        .from('detalle_guardia')
+        .delete()
+        .eq('liquidacion_id', liquidacionActual.id)
+        .eq('fila_excel', filaExcel)
+
+      if (error) throw error
+
+      // Recargar ExcelData para asegurar sincronización
+      const excelDataRecargado = await cargarExcelDataDesdeBD(liquidacionActual.id, supabase)
+      if (excelDataRecargado) {
+        setExcelData(excelDataRecargado)
+      }
+
+      await actualizarTotalesLiquidacion()
+    } catch (error) {
+      console.error('Error eliminando fila:', error)
+    }
+  }, [liquidacionActual, excelData])
+
+  // Nueva función para eliminar múltiples filas en una sola llamada
+  const handleDeleteRows = useCallback(async (indices: number[]) => {
+    if (!liquidacionActual || !excelData) return
+
+    const filasExcel = indices
+      .map(idx => (excelData.rows[idx] as any)?.__fila_excel)
+      .filter((f): f is number => f !== null && f !== undefined)
+
+    if (filasExcel.length === 0) return
+
+    try {
+      const { error } = await supabase
+        .from('detalle_guardia')
+        .delete()
+        .eq('liquidacion_id', liquidacionActual.id)
+        .in('fila_excel', filasExcel)
+
+      if (error) throw error
+
+      const excelDataRecargado = await cargarExcelDataDesdeBD(liquidacionActual.id, supabase)
+      if (excelDataRecargado) {
+        setExcelData(excelDataRecargado)
+      }
+
+      await actualizarTotalesLiquidacion()
+    } catch (error) {
+      console.error('Error eliminando filas:', error)
+    }
+  }, [liquidacionActual, excelData])
+
+  const actualizarTotalesLiquidacion = async () => {
+    if (!liquidacionActual) return
+
+    const { data: detalles } = await supabase
+      .from('detalle_guardia')
+      .select('importe_calculado, monto_facturado')
+      .eq('liquidacion_id', liquidacionActual.id) as { data: any[] | null }
+
+    if (detalles) {
+      const totalConsultas = detalles.length
+      const totalBruto = detalles.reduce((sum, d) => sum + (d.monto_facturado || 0), 0)
+      const totalNeto = detalles.reduce((sum, d) => sum + (d.importe_calculado || 0), 0)
+
+      // @ts-ignore
+      await (supabase.from('liquidaciones_guardia') as any)
+        .update({
+          total_consultas: totalConsultas,
+          total_bruto: totalBruto,
+          total_neto: totalNeto
+        })
+        .eq('id', liquidacionActual.id)
+    }
+  }
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('admisiones_resumenes_mes', mes.toString())
@@ -79,7 +231,6 @@ export default function ResumenesAdmisionesPage() {
     }
   }, [mes, anio, tabActiva])
 
-  // Cargar ExcelData desde la liquidación del mes seleccionado
   const cargarExcelData = useCallback(async () => {
     setLoadingExcel(true)
     try {
@@ -110,7 +261,6 @@ export default function ResumenesAdmisionesPage() {
   const cargarResumenes = useCallback(async () => {
     setLoading(true)
     try {
-      // Obtener liquidación específica de Admisiones para trabajar solo con ese archivo
       const { data: liquidacion } = await supabase
         .from('liquidaciones_guardia')
         .select('id')
@@ -120,20 +270,15 @@ export default function ResumenesAdmisionesPage() {
         .maybeSingle()
 
       if (!liquidacion || !(liquidacion as any).id) {
-        console.warn(`[Admisiones Resúmenes] No se encontró liquidación de Admisiones Clínicas para ${mes}/${anio}`)
         setResumenesPorMedico([])
         setResumenesPorPrestador([])
         return
       }
 
       const liquidacionId = (liquidacion as any).id
-      console.log(`[Admisiones Resúmenes] Liquidación ID: ${liquidacionId}`)
-      
-      // Calcular resumen por médico
       const resumenes = await calcularResumenPorMedico(mes, anio, liquidacionId)
       setResumenesPorMedico(resumenes)
 
-      // Calcular resumen por prestador
       const resumenPrestadores = await calcularResumenPorPrestador(mes, anio, liquidacionId)
       setResumenesPorPrestador(resumenPrestadores)
     } catch (error) {
@@ -154,7 +299,7 @@ export default function ResumenesAdmisionesPage() {
         .order('mes', { ascending: false })
 
       if (error) throw error
-      setHistorial((data || []) as LiquidacionGuardia[])
+      setHistorial((data || []) as any)
     } catch (error) {
       console.error('Error cargando historial:', error)
     } finally {
@@ -164,11 +309,8 @@ export default function ResumenesAdmisionesPage() {
 
   const totalGeneral = calcularTotalGeneral(resumenesPorMedico)
 
-  // Función para cargar detalle de pacientes por prestador
   const cargarDetallePacientes = useCallback(async (prestador: ResumenPorPrestador) => {
     const clave = prestador.medico_id || prestador.medico_nombre
-    
-    // Si ya está cargado, no volver a cargar
     if (detallePacientesPorPrestador.has(clave)) {
       setPrestadorExpandido(prestadorExpandido === clave ? null : clave)
       return
@@ -176,7 +318,6 @@ export default function ResumenesAdmisionesPage() {
 
     setLoadingDetallePacientes(clave)
     try {
-      // Obtener liquidación específica
       const { data: liquidacion } = await supabase
         .from('liquidaciones_guardia')
         .select('id')
@@ -186,14 +327,7 @@ export default function ResumenesAdmisionesPage() {
         .maybeSingle()
 
       const liquidacionId = liquidacion ? (liquidacion as any).id : undefined
-      
-      const detalles = await obtenerDetallePacientesPorPrestador(
-        prestador.medico_id,
-        prestador.medico_nombre,
-        mes,
-        anio,
-        liquidacionId
-      )
+      const detalles = await obtenerDetallePacientesPorPrestador(prestador.medico_id, prestador.medico_nombre, mes, anio, liquidacionId)
 
       setDetallePacientesPorPrestador(prev => {
         const nuevo = new Map(prev)
@@ -209,16 +343,11 @@ export default function ResumenesAdmisionesPage() {
   }, [mes, anio, prestadorExpandido, detallePacientesPorPrestador])
 
   function handleExportarPDFPrestadores() {
-    exportPDFResumenPorPrestador({
-      resumenes: resumenesPorPrestador,
-      mes,
-      anio
-    })
+    exportPDFResumenPorPrestador({ resumenes: resumenesPorPrestador, mes, anio })
   }
 
   async function handleExportarPDFPrestadorIndividual(prestador: ResumenPorPrestador) {
     try {
-      // Obtener liquidación específica
       const { data: liquidacion } = await supabase
         .from('liquidaciones_guardia')
         .select('id')
@@ -228,17 +357,8 @@ export default function ResumenesAdmisionesPage() {
         .maybeSingle()
 
       const liquidacionId = liquidacion ? (liquidacion as any).id : undefined
+      const detalles = await obtenerDetallePacientesPorPrestador(prestador.medico_id, prestador.medico_nombre, mes, anio, liquidacionId)
 
-      // Obtener detalles de pacientes
-      const detalles = await obtenerDetallePacientesPorPrestador(
-        prestador.medico_id,
-        prestador.medico_nombre,
-        mes,
-        anio,
-        liquidacionId
-      )
-
-      // Generar PDF individual
       exportPDFResumenPrestadorIndividual({
         prestadorNombre: prestador.medico_nombre,
         detalles,
@@ -255,176 +375,126 @@ export default function ResumenesAdmisionesPage() {
 
   function formatearMoneda(valor: number | null): string {
     if (valor === null || valor === undefined) return '$0,00'
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: 'ARS',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(valor)
+    return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(valor)
   }
 
   function formatearFecha(fecha: string | null): string {
     if (!fecha) return '-'
     try {
-      const date = new Date(fecha)
-      return date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-    } catch {
-      return fecha
-    }
+      return new Date(fecha).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    } catch { return fecha }
   }
 
   return (
-    <div className="min-h-screen relative p-8 pb-20 overflow-hidden">
-      {/* Efectos de luz púrpura */}
-      <div className="absolute top-20 left-20 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse"></div>
-      <div className="absolute bottom-20 right-20 w-96 h-96 bg-purple-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+    <div className="min-h-screen bg-[#000000] text-white relative p-4 md:p-8 pb-20 overflow-x-hidden">
+      {/* GrowLabs Auras */}
+      <div className="fixed top-[-10%] right-[-10%] w-[500px] h-[500px] bg-[#00FF88]/10 rounded-full blur-[120px] pointer-events-none z-0"></div>
+      <div className="fixed bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-[#1E3A8A]/10 rounded-full blur-[120px] pointer-events-none z-0"></div>
 
-      <div className="max-w-7xl mx-auto space-y-8 relative z-10">
+      <div className="max-w-7xl mx-auto space-y-10 relative z-10">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-4">
             <Button
               onClick={() => router.push('/admisiones')}
-              variant="outline"
-              className="border-purple-500/50 text-purple-400 hover:bg-purple-500/20"
+              variant="ghost"
+              className="text-gray-400 hover:text-[#00FF88] hover:bg-[#00FF88]/10 group transition-all rounded-full px-4"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Volver
+              <ArrowLeft className="h-4 w-4 mr-2 group-hover:-translate-x-1 transition-transform" />
+              Regresar
             </Button>
-          </div>
-          <div>
-            <h1 className="text-4xl font-bold mb-2 tracking-tight">
-              <span className="bg-gradient-to-r from-purple-400 to-pink-300 bg-clip-text text-transparent">
-                Resúmenes Admisiones Clínicas
-              </span>
+            <h1 className="text-4xl md:text-5xl font-black tracking-tighter">
+              EXPLORADOR DE <span className="text-[#00FF88]">RESÚMENES</span>
             </h1>
           </div>
-        </div>
 
-        {/* Selectores de Mes y Año */}
-        <div 
-          className="p-6 rounded-xl mb-6"
-          style={{
-            background: 'rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(168, 85, 247, 0.3)',
-          }}
-        >
-          <div className="flex items-center gap-4">
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-300 mb-2">Mes</label>
-              <select
-                value={mes}
-                onChange={(e) => setMes(parseInt(e.target.value, 10))}
-                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-              >
-                {MESES.map(m => (
-                  <option key={m.value} value={m.value} className="bg-gray-800">
-                    {m.label}
-                  </option>
-                ))}
-              </select>
+          <div
+            className="flex items-center gap-4 p-2 bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-2xl"
+          >
+            <div className="flex flex-col px-4 border-r border-white/10">
+              <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Periodo</span>
+              <span className="text-sm font-bold text-[#00FF88]">{MESES[mes - 1].label} {anio}</span>
             </div>
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-300 mb-2">Año</label>
-              <input
-                type="number"
-                value={anio}
-                onChange={(e) => setAnio(parseInt(e.target.value, 10) || new Date().getFullYear())}
-                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                min="2020"
-                max="2100"
-              />
-            </div>
+            <select
+              value={mes}
+              onChange={(e) => setMes(parseInt(e.target.value, 10))}
+              className="bg-transparent text-sm font-bold focus:outline-none cursor-pointer hover:text-[#00FF88] transition-colors appearance-none"
+            >
+              {MESES.map(m => <option key={m.value} value={m.value} className="bg-black text-white">{m.label.substring(0, 3)}</option>)}
+            </select>
+            <input
+              type="number"
+              value={anio}
+              onChange={(e) => setAnio(parseInt(e.target.value, 10) || anio)}
+              className="bg-transparent text-sm font-bold w-16 focus:outline-none hover:text-[#00FF88] transition-colors"
+              min="2020"
+              max="2100"
+            />
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-2 mb-6">
-          <button
-            onClick={() => setTabActiva('medicos')}
-            className={`px-6 py-3 rounded-lg font-medium transition-all ${
-              tabActiva === 'medicos'
-                ? 'bg-purple-500/30 text-purple-300 border border-purple-500/50'
-                : 'bg-white/5 text-gray-400 hover:bg-white/10'
-            }`}
-          >
-            Resumen por Médico
-          </button>
-          <button
-            onClick={() => setTabActiva('prestadores')}
-            className={`px-6 py-3 rounded-lg font-medium transition-all ${
-              tabActiva === 'prestadores'
-                ? 'bg-purple-500/30 text-purple-300 border border-purple-500/50'
-                : 'bg-white/5 text-gray-400 hover:bg-white/10'
-            }`}
-          >
-            Resumen por Prestador
-          </button>
-          <button
-            onClick={() => setTabActiva('historial')}
-            className={`px-6 py-3 rounded-lg font-medium transition-all ${
-              tabActiva === 'historial'
-                ? 'bg-purple-500/30 text-purple-300 border border-purple-500/50'
-                : 'bg-white/5 text-gray-400 hover:bg-white/10'
-            }`}
-          >
-            Historial
-          </button>
-          <button
-            onClick={() => setTabActiva('excel')}
-            className={`px-6 py-3 rounded-lg font-medium transition-all ${
-              tabActiva === 'excel'
-                ? 'bg-purple-500/30 text-purple-300 border border-purple-500/50'
-                : 'bg-white/5 text-gray-400 hover:bg-white/10'
-            }`}
-          >
-            Ver Excel Original
-          </button>
+        {/* Action Tabs */}
+        <div className="flex flex-wrap gap-2 p-1.5 bg-white/[0.02] border border-white/5 rounded-2xl backdrop-blur-md">
+          {[
+            { id: 'medicos', label: 'Resumen Médico', icon: TrendingUp },
+            { id: 'prestadores', label: 'Resumen Prestador', icon: Eye },
+            { id: 'historial', label: 'Historial', icon: History },
+            { id: 'excel', label: 'Data Original', icon: FileSpreadsheet }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setTabActiva(tab.id as any)}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all ${tabActiva === tab.id
+                ? 'bg-[#00FF88] text-black shadow-[0_0_20px_rgba(0,255,136,0.3)]'
+                : 'text-gray-500 hover:text-white hover:bg-white/5'
+                }`}
+            >
+              <tab.icon className="h-4 w-4" />
+              {tab.label}
+            </button>
+          ))}
         </div>
 
-        {/* Contenido de Tabs */}
-        {tabActiva === 'prestadores' && (
-          <div 
-            className="rounded-2xl shadow-2xl overflow-hidden p-8"
-            style={{
-              background: 'rgba(255, 255, 255, 0.1)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(168, 85, 247, 0.3)',
-            }}
-          >
-            {loading ? (
-              <div className="text-center py-12 text-gray-400">Cargando resúmenes...</div>
-            ) : resumenesPorPrestador.length === 0 ? (
-              <div className="text-center py-12 text-gray-400">
-                No hay datos para el mes {MESES[mes - 1]?.label} {anio}
-              </div>
-            ) : (
-              <>
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-2xl font-bold text-purple-400">Resumen por Prestador</h2>
-                  <Button
-                    onClick={handleExportarPDFPrestadores}
-                    variant="outline"
-                    className="border-purple-500/50 text-purple-400 hover:bg-purple-500/20"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Exportar PDF Completo
-                  </Button>
+        {/* Content Area */}
+        <div className="relative">
+          {tabActiva === 'prestadores' && (
+            <div className="rounded-[32px] border border-white/10 bg-[#000000]/50 backdrop-blur-3xl p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="flex justify-between items-center border-b border-white/5 pb-6">
+                <div className="space-y-1">
+                  <h2 className="text-2xl font-black tracking-tight">VISTA POR <span className="text-[#00FF88]">PRESTADORES</span></h2>
+                  <p className="text-gray-500 text-xs font-mono uppercase tracking-[0.2em]">Liquidación Consolidada</p>
                 </div>
+                <Button
+                  onClick={handleExportarPDFPrestadores}
+                  className="bg-[#00FF88] hover:bg-[#00FF88]/90 text-black font-black rounded-xl px-8 shadow-lg shadow-[#00FF88]/20 transition-all hover:scale-105"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  EXPORTAR TODO
+                </Button>
+              </div>
 
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-white/10">
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400">Prestador</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400">Cantidad</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400">Valor Unitario</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400">Total</th>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 w-48">Acciones</th>
+              {loading ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-4">
+                  <div className="h-12 w-12 border-2 border-t-[#00FF88] border-white/10 rounded-full animate-spin"></div>
+                  <span className="text-xs font-mono text-gray-500 uppercase tracking-widest">Sincronizando registros...</span>
+                </div>
+              ) : resumenesPorPrestador.length === 0 ? (
+                <div className="text-center py-20 border-2 border-dashed border-white/5 rounded-3xl">
+                  <p className="text-gray-500 font-mono italic uppercase tracking-widest">No se encontraron liquidaciones para {MESES[mes - 1]?.label}</p>
+                </div>
+              ) : (
+                <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.01]">
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-white/5 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">
+                      <tr>
+                        <th className="px-8 py-5">Prestador</th>
+                        <th className="px-8 py-5 text-right font-mono">Cantidad</th>
+                        <th className="px-8 py-5 text-right font-mono">Unitario</th>
+                        <th className="px-8 py-5 text-right font-mono text-[#00FF88]">Total</th>
+                        <th className="px-8 py-5 text-center">Acciones</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-white/5">
                       {resumenesPorPrestador.map((resumen, idx) => {
                         const clave = resumen.medico_id || resumen.medico_nombre
                         const estaExpandido = prestadorExpandido === clave
@@ -432,66 +502,68 @@ export default function ResumenesAdmisionesPage() {
                         const estaCargando = loadingDetallePacientes === clave
 
                         return (
-                          <>
-                            <tr key={idx} className="border-b border-white/5 hover:bg-white/5">
-                              <td className="px-4 py-3 text-white font-medium">{resumen.medico_nombre}</td>
-                              <td className="px-4 py-3 text-right text-gray-300">{resumen.cantidad}</td>
-                              <td className="px-4 py-3 text-right text-gray-300">{formatearMoneda(resumen.valor_unitario)}</td>
-                              <td className="px-4 py-3 text-right text-gray-300 font-semibold">{formatearMoneda(resumen.total)}</td>
-                              <td className="px-4 py-3 text-center">
+                          <React.Fragment key={idx}>
+                            <tr className={`hover:bg-white/[0.03] transition-colors ${estaExpandido ? 'bg-[#00FF88]/5' : ''}`}>
+                              <td className="px-8 py-5">
+                                <span className={`font-bold tracking-tight ${estaExpandido ? 'text-[#00FF88]' : 'text-white'}`}>
+                                  {resumen.medico_nombre}
+                                </span>
+                              </td>
+                              <td className="px-8 py-5 text-right font-mono font-bold">{resumen.cantidad}</td>
+                              <td className="px-8 py-5 text-right font-mono text-gray-400">{formatearMoneda(resumen.valor_unitario)}</td>
+                              <td className="px-8 py-5 text-right font-mono font-black text-[#00FF88] scale-110 origin-right transition-transform">
+                                {formatearMoneda(resumen.total)}
+                              </td>
+                              <td className="px-8 py-5">
                                 <div className="flex items-center justify-center gap-2">
                                   <Button
                                     onClick={() => cargarDetallePacientes(resumen)}
-                                    variant="outline"
+                                    variant="ghost"
                                     size="sm"
-                                    className="border-purple-500/50 text-purple-400 hover:bg-purple-500/20"
-                                    disabled={estaCargando}
+                                    className={`rounded-lg transition-all ${estaExpandido ? 'bg-[#00FF88] text-black' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
                                   >
-                                    <Eye className="h-4 w-4 mr-1" />
-                                    {estaCargando ? 'Cargando...' : estaExpandido ? 'Ocultar' : 'Ver'}
+                                    <Eye className="h-4 w-4" />
                                   </Button>
                                   <Button
                                     onClick={() => handleExportarPDFPrestadorIndividual(resumen)}
-                                    variant="outline"
+                                    variant="ghost"
                                     size="sm"
-                                    className="border-purple-500/50 text-purple-400 hover:bg-purple-500/20"
+                                    className="text-gray-500 hover:text-[#00FF88] hover:bg-[#00FF88]/10 rounded-lg"
                                   >
-                                    <Download className="h-4 w-4 mr-1" />
-                                    PDF
+                                    <FileDown className="h-4 w-4" />
                                   </Button>
                                 </div>
                               </td>
                             </tr>
-                            {estaExpandido && detalles.length > 0 && (
-                              <tr>
-                                <td colSpan={5} className="px-4 py-4 bg-gray-900/50">
-                                  <div className="space-y-4">
-                                    <h3 className="text-lg font-semibold text-purple-400 mb-3">
-                                      Pacientes atendidos por {resumen.medico_nombre}
-                                    </h3>
-                                    <div className="overflow-x-auto">
+                            {estaExpandido && (
+                              <tr className="bg-[#00FF88]/[0.02]">
+                                <td colSpan={5} className="p-0 border-none">
+                                  <div className="px-8 py-8 animate-in fade-in slide-in-from-top-2 duration-300">
+                                    <div className="rounded-2xl border border-[#00FF88]/20 bg-black/40 overflow-hidden">
                                       <table className="w-full text-xs">
-                                        <thead>
-                                          <tr className="border-b border-white/10">
-                                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-400">Fecha</th>
-                                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-400">Paciente</th>
-                                            <th className="px-3 py-2 text-right text-xs font-semibold text-gray-400">Valor</th>
+                                        <thead className="bg-[#00FF88]/10 text-[9px] font-black text-[#00FF88] uppercase tracking-[0.3em]">
+                                          <tr>
+                                            <th className="px-6 py-4">Fecha</th>
+                                            <th className="px-6 py-4">Paciente</th>
+                                            <th className="px-6 py-4 text-right">Monto Unitario</th>
                                           </tr>
                                         </thead>
-                                        <tbody>
+                                        <tbody className="divide-y divide-white/5">
                                           {detalles.map((detalle) => (
-                                            <tr key={detalle.id} className="border-b border-white/5 hover:bg-white/5">
-                                              <td className="px-3 py-2 text-gray-300">{formatearFecha(detalle.fecha)}</td>
-                                              <td className="px-3 py-2 text-gray-300">{detalle.paciente || '-'}</td>
-                                              <td className="px-3 py-2 text-right text-gray-300 font-semibold">{formatearMoneda(detalle.importe_calculado || detalle.monto_facturado)}</td>
+                                            <tr key={detalle.id} className="hover:bg-[#00FF88]/5 transition-colors">
+                                              <td className="px-6 py-4 font-mono text-gray-500">{formatearFecha(detalle.fecha)}</td>
+                                              <td className="px-6 py-4 font-bold text-gray-300">{detalle.paciente || '---'}</td>
+                                              <td className="px-6 py-4 text-right font-mono font-bold text-[#00FF88]">
+                                                {formatearMoneda(detalle.importe_calculado || detalle.monto_facturado)}
+                                              </td>
                                             </tr>
                                           ))}
                                         </tbody>
-                                        <tfoot>
-                                          <tr className="bg-gray-800/50 font-bold">
-                                            <td colSpan={2} className="px-3 py-2 text-purple-400">Total</td>
-                                            <td className="px-3 py-2 text-right text-purple-400">
-                                              {formatearMoneda(detalles.reduce((sum, d) => sum + (d.importe_calculado || d.monto_facturado || 0), 0))}
+                                        <tfoot className="bg-[#00FF88]/5">
+                                          <tr>
+                                            <td colSpan={2} className="px-6 py-4 text-[10px] uppercase font-black tracking-widest text-[#00FF88]">Total Consolidado</td>
+                                            <td className="px-6 py-4 text-right font-mono font-black text-xl text-[#00FF88]">
+                                              {formatearMoneda(resumen.total)}
                                             </td>
                                           </tr>
                                         </tfoot>
@@ -501,155 +573,158 @@ export default function ResumenesAdmisionesPage() {
                                 </td>
                               </tr>
                             )}
-                          </>
+                          </React.Fragment>
                         )
                       })}
-                      <tr className="bg-gray-800/50 font-bold">
-                        <td className="px-4 py-3 text-purple-400">Total general</td>
-                        <td className="px-4 py-3 text-right text-purple-400">
-                          {resumenesPorPrestador.reduce((sum, r) => sum + r.cantidad, 0)}
-                        </td>
-                        <td className="px-4 py-3 text-right text-purple-400">-</td>
-                        <td className="px-4 py-3 text-right text-purple-400">
-                          {formatearMoneda(resumenesPorPrestador.reduce((sum, r) => sum + r.total, 0))}
-                        </td>
-                        <td></td>
-                      </tr>
                     </tbody>
                   </table>
                 </div>
-              </>
-            )}
-          </div>
-        )}
-        {tabActiva === 'medicos' && (
-          <div 
-            className="rounded-2xl shadow-2xl overflow-hidden p-8"
-            style={{
-              background: 'rgba(255, 255, 255, 0.1)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(168, 85, 247, 0.3)',
-            }}
-          >
-            {loading ? (
-              <div className="text-center py-12 text-gray-400">Cargando resúmenes...</div>
-            ) : resumenesPorMedico.length === 0 ? (
-              <div className="text-center py-12 text-gray-400">
-                No hay datos para el mes {MESES[mes - 1]?.label} {anio}
-              </div>
-            ) : (
-              <>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-white/10">
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400">Responsable de admisión</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400">Cantidad</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400">Valor unitario</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {resumenesPorMedico.map((resumen, idx) => (
-                        <tr key={idx} className="border-b border-white/5 hover:bg-white/5">
-                          <td className="px-4 py-3 text-white">{resumen.medico_nombre}</td>
-                          <td className="px-4 py-3 text-right text-gray-300">{resumen.cantidad}</td>
-                          <td className="px-4 py-3 text-right text-gray-300">
-                            ${resumen.valor_unitario.toLocaleString('es-AR')}
-                          </td>
-                          <td className="px-4 py-3 text-right text-purple-300 font-semibold">
-                            ${resumen.total.toLocaleString('es-AR')}
-                          </td>
-                        </tr>
-                      ))}
-                      {/* Fila Total General */}
-                      <tr className="border-t-2 border-purple-500/50 bg-purple-500/10">
-                        <td className="px-4 py-4 text-white font-bold">Total general</td>
-                        <td className="px-4 py-4 text-right text-white font-bold">{totalGeneral.totalCantidad}</td>
-                        <td className="px-4 py-4 text-right text-gray-300">-</td>
-                        <td className="px-4 py-4 text-right text-purple-300 font-bold">
-                          ${totalGeneral.totalMonto.toLocaleString('es-AR')}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            )}
-          </div>
-        )}
+              )}
+            </div>
+          )}
 
-        {tabActiva === 'historial' && (
-          <div 
-            className="rounded-2xl shadow-2xl overflow-hidden p-8"
-            style={{
-              background: 'rgba(255, 255, 255, 0.1)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(168, 85, 247, 0.3)',
-            }}
-          >
-            {loadingHistorial ? (
-              <div className="text-center py-12 text-gray-400">Cargando historial...</div>
-            ) : historial.length === 0 ? (
-              <div className="text-center py-12 text-gray-400">No hay liquidaciones en el historial</div>
-            ) : (
-              <div className="space-y-4">
-                {historial.map((liquidacion) => (
-                  <div
-                    key={liquidacion.id}
-                    className="p-4 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 cursor-pointer"
-                    onClick={() => {
-                      setLiquidacionExpandida(
-                        liquidacionExpandida === liquidacion.id ? null : liquidacion.id
-                      )
-                    }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-semibold text-white">
-                          {MESES[liquidacion.mes - 1]?.label} {liquidacion.anio}
+          {tabActiva === 'medicos' && (
+            <div className="rounded-[32px] border border-white/10 bg-[#000000]/50 backdrop-blur-3xl p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="flex items-center justify-between border-b border-white/5 pb-6">
+                <div className="space-y-1">
+                  <h2 className="text-2xl font-black tracking-tight">TABLERO <span className="text-[#00FF88]">FINANCIERO</span></h2>
+                  <p className="text-gray-500 text-xs font-mono uppercase tracking-[0.2em]">Agregación por Médico Responsable</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 space-y-2">
+                  <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Total Admisiones</span>
+                  <div className="text-4xl font-black text-white leading-none">{totalGeneral.totalCantidad}</div>
+                </div>
+                <div className="p-6 rounded-2xl bg-[#00FF88]/5 border border-[#00FF88]/10 space-y-2">
+                  <span className="text-[10px] font-black text-[#00FF88] uppercase tracking-widest">Total Liquidado</span>
+                  <div className="text-4xl font-black text-[#00FF88] leading-none transition-all hover:scale-105 origin-left">
+                    {formatearMoneda(totalGeneral.totalMonto)}
+                  </div>
+                </div>
+              </div>
+
+              <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.01]">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-white/5 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">
+                    <tr>
+                      <th className="px-8 py-5">Médico Responsable</th>
+                      <th className="px-8 py-5 text-right font-mono">Admisiones</th>
+                      <th className="px-8 py-5 text-right font-mono">Valor Fijo</th>
+                      <th className="px-8 py-5 text-right font-mono text-[#00FF88]">Total Acumulado</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {resumenesPorMedico.map((resumen, idx) => (
+                      <tr key={idx} className="hover:bg-white/[0.03] transition-colors group">
+                        <td className="px-8 py-5">
+                          <span className="font-bold tracking-tight text-white group-hover:text-[#00FF88] transition-colors">{resumen.medico_nombre}</span>
+                        </td>
+                        <td className="px-8 py-5 text-right font-mono font-bold">{resumen.cantidad}</td>
+                        <td className="px-8 py-5 text-right font-mono text-gray-500">{formatearMoneda(resumen.valor_unitario)}</td>
+                        <td className="px-8 py-5 text-right font-mono font-black text-[#00FF88]">{formatearMoneda(resumen.total)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {tabActiva === 'historial' && (
+            <div className="rounded-[32px] border border-white/10 bg-[#000000]/50 backdrop-blur-3xl p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="flex items-center justify-between border-b border-white/5 pb-6">
+                <div className="space-y-1">
+                  <h2 className="text-2xl font-black tracking-tight">LÍNEA DE TIEMPO <span className="text-[#00FF88]">HISTÓRICA</span></h2>
+                  <p className="text-gray-500 text-xs font-mono uppercase tracking-[0.2em]">Registro Maestro de Liquidaciones</p>
+                </div>
+              </div>
+
+              {loadingHistorial ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-4">
+                  <div className="h-12 w-12 border-2 border-t-[#00FF88] border-white/10 rounded-full animate-spin"></div>
+                </div>
+              ) : historial.length === 0 ? (
+                <div className="text-center py-20 border-2 border-dashed border-white/5 rounded-3xl">
+                  <p className="text-gray-500 font-mono italic uppercase tracking-widest">El historial de auditoría está vacío</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {historial.map((liq) => (
+                    <div
+                      key={liq.id}
+                      onClick={() => { setMes(liq.mes); setAnio(liq.anio); setTabActiva('medicos'); }}
+                      className="group p-6 rounded-2xl bg-white/[0.02] border border-white/10 hover:border-[#00FF88]/50 hover:bg-[#00FF88]/5 transition-all cursor-pointer relative overflow-hidden"
+                    >
+                      <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Eye className="h-4 w-4 text-[#00FF88]" />
+                      </div>
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-3 bg-white/5 rounded-xl text-gray-400 group-hover:text-[#00FF88] transition-colors">
+                            <Calendar className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <h4 className="font-black text-white uppercase tracking-tight">{MESES[liq.mes - 1]?.label} {liq.anio}</h4>
+                            <span className="text-[9px] font-mono text-gray-500 uppercase tracking-widest">Liquidación Finalizada</span>
+                          </div>
                         </div>
-                        <div className="text-sm text-gray-400">
-                          {liquidacion.total_consultas} admisiones • ${liquidacion.total_neto.toLocaleString('es-AR')}
+                        <div className="flex justify-between items-end border-t border-white/5 pt-4">
+                          <div className="flex flex-col">
+                            <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Admisiones</span>
+                            <span className="text-lg font-black text-white">{liq.total_consultas}</span>
+                          </div>
+                          <div className="flex flex-col items-end">
+                            <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Monto Total</span>
+                            <span className="text-lg font-black text-[#00FF88]">{formatearMoneda(liq.total_neto)}</span>
+                          </div>
                         </div>
                       </div>
-                      <Eye className="h-5 w-5 text-gray-400" />
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
-        {tabActiva === 'excel' && (
-          <div 
-            className="rounded-2xl shadow-2xl overflow-hidden p-8"
-            style={{
-              background: 'rgba(255, 255, 255, 0.1)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(168, 85, 247, 0.3)',
-            }}
-          >
-            {loadingExcel ? (
-              <div className="text-center py-12 text-gray-400">Cargando Excel...</div>
-            ) : !excelData ? (
-              <div className="text-center py-12 text-gray-400">
-                No hay Excel disponible para {MESES[mes - 1]?.label} {anio}
+          {tabActiva === 'excel' && (
+            <div className="rounded-[32px] border border-white/10 bg-[#000000]/50 backdrop-blur-3xl p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="flex items-center justify-between border-b border-white/5 pb-6">
+                <div className="space-y-1">
+                  <h2 className="text-2xl font-black tracking-tight">NÚCLEO DE <span className="text-[#00FF88]">DATOS</span></h2>
+                  <p className="text-gray-500 text-xs font-mono uppercase tracking-[0.2em]">Inspección Técnica Excel Original</p>
+                </div>
               </div>
-            ) : (
-              <ExcelDataTable 
-                data={excelData} 
-                especialidad="Admisiones Clínicas"
-                liquidacionId={liquidacionActual?.id}
-                mes={mes}
-                anio={anio}
-              />
-            )}
-          </div>
-        )}
+
+              {loadingExcel ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-4">
+                  <div className="h-12 w-12 border-2 border-t-[#00FF88] rounded-full animate-spin"></div>
+                </div>
+              ) : !excelData ? (
+                <div className="text-center py-20 border-2 border-dashed border-white/5 rounded-3xl">
+                  <p className="text-gray-500 font-mono italic uppercase tracking-widest">Sin datos de origen para este periodo</p>
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-white/10 overflow-hidden bg-black/40">
+                  <ExcelDataTable
+                    data={excelData}
+                    especialidad="Admisiones Clínicas"
+                    liquidacionId={liquidacionActual?.id}
+                    mes={mes}
+                    anio={anio}
+                    onCellUpdate={handleCellUpdate}
+                    onDeleteRow={handleDeleteRow}
+                    onDeleteRows={handleDeleteRows}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
 }
+
 

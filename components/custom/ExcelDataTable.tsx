@@ -14,12 +14,13 @@ interface ExcelDataTableProps {
   especialidad?: 'Pediatría' | 'Ginecología' | 'Admisiones Clínicas' | 'Guardias Clínicas'
   onCellUpdate?: (rowIndex: number, column: string, newValue: any) => Promise<void>
   onDeleteRow?: (rowIndex: number) => Promise<void>
+  onDeleteRows?: (indices: number[]) => Promise<void>
   liquidacionId?: string
   mes?: number
   anio?: number
 }
 
-export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, liquidacionId, mes, anio }: ExcelDataTableProps) {
+export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, onDeleteRows, liquidacionId, mes, anio }: ExcelDataTableProps) {
   const [rows, setRows] = useState<ExcelRow[]>(data.rows)
   const [saving, setSaving] = useState<{ [key: string]: boolean }>({})
   const [medicos, setMedicos] = useState<Medico[]>([])
@@ -450,13 +451,20 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
     }
   }, [rows, data, onDeleteRow])
 
-  // Funciones para eliminar múltiples filas (optimizado: batch)
-  const handleDeleteRows = useCallback(async (indices: Set<number>) => {
+  const handleDeleteRows = useCallback(async (indicesInput: Set<number> | number[]) => {
+    const indices = indicesInput instanceof Set ? indicesInput : new Set(indicesInput)
+
     if (onDeleteRow) {
-      // Eliminar en batch usando el callback del padre
-      const indicesArray = Array.from(indices).sort((a, b) => b - a) // Orden inverso para evitar problemas de índices
-      for (const index of indicesArray) {
-        await onDeleteRow(index)
+      const indicesArray = Array.from(indices).sort((a, b) => b - a)
+
+      if (onDeleteRows) {
+        // Usar eliminación por lotes si está disponible
+        await onDeleteRows(indicesArray)
+      } else {
+        // Fallback: eliminar uno por uno
+        for (const index of indicesArray) {
+          await onDeleteRow(index)
+        }
       }
     } else {
       // Fallback: solo actualizar local
@@ -464,7 +472,7 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
       setRows(updatedRows)
       data.rows = updatedRows
     }
-  }, [rows, data, onDeleteRow])
+  }, [rows, data, onDeleteRow, onDeleteRows])
 
   // Obtener filas filtradas por tipo
   const filasParticularesList = useMemo(() => {
@@ -545,7 +553,7 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
           data={data}
           onCellUpdate={onCellUpdate}
           onDeleteRow={handleDeleteRowLocal}
-          onDeleteAll={handleDeleteAllParticulares}
+          onDeleteRows={handleDeleteRows}
           allowEdit={true}
           allowDelete={true}
           mes={mes}
@@ -576,7 +584,7 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
           rows={filasSinHorarioList}
           data={data}
           onDeleteRow={handleDeleteRowLocal}
-          onDeleteAll={handleDeleteAllSinHorario}
+          onDeleteRows={handleDeleteRows}
           allowDelete={true}
           mes={mes}
           anio={anio}
@@ -614,7 +622,7 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
         rows={filasDuplicadasList}
         data={data}
         onDeleteRow={handleDeleteRowLocal}
-        onDeleteAll={handleDeleteAllDuplicados}
+        onDeleteRows={handleDeleteRows}
         allowDelete={true}
         mes={mes}
         anio={anio}
@@ -646,7 +654,7 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
           rows={filasResidenteFormativoList}
           data={data}
           onDeleteRow={handleDeleteRowLocal}
-          onDeleteAll={handleDeleteAllResidenteFormativo}
+          onDeleteRows={handleDeleteRows}
           allowDelete={true}
           mes={mes}
           anio={anio}
@@ -679,6 +687,7 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
         data={data}
         onCellUpdate={onCellUpdate}
         onDeleteRow={handleDeleteRowLocal}
+        onDeleteRows={handleDeleteRows}
         allowEdit={true}
         allowDelete={true}
         mes={mes}

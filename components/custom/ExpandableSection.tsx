@@ -21,6 +21,7 @@ interface ExpandableSectionProps {
   data: ExcelData
   onCellUpdate?: (rowIndex: number, column: string, newValue: any) => Promise<void>
   onDeleteRow?: (rowIndex: number) => Promise<void> | void
+  onDeleteRows?: (indices: number[]) => Promise<void> | void
   onDeleteAll?: () => Promise<void> | void
   allowEdit?: boolean
   allowDelete?: boolean
@@ -53,6 +54,7 @@ export function ExpandableSection({
   onCellUpdate,
   especialidad,
   onDeleteRow,
+  onDeleteRows,
   onDeleteAll,
   allowEdit = false,
   allowDelete = false,
@@ -502,13 +504,14 @@ export function ExpandableSection({
             )}
             {allowDelete && isExpanded && (
               <>
-                {selectedRows.size > 0 && (
+                {(selectedRows.size > 0 || (sectionKey !== 'detalle_completo' && count > 0)) && (
                   <Button
                     onClick={(e) => {
                       e.stopPropagation()
+                      const selectionCount = selectedRows.size > 0 ? selectedRows.size : count
                       setConfirmAction({
-                        type: 'multiple',
-                        count: selectedRows.size
+                        type: selectedRows.size > 0 ? 'multiple' : 'all',
+                        count: selectionCount
                       })
                       setShowConfirmModal(true)
                     }}
@@ -517,25 +520,9 @@ export function ExpandableSection({
                     className="mr-2"
                   >
                     <Trash2 className="h-4 w-4 mr-1" />
-                    Eliminar seleccionados ({selectedRows.size})
-                  </Button>
-                )}
-                {onDeleteAll && (
-                  <Button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setConfirmAction({
-                        type: 'all',
-                        count: count
-                      })
-                      setShowConfirmModal(true)
-                    }}
-                    size="sm"
-                    variant="destructive"
-                    className="mr-2"
-                  >
-                    <Trash2 className="h-4 w-4 mr-1" />
-                    Eliminar todos
+                    {selectedRows.size > 0
+                      ? `Eliminar seleccionados (${selectedRows.size})`
+                      : `Eliminar todos (${count})`}
                   </Button>
                 )}
               </>
@@ -1097,31 +1084,31 @@ export function ExpandableSection({
           if (!confirmAction) return
 
           try {
-            if (confirmAction.type === 'all' && onDeleteAll) {
-              // Eliminar todos
-              await onDeleteAll()
+            if (confirmAction.type === 'all') {
+              // Eliminar todos los de esta sección
+              if (onDeleteRows) {
+                // Obtener todos los índices originales de las filas de esta sección
+                const allIndices = rows.map((row) => {
+                  const filaExcel = (row as any).__fila_excel
+                  return rowIndexMap.get(filaExcel) ?? rowIndexMap.get(row) ?? -1
+                }).filter(idx => idx !== -1)
+
+                await onDeleteRows(allIndices)
+              } else if (onDeleteAll) {
+                await onDeleteAll()
+              }
               setSelectedRows(new Set())
-            } else if (confirmAction.type === 'multiple' && onDeleteRow) {
+            } else if (confirmAction.type === 'multiple' && (onDeleteRows || onDeleteRow)) {
               // Eliminar seleccionados
-              // IMPORTANTE: Obtener los índices originales ANTES de empezar a eliminar
-              // porque después de cada eliminación, los índices cambian al recargar los datos
-              const indicesArray = Array.from(selectedRows).sort((a, b) => b - a) // Orden inverso
+              const indicesArray = Array.from(selectedRows).sort((a, b) => b - a)
 
-              // Obtener los fila_excel de todas las filas seleccionadas ANTES de eliminar
-              const filasExcel = indicesArray
-                .map(index => {
-                  const row = data.rows[index]
-                  return row ? (row as any).__fila_excel : null
-                })
-                .filter((filaExcel): filaExcel is number => filaExcel !== null && filaExcel !== undefined)
-
-              // Eliminar cada fila usando su índice original
-              // El handleDeleteRow ya maneja la recarga de datos después de cada eliminación
-              // Pero como estamos usando fila_excel, no importa si los índices cambian
-              for (const index of indicesArray) {
-                // Verificar que la fila todavía existe antes de intentar eliminarla
-                if (index < data.rows.length) {
-                  await onDeleteRow(index)
+              if (onDeleteRows) {
+                await onDeleteRows(indicesArray)
+              } else if (onDeleteRow) {
+                for (const index of indicesArray) {
+                  if (index < data.rows.length) {
+                    await onDeleteRow(index)
+                  }
                 }
               }
               setSelectedRows(new Set())

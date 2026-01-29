@@ -7,7 +7,7 @@ import { MesSelectorModal } from '@/components/custom/MesSelectorModal'
 import { NotificationModal, NotificationType } from '@/components/custom/NotificationModal'
 import { readExcelFileAdmisiones, ExcelData } from '@/lib/excel-reader'
 import { procesarExcelAdmisiones } from '@/lib/admisiones-processor'
-import { AlertTriangle, XCircle, AlertCircle, Sparkles, ArrowLeft, X, Upload, FileText } from 'lucide-react'
+import { AlertTriangle, XCircle, AlertCircle, Sparkles, ArrowLeft, X, Upload, FileText, Coins } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 
@@ -207,165 +207,201 @@ export default function AdmisionesPage() {
     }
 
     return (
-        <div className="min-h-screen relative p-8 pb-20 overflow-hidden">
-            {/* Efectos de luz púrpura */}
-            <div className="absolute top-20 left-20 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse"></div>
-            <div className="absolute bottom-20 right-20 w-96 h-96 bg-purple-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="min-h-screen bg-[#000000] text-white relative p-4 md:p-8 pb-20 overflow-x-hidden">
+            {/* GrowLabs Ultra-Dark Auras */}
+            <div className="fixed top-[-10%] right-[-10%] w-[500px] h-[500px] bg-[#00FF88]/10 rounded-full blur-[120px] pointer-events-none z-0 animate-pulse"></div>
+            <div className="fixed bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-[#1E3A8A]/15 rounded-full blur-[120px] pointer-events-none z-0 animate-pulse delay-700"></div>
 
-            <div className="max-w-6xl mx-auto space-y-8 relative z-10">
-                {/* Header con Logo */}
-                <div className="flex items-center justify-between mb-8">
-                    <div className="flex items-center gap-4">
+            <div className="max-w-6xl mx-auto space-y-10 relative z-10">
+                {/* Header Section */}
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                    <div className="space-y-4">
                         <Button
                             onClick={() => router.push('/')}
-                            variant="outline"
-                            className="border-purple-500/50 text-purple-400 hover:bg-purple-500/20"
+                            variant="ghost"
+                            className="text-gray-400 hover:text-[#00FF88] hover:bg-[#00FF88]/10 group transition-all rounded-full px-4"
                         >
-                            <ArrowLeft className="h-4 w-4 mr-2" />
-                            Volver
+                            <ArrowLeft className="h-4 w-4 mr-2 group-hover:-translate-x-1 transition-transform" />
+                            Regresar
                         </Button>
-                    </div>
-                    <div>
-                        <div className="flex items-center gap-4 mb-4">
-                            <Link href="/" className="hover:opacity-80 transition-opacity">
-                                <img
-                                    src="/logogrow.png"
-                                    alt="Grow Labs"
-                                    className="h-16 w-auto drop-shadow-2xl"
-                                    style={{
-                                        filter: 'drop-shadow(0 0 20px rgba(168, 85, 247, 0.5))'
-                                    }}
-                                />
-                            </Link>
+                        <div className="flex items-center gap-6">
+                            <div className="relative">
+                                <Link href="/" className="block relative z-10">
+                                    <img
+                                        src="/logogrow.png"
+                                        alt="Grow Labs"
+                                        className="h-20 w-auto drop-shadow-[0_0_15px_rgba(0,255,136,0.3)]"
+                                    />
+                                </Link>
+                                <div className="absolute inset-0 bg-[#00FF88]/20 blur-2xl rounded-full scale-75"></div>
+                            </div>
                             <div>
-                                <h1 className="text-4xl font-bold mb-2 tracking-tight">
-                                    <span className="bg-gradient-to-r from-purple-400 to-pink-300 bg-clip-text text-transparent">
-                                        Módulo Admisiones Clínicas
-                                    </span>
+                                <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-none">
+                                    ADMISIONES <span className="text-[#00FF88]">CLÍNICAS</span>
                                 </h1>
-                                <p className="text-gray-400 flex items-center gap-2">
-                                    <Sparkles className="h-4 w-4 text-purple-400" />
-                                    Procesamiento de liquidaciones por admisión
+                                <p className="text-gray-500 font-mono text-sm mt-2 flex items-center gap-2">
+                                    <Sparkles className="h-4 w-4 text-[#00FF88] animate-pulse" />
+                                    PREMIUM POWERHOUSE • LIQUIDATION ENGINE v2.0
                                 </p>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Upload Excel Card */}
-                <div
-                    className="relative rounded-2xl shadow-2xl overflow-hidden p-8"
-                    style={{
-                        background: 'rgba(255, 255, 255, 0.1)',
-                        backdropFilter: 'blur(20px)',
-                        border: '1px solid rgba(168, 85, 247, 0.3)',
-                        boxShadow: '0 8px 32px 0 rgba(168, 85, 247, 0.3)',
-                    }}
-                >
-                    {/* Borde brillante animado */}
-                    <div
-                        className="absolute inset-0 rounded-2xl"
-                        style={{
-                            background: 'linear-gradient(45deg, transparent, rgba(168, 85, 247, 0.3), transparent)',
-                            animation: 'borderGlow 3s ease-in-out infinite',
-                        }}
-                    ></div>
-                    <div className="relative">
-                        <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-2xl font-bold text-purple-400 flex items-center gap-2">
-                                <Upload className="h-6 w-6" />
-                                Cargar Liquidación
-                            </h2>
-                            <Button
-                                onClick={() => router.push('/admisiones/resumenes')}
-                                variant="outline"
-                                className="border-purple-500/50 text-purple-400 hover:bg-purple-500/20"
-                            >
-                                Ver Resúmenes
-                            </Button>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    {/* Main Interaction Area */}
+                    <div className="lg:col-span-8 space-y-8">
+                        {/* Upload Card */}
+                        <div
+                            className="relative group rounded-3xl overflow-hidden p-[1px] transition-all hover:scale-[1.01]"
+                            style={{
+                                background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(0,255,136,0.2) 100%)'
+                            }}
+                        >
+                            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 bg-[radial-gradient(circle_at_50%_0%,rgba(0,255,136,0.15),transparent_70%)]"></div>
+                            <div className="relative bg-[#000000]/90 backdrop-blur-3xl rounded-[23px] p-8 space-y-8">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-3 bg-[#00FF88]/10 rounded-2xl">
+                                            <Upload className="h-6 w-6 text-[#00FF88]" />
+                                        </div>
+                                        <h2 className="text-2xl font-bold tracking-tight">Carga de Datos</h2>
+                                    </div>
+                                    <Button
+                                        onClick={() => router.push('/admisiones/resumenes')}
+                                        variant="outline"
+                                        className="border-white/10 hover:border-[#00FF88] hover:text-[#00FF88] transition-all rounded-xl px-6 bg-white/5"
+                                    >
+                                        Explorar Historial
+                                    </Button>
+                                </div>
+
+                                <div className="border border-dashed border-white/10 rounded-2xl p-1 bg-white/[0.02]">
+                                    <UploadExcel onUpload={handleUpload} isProcessing={isProcessing} />
+                                </div>
+
+                                {error && (
+                                    <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-start gap-4 animate-in fade-in slide-in-from-top-2">
+                                        <XCircle className="h-6 w-6 text-red-500 shrink-0" />
+                                        <div>
+                                            <h3 className="font-bold text-red-400">Error de Procesamiento</h3>
+                                            <p className="text-sm text-red-400/80">{error}</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
-                        <UploadExcel onUpload={handleUpload} isProcessing={isProcessing} />
-
-                        {/* Mensaje de error */}
-                        {error && (
-                            <div className="mt-6 bg-red-500/10 border border-red-500/30 rounded-lg p-4 flex items-start gap-3 text-red-400">
-                                <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" />
-                                <div>
-                                    <h3 className="font-semibold">Error de Procesamiento</h3>
-                                    <p className="text-sm opacity-90">{error}</p>
+                        {/* Summary View (if data exists) */}
+                        {resultadoProcesamiento && resultadoProcesamiento.filasExcluidas && resultadoProcesamiento.filasExcluidas.length > 0 && excelData && (
+                            <div className="rounded-3xl border border-white/10 bg-[#000000]/50 backdrop-blur-xl p-8 space-y-6 animate-in fade-in zoom-in-95 duration-500">
+                                <div className="flex items-center gap-4">
+                                    <div className="p-3 bg-amber-500/10 rounded-2xl text-amber-500">
+                                        <AlertTriangle className="h-6 w-6" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-bold">Inconsistencias Detectadas</h3>
+                                        <p className="text-gray-500 text-sm">Registros excluidos por falta de integridad o duplicidad.</p>
+                                    </div>
                                 </div>
+
+                                <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm text-left">
+                                            <thead className="bg-white/5 text-gray-400 font-mono text-xs uppercase tracking-widest">
+                                                <tr>
+                                                    <th className="px-6 py-4">Fila</th>
+                                                    <th className="px-6 py-4">Motivo</th>
+                                                    <th className="px-6 py-4">Detalle</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-white/5">
+                                                {resultadoProcesamiento.filasExcluidas.slice(0, 10).map((fila: any, i: number) => (
+                                                    <tr key={i} className="hover:bg-white/[0.03] transition-colors">
+                                                        <td className="px-6 py-4 font-mono text-[#00FF88]">{fila.numeroFila}</td>
+                                                        <td className="px-6 py-4">
+                                                            <span className="px-2 py-1 rounded-md bg-red-500/10 text-red-400 text-[10px] font-bold uppercase tracking-wider">
+                                                                {fila.razon === 'sin_fecha' ? 'Fecha Ausente' :
+                                                                    fila.razon === 'fecha_invalida' ? 'Rango Inválido' : 'Duplicado'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-gray-500 truncate max-w-xs transition-all hover:max-w-none">
+                                                            {Object.values(fila.datos).join(' | ')}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                {resultadoProcesamiento.filasExcluidas.length > 10 && (
+                                    <p className="text-center text-gray-600 text-xs italic">Ver archivos de log para el detalle completo ({resultadoProcesamiento.filasExcluidas.length} filas en total)</p>
+                                )}
                             </div>
                         )}
                     </div>
-                </div>
 
-
-                {/* Reglas de Negocio */}
-                <div
-                    className="p-6 rounded-xl"
-                    style={{
-                        background: 'rgba(255, 255, 255, 0.1)',
-                        backdropFilter: 'blur(20px)',
-                        border: '1px solid rgba(255, 255, 255, 0.2)',
-                        boxShadow: '0 8px 32px 0 rgba(168, 85, 247, 0.2)',
-                    }}
-                >
-                    <h3 className="text-xl font-semibold text-gray-200 mb-4 flex items-center gap-2">
-                        <FileText className="h-5 w-5" />
-                        Reglas Vigentes
-                    </h3>
-                    <div className="space-y-4 text-sm text-gray-300">
-                        <div className="p-3 bg-white/5 rounded-lg border border-white/5">
-                            <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Valor por Admisión</div>
-                            <div className="font-semibold text-white">$12,000</div>
-                            <div className="text-xs text-gray-400">Valor fijo por cada admisión procesada</div>
-                        </div>
-
-                        <div className="p-3 bg-white/5 rounded-lg border border-white/5">
-                            <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">
-                                <AlertTriangle className="h-3 w-3" />
-                                Regla A: Auto-Duplicados
-                            </div>
-                            <div className="text-sm mt-2">
-                                <div className="text-gray-300">
-                                    Si el mismo <strong>Doctor</strong> admite al mismo <strong>Paciente</strong> en la misma <strong>Fecha</strong> múltiples veces, se cuenta como <strong className="text-purple-400">1 admisión</strong>.
+                    {/* Sidebar / Rules Panel */}
+                    <div className="lg:col-span-4 space-y-8">
+                        {/* THE 12000 VALUE CARD - PREMIUM POSITION */}
+                        <div
+                            className="p-8 rounded-[32px] bg-gradient-to-br from-[#00FF88] to-[#047857] text-[#000000] shadow-[0_20px_50px_rgba(0,255,136,0.3)] relative overflow-hidden group hover:scale-[1.03] transition-transform duration-500"
+                        >
+                            <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/20 rounded-full blur-3xl group-hover:translate-x-10 group-hover:-translate-y-10 transition-transform duration-700"></div>
+                            <div className="relative z-10 space-y-1">
+                                <p className="text-xs font-black uppercase tracking-[0.2em] opacity-80">Tarifa Mensual Vigente</p>
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-6xl font-black tracking-tighter">$12.000</span>
+                                    <span className="text-xs font-bold bg-[#000000] text-[#00FF88] px-2 py-1 rounded-full">v2.1</span>
                                 </div>
+                                <p className="text-sm font-medium pt-4 border-t border-black/10 mt-4 leading-snug">
+                                    Valor neto consolidado por cada admisión procesada y aprobada.
+                                </p>
                             </div>
                         </div>
 
-                        <div className="p-3 bg-white/5 rounded-lg border border-white/5">
-                            <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 flex items-center gap-1">
-                                <AlertCircle className="h-3 w-3" />
-                                Regla B: First Come First Served (FCFS)
+                        {/* Rules Section */}
+                        <div className="rounded-3xl border border-white/10 bg-[#000000]/50 backdrop-blur-3xl p-8 space-y-8">
+                            <div className="flex items-center gap-3">
+                                <FileText className="h-5 w-5 text-[#00FF88]" />
+                                <h3 className="text-xl font-bold tracking-tight">Inteligencia de Negocio</h3>
                             </div>
-                            <div className="text-sm mt-2 space-y-2">
-                                <div className="text-gray-300">
-                                    Si un <strong>Paciente</strong> aparece en la misma <strong>Fecha</strong> pero con <strong className="text-red-400">DIFERENTES Doctores</strong>:
+
+                            <div className="space-y-6">
+                                {/* Rule Item 1 */}
+                                <div className="group space-y-3">
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-[2px] w-4 bg-[#00FF88] group-hover:w-8 transition-all"></div>
+                                        <span className="text-[10px] font-black uppercase text-gray-500 tracking-[0.2em]">Regla A: Consolidación</span>
+                                    </div>
+                                    <p className="text-[13px] text-gray-400 group-hover:text-white transition-colors leading-relaxed">
+                                        Mismo <strong className="text-white">Profesional</strong> + Mismo <strong className="text-white">Paciente</strong> + Misma <strong className="text-white">Fecha</strong> →
+                                        Ejecuta <span className="text-[#00FF88] font-bold underline decoration-[#00FF88]/30">Auto-Deduplicación</span>.
+                                    </p>
                                 </div>
-                                <ul className="text-xs space-y-1 ml-2 text-gray-300">
-                                    <li className="flex items-start gap-2">
-                                        <span className="text-purple-400">•</span>
-                                        <span>Se mantiene el <strong>primer registro</strong> encontrado en el archivo</span>
-                                    </li>
-                                    <li className="flex items-start gap-2">
-                                        <span className="text-purple-400">•</span>
-                                        <span>Se descartan los registros posteriores (marcados como duplicados)</span>
-                                    </li>
-                                    <li className="flex items-start gap-2">
-                                        <span className="text-purple-400">•</span>
-                                        <span className="text-red-400">NO se suman</span> - Solo un doctor recibe el pago por paciente/día
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
 
-                        <div className="p-3 bg-white/5 rounded-lg border border-white/5">
-                            <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Formato del Archivo</div>
-                            <div className="text-xs text-gray-400 space-y-1">
-                                <div>• Filas 1-9: Metadata (se ignoran automáticamente)</div>
-                                <div>• Fila 10: Headers (Paciente, Fecha Visita, Responsable, etc.)</div>
-                                <div>• Desde fila 11: Datos a procesar</div>
+                                {/* Rule Item 2 */}
+                                <div className="group space-y-3">
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-[2px] w-4 bg-[#00FF88] group-hover:w-8 transition-all"></div>
+                                        <span className="text-[10px] font-black uppercase text-gray-500 tracking-[0.2em]">Regla B: Prioridad Directa</span>
+                                    </div>
+                                    <p className="text-[13px] text-gray-400 group-hover:text-white transition-colors leading-relaxed">
+                                        Sistema <strong className="text-[#00FF88]">FCFS</strong> (First-Come, First-Served) activo. Se liquida únicamente al primer responsable registrado por paciente/día.
+                                    </p>
+                                </div>
+
+                                {/* Format Info */}
+                                <div className="pt-6 border-t border-white/5 space-y-4">
+                                    <div className="flex items-center justify-between text-[11px] font-bold text-gray-500 uppercase tracking-widest">
+                                        <span>Estructura Requerida</span>
+                                        <span className="text-[#00FF88]">XLSX</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2 font-mono text-[10px]">
+                                        <div className="bg-white/5 p-2 rounded-lg border border-white/5 text-center">HEADER: FILA 10</div>
+                                        <div className="bg-white/5 p-2 rounded-lg border border-white/5 text-center">DATA: FILA 11+</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -392,95 +428,19 @@ export default function AdmisionesPage() {
                 message={notification.message}
             />
 
-            {/* Indicador de guardado */}
+            {/* Global Loader Overlay */}
             {isGuardando && (
-                <div className="fixed bottom-4 right-4 p-4 rounded-lg bg-purple-500/20 border border-purple-500/50 text-purple-400">
-                    Guardando datos en la base de datos...
-                </div>
-            )}
-
-            {/* Sección de filas excluidas */}
-            {resultadoProcesamiento && resultadoProcesamiento.filasExcluidas && resultadoProcesamiento.filasExcluidas.length > 0 && excelData && (
-                <div className="max-w-6xl mx-auto mt-8 relative z-10">
-                    <div
-                        className="rounded-2xl shadow-2xl overflow-hidden p-6 mb-6"
-                        style={{
-                            background: 'rgba(239, 68, 68, 0.15)',
-                            backdropFilter: 'blur(20px)',
-                            border: '1px solid rgba(239, 68, 68, 0.5)',
-                        }}
-                    >
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-3">
-                                <XCircle className="h-6 w-6 text-red-400 flex-shrink-0" />
-                                <div>
-                                    <h3 className="text-xl font-bold text-red-400">
-                                        {resultadoProcesamiento.filasExcluidas.length} fila{resultadoProcesamiento.filasExcluidas.length > 1 ? 's' : ''} excluida{resultadoProcesamiento.filasExcluidas.length > 1 ? 's' : ''} del procesamiento
-                                    </h3>
-                                    <p className="text-sm text-gray-400 mt-1">
-                                        Estas filas fueron excluidas porque no tienen fecha válida, tienen fecha fuera de rango o son duplicadas según las reglas FCFS.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm border-collapse">
-                                <thead>
-                                    <tr className="border-b border-white/10">
-                                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-400 sticky left-0 bg-gray-900/95 z-10" style={{ minWidth: '80px' }}>
-                                            Fila Excel
-                                        </th>
-                                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-400" style={{ minWidth: '150px' }}>
-                                            Razón
-                                        </th>
-                                        {excelData.headers.map((header, idx) => (
-                                            <th key={idx} className="px-3 py-2 text-left text-xs font-semibold text-gray-400" style={{ minWidth: '120px' }}>
-                                                {header}
-                                            </th>
-                                        ))}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {resultadoProcesamiento.filasExcluidas.map((filaExcluida: any, idx: number) => (
-                                        <tr key={idx} className="border-b border-white/5 hover:bg-white/5">
-                                            <td className="px-3 py-2 text-xs text-gray-300 sticky left-0 bg-gray-900/95 z-10">
-                                                {filaExcluida.numeroFila}
-                                            </td>
-                                            <td className="px-3 py-2 text-xs text-red-400">
-                                                {filaExcluida.razon === 'sin_fecha' && (
-                                                    <span className="flex items-center gap-1">
-                                                        <X className="h-3 w-3" />
-                                                        Sin fecha válida
-                                                    </span>
-                                                )}
-                                                {filaExcluida.razon === 'fecha_invalida' && (
-                                                    <span className="flex items-center gap-1">
-                                                        <AlertTriangle className="h-3 w-3" />
-                                                        Fecha fuera de rango
-                                                    </span>
-                                                )}
-                                                {filaExcluida.razon === 'duplicado' && (
-                                                    <span className="flex items-center gap-1">
-                                                        <AlertCircle className="h-3 w-3" />
-                                                        Duplicado (FCFS)
-                                                    </span>
-                                                )}
-                                            </td>
-                                            {excelData.headers.map((header, colIdx) => (
-                                                <td key={colIdx} className="px-3 py-2 text-xs text-gray-300">
-                                                    {filaExcluida.datos[header] || '-'}
-                                                </td>
-                                            ))}
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                <div className="fixed inset-0 z-[100] bg-[#000000]/80 backdrop-blur-md flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-300">
+                    <div className="relative mb-8">
+                        <div className="h-24 w-24 rounded-full border-t-2 border-r-2 border-[#00FF88] animate-spin"></div>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <Sparkles className="h-8 w-8 text-[#00FF88] animate-pulse" />
                         </div>
                     </div>
+                    <h2 className="text-3xl font-black tracking-tight mb-2">SINCRONIZANDO <span className="text-[#00FF88]">DATOS</span></h2>
+                    <p className="text-gray-500 font-mono text-sm max-w-xs">Integrando registros en el motor de liquidación GrowLabs...</p>
                 </div>
             )}
         </div>
     )
 }
-
