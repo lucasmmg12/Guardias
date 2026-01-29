@@ -22,7 +22,7 @@ function extractPeriodo(row2: any[]): { desde: string; hasta: string } | null {
 
   // Buscar el texto que contiene las fechas
   const text = row2.map(cell => String(cell || '')).join(' ')
-  
+
   // Patrones para buscar fechas
   const desdeMatch = text.match(/Desde fecha:\s*(\d{1,2}\/\d{1,2}\/\d{4})/i)
   const hastaMatch = text.match(/Hasta fecha:\s*(\d{1,2}\/\d{1,2}\/\d{4})/i)
@@ -46,7 +46,7 @@ export async function readExcelFile(file: File): Promise<ExcelData> {
   try {
     const arrayBuffer = await file.arrayBuffer()
     const workbook = XLSX.read(arrayBuffer, { type: 'array' })
-    
+
     // Obtener la primera hoja
     const sheetName = workbook.SheetNames[0]
     if (!sheetName) {
@@ -56,7 +56,7 @@ export async function readExcelFile(file: File): Promise<ExcelData> {
     const worksheet = workbook.Sheets[sheetName]
 
     const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1')
-    
+
     // Intentar leer el período de la fila 2 (índice 1) si existe
     const row2: any[] = []
     for (let col = 0; col <= Math.min(range.e.c, 50); col++) {
@@ -70,7 +70,7 @@ export async function readExcelFile(file: File): Promise<ExcelData> {
     // IMPORTANTE: Leer TODAS las columnas, incluso las vacías, para mantener la correspondencia exacta
     const headers: Array<{ name: string; colIndex: number }> = []
     const maxCols = Math.min(range.e.c + 1, 50) // Limitar a 50 columnas máximo para evitar problemas
-    
+
     // Primero, encontrar la última columna con un header válido
     let lastHeaderCol = -1
     for (let col = 0; col < maxCols; col++) {
@@ -83,17 +83,17 @@ export async function readExcelFile(file: File): Promise<ExcelData> {
         }
       }
     }
-    
+
     // Si no encontramos headers, lanzar error
     if (lastHeaderCol === -1) {
       throw new Error('No se encontraron headers en la fila 1')
     }
-    
+
     // Leer todos los headers desde la columna 0 hasta la última con header válido
     for (let col = 0; col <= lastHeaderCol; col++) {
       const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col })
       const cell = worksheet[cellAddress]
-      
+
       if (cell && cell.v !== null && cell.v !== undefined) {
         const headerValue = String(cell.v).trim()
         headers.push({
@@ -115,23 +115,23 @@ export async function readExcelFile(file: File): Promise<ExcelData> {
 
     // Leer datos manualmente desde la fila 2 (índice 1) en adelante
     const rows: ExcelRow[] = []
-    
+
     for (let rowIndex = 1; rowIndex <= range.e.r; rowIndex++) {
       const row: ExcelRow = {}
       let hasData = false
-      
+
       // Leer usando el índice de columna real del Excel
       headers.forEach((headerInfo) => {
         const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: headerInfo.colIndex })
         const cell = worksheet[cellAddress]
-        
+
         if (cell && cell.v !== null && cell.v !== undefined) {
           let value: any = cell.v
-          
+
           // Detectar si es la columna "Duración"
-          const isDuracion = headerInfo.name.toLowerCase().includes('duración') || 
-                            headerInfo.name.toLowerCase().includes('duracion')
-          
+          const isDuracion = headerInfo.name.toLowerCase().includes('duración') ||
+            headerInfo.name.toLowerCase().includes('duracion')
+
           if (isDuracion) {
             // Para la columna Duración, mantener como número (minutos)
             if (typeof value === 'number') {
@@ -147,9 +147,9 @@ export async function readExcelFile(file: File): Promise<ExcelData> {
             // Para otras columnas, aplicar la lógica de conversión de fechas
             // Si es una fecha, convertirla a string formateado
             if (cell.t === 'd' && value instanceof Date) {
-              const day = value.getDate()
-              const month = value.getMonth() + 1
-              const year = value.getFullYear()
+              const day = value.getUTCDate()
+              const month = value.getUTCMonth() + 1
+              const year = value.getUTCFullYear()
               value = `${day}/${month}/${year}`
             } else if (cell.t === 'n' && typeof value === 'number') {
               // Si es un número que parece una fecha serial de Excel
@@ -166,7 +166,7 @@ export async function readExcelFile(file: File): Promise<ExcelData> {
               }
             }
           }
-          
+
           // Solo agregar al row si el header tiene un nombre válido (no es "Columna X")
           if (!headerInfo.name.startsWith('Columna')) {
             row[headerInfo.name] = value
@@ -179,7 +179,7 @@ export async function readExcelFile(file: File): Promise<ExcelData> {
           }
         }
       })
-      
+
       // Solo agregar la fila si tiene al menos un dato
       if (hasData) {
         rows.push(row)
@@ -208,7 +208,7 @@ export async function readExcelFileGinecologia(file: File): Promise<ExcelData> {
   try {
     const arrayBuffer = await file.arrayBuffer()
     const workbook = XLSX.read(arrayBuffer, { type: 'array' })
-    
+
     // Obtener la primera hoja
     const sheetName = workbook.SheetNames[0]
     if (!sheetName) {
@@ -217,7 +217,7 @@ export async function readExcelFileGinecologia(file: File): Promise<ExcelData> {
 
     const worksheet = workbook.Sheets[sheetName]
     const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1')
-    
+
     // Intentar leer el período de la fila 2 (índice 1) si existe (igual que Pediatría)
     const row2: any[] = []
     for (let col = 0; col <= Math.min(range.e.c, 50); col++) {
@@ -230,7 +230,7 @@ export async function readExcelFileGinecologia(file: File): Promise<ExcelData> {
     // Leer la fila 10 (índice 9) para los headers
     const headers: Array<{ name: string; colIndex: number }> = []
     const maxCols = Math.min(range.e.c + 1, 50)
-    
+
     // Primero, encontrar la última columna con un header válido en la fila 10
     let lastHeaderCol = -1
     for (let col = 0; col < maxCols; col++) {
@@ -243,17 +243,17 @@ export async function readExcelFileGinecologia(file: File): Promise<ExcelData> {
         }
       }
     }
-    
+
     // Si no encontramos headers, lanzar error
     if (lastHeaderCol === -1) {
       throw new Error('No se encontraron headers en la fila 10')
     }
-    
+
     // Leer todos los headers desde la columna 0 hasta la última con header válido
     for (let col = 0; col <= lastHeaderCol; col++) {
       const cellAddress = XLSX.utils.encode_cell({ r: 9, c: col }) // Fila 10 = índice 9
       const cell = worksheet[cellAddress]
-      
+
       if (cell && cell.v !== null && cell.v !== undefined) {
         const headerValue = String(cell.v).trim()
         headers.push({
@@ -273,23 +273,23 @@ export async function readExcelFileGinecologia(file: File): Promise<ExcelData> {
 
     // Leer datos manualmente desde la fila 11 (índice 10) en adelante
     const rows: ExcelRow[] = []
-    
+
     for (let rowIndex = 10; rowIndex <= range.e.r; rowIndex++) { // Desde fila 11 (índice 10)
       const row: ExcelRow = {}
       let hasData = false
-      
+
       // Leer usando el índice de columna real del Excel
       headers.forEach((headerInfo) => {
         const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: headerInfo.colIndex })
         const cell = worksheet[cellAddress]
-        
+
         if (cell && cell.v !== null && cell.v !== undefined) {
           let value: any = cell.v
-          
+
           // Detectar si es la columna "Duración"
-          const isDuracion = headerInfo.name.toLowerCase().includes('duración') || 
-                            headerInfo.name.toLowerCase().includes('duracion')
-          
+          const isDuracion = headerInfo.name.toLowerCase().includes('duración') ||
+            headerInfo.name.toLowerCase().includes('duracion')
+
           if (isDuracion) {
             // Para la columna Duración, mantener como número (minutos)
             if (typeof value === 'number') {
@@ -301,9 +301,9 @@ export async function readExcelFileGinecologia(file: File): Promise<ExcelData> {
           } else {
             // Para otras columnas, aplicar la lógica de conversión de fechas
             if (cell.t === 'd' && value instanceof Date) {
-              const day = value.getDate()
-              const month = value.getMonth() + 1
-              const year = value.getFullYear()
+              const day = value.getUTCDate()
+              const month = value.getUTCMonth() + 1
+              const year = value.getUTCFullYear()
               value = `${day}/${month}/${year}`
             } else if (cell.t === 'n' && typeof value === 'number') {
               // Si es un número que parece una fecha serial de Excel
@@ -319,7 +319,7 @@ export async function readExcelFileGinecologia(file: File): Promise<ExcelData> {
               }
             }
           }
-          
+
           // Solo agregar al row si el header tiene un nombre válido
           if (!headerInfo.name.startsWith('Columna')) {
             row[headerInfo.name] = value
@@ -332,7 +332,7 @@ export async function readExcelFileGinecologia(file: File): Promise<ExcelData> {
           }
         }
       })
-      
+
       // Solo agregar la fila si tiene al menos un dato
       if (hasData) {
         rows.push(row)
@@ -362,7 +362,7 @@ export async function readExcelFileAdmisiones(file: File): Promise<ExcelData> {
   try {
     const arrayBuffer = await file.arrayBuffer()
     const workbook = XLSX.read(arrayBuffer, { type: 'array' })
-    
+
     // Obtener la primera hoja
     const sheetName = workbook.SheetNames[0]
     if (!sheetName) {
@@ -371,14 +371,14 @@ export async function readExcelFileAdmisiones(file: File): Promise<ExcelData> {
 
     const worksheet = workbook.Sheets[sheetName]
     const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1')
-    
+
     // No intentar leer período (las filas 1-9 son basura)
     const periodo = null
 
     // Leer la fila 10 (índice 9) para los headers
     const headers: Array<{ name: string; colIndex: number }> = []
     const maxCols = Math.min(range.e.c + 1, 50)
-    
+
     // Primero, encontrar la última columna con un header válido en la fila 10
     let lastHeaderCol = -1
     for (let col = 0; col < maxCols; col++) {
@@ -391,17 +391,17 @@ export async function readExcelFileAdmisiones(file: File): Promise<ExcelData> {
         }
       }
     }
-    
+
     // Si no encontramos headers, lanzar error
     if (lastHeaderCol === -1) {
       throw new Error('No se encontraron headers en la fila 10. Verifique que el archivo tenga el formato correcto.')
     }
-    
+
     // Leer todos los headers desde la columna 0 hasta la última con header válido
     for (let col = 0; col <= lastHeaderCol; col++) {
       const cellAddress = XLSX.utils.encode_cell({ r: 9, c: col }) // Fila 10 = índice 9
       const cell = worksheet[cellAddress]
-      
+
       if (cell && cell.v !== null && cell.v !== undefined) {
         const headerValue = String(cell.v).trim()
         headers.push({
@@ -421,24 +421,24 @@ export async function readExcelFileAdmisiones(file: File): Promise<ExcelData> {
 
     // Leer datos manualmente desde la fila 11 (índice 10) en adelante
     const rows: ExcelRow[] = []
-    
+
     for (let rowIndex = 10; rowIndex <= range.e.r; rowIndex++) { // Desde fila 11 (índice 10)
       const row: ExcelRow = {}
       let hasData = false
-      
+
       // Leer usando el índice de columna real del Excel
       headers.forEach((headerInfo) => {
         const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: headerInfo.colIndex })
         const cell = worksheet[cellAddress]
-        
+
         if (cell && cell.v !== null && cell.v !== undefined) {
           let value: any = cell.v
-          
+
           // Aplicar la lógica de conversión de fechas
           if (cell.t === 'd' && value instanceof Date) {
-            const day = value.getDate()
-            const month = value.getMonth() + 1
-            const year = value.getFullYear()
+            const day = value.getUTCDate()
+            const month = value.getUTCMonth() + 1
+            const year = value.getUTCFullYear()
             value = `${day}/${month}/${year}`
           } else if (cell.t === 'n' && typeof value === 'number') {
             // Si es un número que parece una fecha serial de Excel
@@ -453,7 +453,7 @@ export async function readExcelFileAdmisiones(file: File): Promise<ExcelData> {
               }
             }
           }
-          
+
           // Solo agregar al row si el header tiene un nombre válido
           if (!headerInfo.name.startsWith('Columna')) {
             row[headerInfo.name] = value
@@ -466,7 +466,7 @@ export async function readExcelFileAdmisiones(file: File): Promise<ExcelData> {
           }
         }
       })
-      
+
       // Solo agregar la fila si tiene al menos un dato
       if (hasData) {
         rows.push(row)
@@ -498,7 +498,7 @@ export async function readExcelFileHorasGuardiasClinicas(file: File): Promise<Ex
   try {
     const arrayBuffer = await file.arrayBuffer()
     const workbook = XLSX.read(arrayBuffer, { type: 'array' })
-    
+
     // Obtener la primera hoja
     const sheetName = workbook.SheetNames[0]
     if (!sheetName) {
@@ -507,7 +507,7 @@ export async function readExcelFileHorasGuardiasClinicas(file: File): Promise<Ex
 
     const worksheet = workbook.Sheets[sheetName]
     const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1')
-    
+
     // Intentar leer el mes/año de la fila 3 (índice 2) si existe
     const row3: any[] = []
     for (let col = 0; col <= Math.min(range.e.c, 10); col++) {
@@ -515,7 +515,7 @@ export async function readExcelFileHorasGuardiasClinicas(file: File): Promise<Ex
       const cell = worksheet[cellAddress]
       row3.push(cell ? cell.v : null)
     }
-    
+
     // Extraer mes/año de la fila 3 (formato: "agosto 2025" o similar)
     let periodo = null
     const row3Text = row3.map(cell => String(cell || '')).join(' ')
@@ -540,7 +540,7 @@ export async function readExcelFileHorasGuardiasClinicas(file: File): Promise<Ex
     // Leer la fila 4 (índice 3) para los headers
     const headers: Array<{ name: string; colIndex: number }> = []
     const maxCols = Math.min(range.e.c + 1, 50)
-    
+
     // Primero, encontrar la última columna con un header válido en la fila 4
     let lastHeaderCol = -1
     for (let col = 0; col < maxCols; col++) {
@@ -553,17 +553,17 @@ export async function readExcelFileHorasGuardiasClinicas(file: File): Promise<Ex
         }
       }
     }
-    
+
     // Si no encontramos headers, lanzar error
     if (lastHeaderCol === -1) {
       throw new Error('No se encontraron headers en la fila 4. Verifique que el archivo tenga el formato correcto.')
     }
-    
+
     // Leer todos los headers desde la columna 0 hasta la última con header válido
     for (let col = 0; col <= lastHeaderCol; col++) {
       const cellAddress = XLSX.utils.encode_cell({ r: 3, c: col }) // Fila 4 = índice 3
       const cell = worksheet[cellAddress]
-      
+
       if (cell && cell.v !== null && cell.v !== undefined) {
         const headerValue = String(cell.v).trim()
         headers.push({
@@ -584,7 +584,7 @@ export async function readExcelFileHorasGuardiasClinicas(file: File): Promise<Ex
     // Leer datos manualmente desde la fila 5 (índice 4) en adelante
     // Detener antes de las filas de totales (buscar filas que contengan "Total" o "Diferencia")
     const rows: ExcelRow[] = []
-    
+
     for (let rowIndex = 4; rowIndex <= range.e.r; rowIndex++) { // Desde fila 5 (índice 4)
       // Verificar si esta fila es un total (contiene "Total" o "Diferencia")
       let esFilaTotal = false
@@ -593,30 +593,30 @@ export async function readExcelFileHorasGuardiasClinicas(file: File): Promise<Ex
         const cell = worksheet[cellAddress]
         if (cell && cell.v !== null && cell.v !== undefined) {
           const cellValue = String(cell.v).toLowerCase()
-          if (cellValue.includes('total') || cellValue.includes('diferencia') || 
-              cellValue.includes('horas del mes') || cellValue.includes('horas de guardia')) {
+          if (cellValue.includes('total') || cellValue.includes('diferencia') ||
+            cellValue.includes('horas del mes') || cellValue.includes('horas de guardia')) {
             esFilaTotal = true
             break
           }
         }
       }
-      
+
       if (esFilaTotal) {
         // Detener el procesamiento cuando encontramos filas de totales
         break
       }
-      
+
       const row: ExcelRow = {}
       let hasData = false
-      
+
       // Leer usando el índice de columna real del Excel
       headers.forEach((headerInfo) => {
         const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: headerInfo.colIndex })
         const cell = worksheet[cellAddress]
-        
+
         if (cell && cell.v !== null && cell.v !== undefined) {
           let value: any = cell.v
-          
+
           // Para columnas numéricas (horas), mantener como número
           if (cell.t === 'n' && typeof value === 'number') {
             // Mantener el número tal cual
@@ -628,7 +628,7 @@ export async function readExcelFileHorasGuardiasClinicas(file: File): Promise<Ex
               value = numValue
             }
           }
-          
+
           // Solo agregar al row si el header tiene un nombre válido
           if (!headerInfo.name.startsWith('Columna')) {
             row[headerInfo.name] = value
@@ -641,7 +641,7 @@ export async function readExcelFileHorasGuardiasClinicas(file: File): Promise<Ex
           }
         }
       })
-      
+
       // Solo agregar la fila si tiene al menos un dato y no está vacía
       if (hasData) {
         rows.push(row)

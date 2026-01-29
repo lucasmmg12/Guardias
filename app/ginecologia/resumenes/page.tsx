@@ -12,6 +12,7 @@ import { ArrowLeft, FileDown, Download, History, Eye, FileSpreadsheet, Graduatio
 import { ExcelDataTable } from '@/components/custom/ExcelDataTable'
 import { cargarExcelDataDesdeBD } from '@/lib/excel-reconstructor'
 import { ExcelData } from '@/lib/excel-reader'
+import { extraerCodigoObraSocial, coincidenObrasSociales, esParticular } from '@/lib/utils'
 
 const MESES = [
   { value: 1, label: 'Enero' },
@@ -219,18 +220,51 @@ export default function ResumenesGinecologiaPage() {
             const detalleActual = detalleActualData as { es_horario_formativo: boolean } | null
             const esHorarioFormativo = detalleActual?.es_horario_formativo || false
 
-            // Cargar valor de consulta para la nueva obra social
-            const { data: valorConsultaData } = await supabase
+            // Cargar TODOS los valores de consulta para este período una sola vez
+            const { data: todosLosValores } = await supabase
               .from('valores_consultas_obra_social')
-              .select('valor')
+              .select('obra_social, valor')
               .eq('tipo_consulta', 'CONSULTA GINECOLOGICA')
               .eq('mes', mes)
               .eq('anio', anio)
-              .eq('obra_social', nuevaObraSocial)
-              .maybeSingle()
 
-            const valorConsulta = valorConsultaData as { valor: number } | null
-            let montoFacturado = valorConsulta?.valor || 0
+            const valoresConsultas = (todosLosValores || []) as Array<{ obra_social: string; valor: number }>
+
+            // Buscar valor con la nueva lógica (código -> flexible -> particulares)
+            let valorConsulta = 0
+            const codigoExcel = extraerCodigoObraSocial(nuevaObraSocial)
+
+            // 1. Intentar por código numérico exacto
+            if (codigoExcel) {
+              for (const v of valoresConsultas) {
+                if (extraerCodigoObraSocial(v.obra_social) === codigoExcel) {
+                  valorConsulta = v.valor
+                  break
+                }
+              }
+            }
+
+            // 2. Si no se encontró por código, intentar por coincidencia de nombre flexible
+            if (valorConsulta === 0) {
+              for (const v of valoresConsultas) {
+                if (coincidenObrasSociales(nuevaObraSocial, v.obra_social)) {
+                  valorConsulta = v.valor
+                  break
+                }
+              }
+            }
+
+            // 3. Fallback especial para PARTICULARES
+            if (valorConsulta === 0 && (nuevaObraSocial.includes('PARTICULAR') || nuevaObraSocial.includes('042') || esParticular(nuevaObraSocial))) {
+              const vParticular = valoresConsultas.find(v =>
+                v.obra_social.includes('PARTICULAR') || extraerCodigoObraSocial(v.obra_social) === '042'
+              )
+              if (vParticular) {
+                valorConsulta = vParticular.valor
+              }
+            }
+
+            let montoFacturado = valorConsulta
             let importeCalculado = montoFacturado
 
             // Si es horario formativo, no se paga
@@ -1144,6 +1178,14 @@ function DetalleLiquidacion({ liquidacionId }: { liquidacionId: string }) {
 
   function formatearFecha(fecha: string | null): string {
     if (!fecha) return '-'
+    // Suponemos que la fecha viene en formato ISO (YYYY-MM-DD) desde la base de datos
+    // Para evitar desplazamientos por zona horaria, la formateamos manualmente
+    if (fecha.includes('-')) {
+      const [year, month, day] = fecha.split('-')
+      if (year && month && day) {
+        return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`
+      }
+    }
     return new Date(fecha).toLocaleDateString('es-AR')
   }
 
