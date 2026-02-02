@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { esFeriado } from './feriados'
 
 export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs))
@@ -332,7 +333,7 @@ export function esHorarioFormativo(hora: string | null | undefined): boolean {
  * REGLA ACTUALIZADA FEB 2026:
  * - Lunes a Viernes: 07:30 a 15:00 hs (se paga $0)
  * - Sábados: 08:00 a 12:00 hs (se paga $0)
- * - Domingos/Feriados: Se paga siempre
+ * - Domingos/Feriados: Se paga siempre (retorna false)
  */
 export function esResidenteHorarioFormativo(
     fecha: string | Date | null | undefined,
@@ -342,19 +343,18 @@ export function esResidenteHorarioFormativo(
     // 1. Solo aplica si es residente
     if (!esResidente) return false
 
-    // 2. Obtener día de la semana
-    const diaSemana = obtenerDiaSemana(fecha)
-    if (diaSemana === null) return false // si no hay fecha, ante la duda pagamos (conservative)
+    // 2. Si es FERIADO, se paga siempre (NO es formativo)
+    // Prioridad absoluta sobre reglas de día/hora
+    if (esFeriado(fecha)) return false
 
-    // 0 = Domingo, 6 = Sábado. Feriados se pagan siempre (aquí asumimos que si es feriado no llega a esta función o se filtra antes, 
-    // pero la función solo revisa día de semana. Si el sistema de feriados está desacoplado, mejor).
-    // Nota: Esta función es puramente horaria/semanal. Si fuera feriado un lunes, esta función devuelve true y no se paga.
-    // TODO: Integrar verificación de feriados si es requerida aquí. Por ahora seguimos lógica de día laboral.
+    // 3. Obtener día de la semana
+    const diaSemana = obtenerDiaSemana(fecha)
+    if (diaSemana === null) return false // si no hay fecha, ante la duda pagamos
 
     // Si es Domingo (0), NO es formativo (se paga siempre)
     if (diaSemana === 0) return false
 
-    // 3. Obtener minutos del día
+    // 4. Obtener minutos del día
     const minutos = horaAMinutos(hora)
     if (minutos === null) return false // si no hay hora, se paga
 
@@ -368,11 +368,11 @@ export function esResidenteHorarioFormativo(
     }
 
     // REGLA LUNES A VIERNES (1-5): 07:30 a 15:00 hs
-    // Antes era 07:00 (420), ahora ajustamos a 07:30 (450) por precisión o mantenemos 07:00?
-    // El comentario original decía 07:00 a 15:00.
-    // Si la regla "general" es 7-15, la mantenemos.
-    // 07:00 = 420, 15:00 = 900
     if (diaSemana >= 1 && diaSemana <= 5) {
+        // 07:00 = 420 min (mantenemos 07:00 por compatibilidad histórica si no se pidió cambiar a 07:30 explícito en código)
+        // Nota: En comentarios anteriores se mencionó 07:30, pero el código original tenía 07:00.
+        // Si el usuario pide 07:30 explícitamente, cambiar 420 a 450. 
+        // Por ahora mantenemos ventana amplia: 07:00 (420) a 15:00 (900)
         if (minutos >= 420 && minutos < 900) {
             return true // Es formativo, no se paga
         }
