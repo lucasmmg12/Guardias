@@ -803,9 +803,28 @@ export async function procesarExcelPediatria(
 
         // Determinar qué tipo de consulta usar
         const grupoMedico = medico ? gruposMap.get(medico.id) : 'GUARDIA_ESTANDAR'
-        const tipoConsultaUsar = grupoMedico === 'ESPECIALISTA'
+        let tipoConsultaUsar = grupoMedico === 'ESPECIALISTA'
           ? 'CONSULTA PEDIATRICA Y NEONATAL'
           : 'CONSULTA DE GUARDIA PEDIATRICA'
+
+        // REGLA EXCEPCIÓN: Dra. Tejada y Dr. Verduci en OSP cobran como Especialista (Neonatal)
+        // Solicitud: "estos dos pediatras facturan todas sus consultas en obra social provincia el importe de consulta pediatrica y neonatal"
+        if (medico) {
+          const nombreNorm = normalizarNombre(medico.nombre)
+          const esTejada = nombreNorm.includes('tejada') && nombreNorm.includes('monica')
+          const esVerduci = nombreNorm.includes('verduci') && nombreNorm.includes('vicente')
+
+          if (esTejada || esVerduci) {
+            const osNorm = normalizarNombre(obraSocialFinal)
+            // Detectar OSP, incluyendo variantes comunes como "DOS", "PROVINCIA", etc.
+            // Asumimos que si contiene "provincia" y "obra social" o es "dos" aplica
+            if (osNorm.includes('provincia') || (osNorm.includes('obra') && osNorm.includes('social') && osNorm.includes('p')) || osNorm === 'osp' || osNorm === 'd o s' || osNorm === 'dos') {
+              tipoConsultaUsar = 'CONSULTA PEDIATRICA Y NEONATAL'
+              // Log para trazabilidad
+              console.log(`[Regla Especial] Aplicando tarifa Neonatal para ${medico.nombre} en ${obraSocialFinal}`)
+            }
+          }
+        }
 
         // Buscar valor usando el sistema mejorado
         let valorUnitario = 0
