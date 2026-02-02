@@ -1,5 +1,17 @@
 [
     {
+        "hash": "f39103f",
+        "date": "2026-02-02",
+        "message": "feat: implement feriados logic to override resident formative hours",
+        "author": "Grow Labs Agent"
+    },
+    {
+        "hash": "b37bd77",
+        "date": "2026-02-02",
+        "message": "feat: new changelog section with timeline UI",
+        "author": "Grow Labs Agent"
+    },
+    {
         "hash": "74b4c0a",
         "date": "2026-02-02",
         "message": "feat: regla horario formativo residentes gineco (Sab 8-12)",
@@ -165,18 +177,6 @@
         "hash": "74b8a8c",
         "date": "2026-01-02",
         "message": "Fix: Improve pediatric duplicate detection by normalizing names",
-        "author": "lucasmmg12"
-    },
-    {
-        "hash": "ef462f9",
-        "date": "2026-01-02",
-        "message": "Feat: Add collapsible medical list for pediatrics summary page",
-        "author": "lucasmmg12"
-    },
-    {
-        "hash": "3df900d",
-        "date": "2026-01-02",
-        "message": "Feat: Implement collapsible medical summary items for performance",
         "author": "lucasmmg12"
     }
 ]
