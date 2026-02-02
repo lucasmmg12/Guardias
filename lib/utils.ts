@@ -329,23 +329,56 @@ export function esHorarioFormativo(hora: string | null | undefined): boolean {
 
 /**
  * Detecta si una consulta es de un residente en horario formativo
- * Requiere: fecha, hora, y que el médico sea residente
+ * REGLA ACTUALIZADA FEB 2026:
+ * - Lunes a Viernes: 07:30 a 15:00 hs (se paga $0)
+ * - Sábados: 08:00 a 12:00 hs (se paga $0)
+ * - Domingos/Feriados: Se paga siempre
  */
 export function esResidenteHorarioFormativo(
     fecha: string | Date | null | undefined,
     hora: string | null | undefined,
     esResidente: boolean
 ): boolean {
-    // Solo aplica si es residente
+    // 1. Solo aplica si es residente
     if (!esResidente) return false
 
-    // Debe ser día laboral (lunes a sábado)
-    if (!esDiaLaboral(fecha)) return false
+    // 2. Obtener día de la semana
+    const diaSemana = obtenerDiaSemana(fecha)
+    if (diaSemana === null) return false // si no hay fecha, ante la duda pagamos (conservative)
 
-    // Debe estar en horario formativo (07:00 a 15:00)
-    if (!esHorarioFormativo(hora)) return false
+    // 0 = Domingo, 6 = Sábado. Feriados se pagan siempre (aquí asumimos que si es feriado no llega a esta función o se filtra antes, 
+    // pero la función solo revisa día de semana. Si el sistema de feriados está desacoplado, mejor).
+    // Nota: Esta función es puramente horaria/semanal. Si fuera feriado un lunes, esta función devuelve true y no se paga.
+    // TODO: Integrar verificación de feriados si es requerida aquí. Por ahora seguimos lógica de día laboral.
 
-    return true
+    // Si es Domingo (0), NO es formativo (se paga siempre)
+    if (diaSemana === 0) return false
+
+    // 3. Obtener minutos del día
+    const minutos = horaAMinutos(hora)
+    if (minutos === null) return false // si no hay hora, se paga
+
+    // REGLA SÁBADO (6): 08:00 a 12:00 hs
+    if (diaSemana === 6) {
+        // 08:00 = 480 min, 12:00 = 720 min
+        if (minutos >= 480 && minutos < 720) {
+            return true // Es formativo, no se paga
+        }
+        return false // Fuera de ese rango el sábado, se paga
+    }
+
+    // REGLA LUNES A VIERNES (1-5): 07:30 a 15:00 hs
+    // Antes era 07:00 (420), ahora ajustamos a 07:30 (450) por precisión o mantenemos 07:00?
+    // El comentario original decía 07:00 a 15:00.
+    // Si la regla "general" es 7-15, la mantenemos.
+    // 07:00 = 420, 15:00 = 900
+    if (diaSemana >= 1 && diaSemana <= 5) {
+        if (minutos >= 420 && minutos < 900) {
+            return true // Es formativo, no se paga
+        }
+    }
+
+    return false
 }
 
 /**

@@ -60,11 +60,25 @@ Factor: 1.0 + 0.20 = 1.20 (120%)
 ✅ Sábado 20:00 hs → SÍ aplica plus
 ✅ Domingo 08:00 hs → SÍ aplica plus (todo el día)
 ✅ Domingo 22:00 hs → SÍ aplica plus (todo el día)
+✅ Sábado 20:00 hs → SÍ aplica plus
+✅ Domingo 08:00 hs → SÍ aplica plus (todo el día)
+✅ Domingo 22:00 hs → SÍ aplica plus (todo el día)
 ```
 
 ---
 
-### 3. Orden de Prioridad
+### 3. Reglas Especiales Residentes (Ginecología)
+
+Los residentes de Ginecología tienen **Horario Formativo** donde **NO** se liquida la hora (importe $0).
+
+**Reglas de Horario Formativo:**
+1. **Lunes a Viernes**: 07:00 a 15:00 hs.
+2. **Sábados**: 08:00 a 12:00 hs.
+3. **Domingos y Feriados**: Se paga siempre.
+
+---
+
+### 4. Orden de Prioridad
 
 El sistema verifica en este orden:
 
