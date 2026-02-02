@@ -178,6 +178,9 @@ export default function HomePage() {
                             <Link href="/admin/valores-consultas" className="flex items-center gap-3 px-6 py-3 rounded-full bg-white/5 border border-white/10 hover:bg-[#00FF88]/10 hover:border-[#00FF88]/30 transition-all text-xs font-black tracking-widest text-gray-400 hover:text-white uppercase">
                                 <DollarSign className="h-4 w-4" /> tarifas
                             </Link>
+                            <Link href="/changelog" className="flex items-center gap-3 px-6 py-3 rounded-full bg-white/5 border border-white/10 hover:bg-[#00FF88]/10 hover:border-[#00FF88]/30 transition-all text-xs font-black tracking-widest text-gray-400 hover:text-white uppercase transition-colors duration-300">
+                                <Sparkles className="h-4 w-4 text-[#00FF88]" /> actualizaciones
+                            </Link>
                             <Link href="/manual" className="flex items-center gap-3 px-6 py-3 rounded-full bg-[#00FF88] text-black hover:scale-105 transition-all text-xs font-black tracking-widest uppercase shadow-[0_0_20px_rgba(0,255,136,0.2)]">
                                 <BookOpen className="h-4 w-4" /> manual de uso
                             </Link>
