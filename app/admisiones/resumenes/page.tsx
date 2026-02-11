@@ -190,6 +190,35 @@ export default function ResumenesAdmisionesPage() {
     }
   }, [liquidacionActual, excelData])
 
+  // Handler for re-inserting deleted records on undo
+  const handleUndoDelete = useCallback(async (records: Record<string, any>[]) => {
+    if (!liquidacionActual) return
+
+    const recordsToInsert = records.map(r => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { id, created_at, updated_at, ...rest } = r
+      return rest
+    })
+
+    // @ts-ignore - dynamic record types from undo
+    const { error } = await (supabase.from('detalle_guardia') as any)
+      .insert(recordsToInsert)
+
+    if (error) {
+      console.error('[Undo] Error re-inserting records:', error)
+      throw error
+    }
+
+    // Reload Excel data
+    const excelDataRecargado = await cargarExcelDataDesdeBD(liquidacionActual.id, supabase)
+    if (excelDataRecargado) {
+      setExcelData(excelDataRecargado)
+    }
+
+    // Recalculate totals
+    await actualizarTotalesLiquidacion()
+  }, [liquidacionActual])
+
   const actualizarTotalesLiquidacion = async () => {
     if (!liquidacionActual) return
 
@@ -743,6 +772,7 @@ export default function ResumenesAdmisionesPage() {
                     onCellUpdate={handleCellUpdate}
                     onDeleteRow={handleDeleteRow}
                     onDeleteRows={handleDeleteRows}
+                    onUndoDelete={handleUndoDelete}
                   />
                 </div>
               )}

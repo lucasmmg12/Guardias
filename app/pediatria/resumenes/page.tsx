@@ -388,6 +388,50 @@ export default function ResumenesPediatriaPage() {
     }
   }, [liquidacionActual, excelData])
 
+  // Handler for re-inserting deleted records on undo
+  const handleUndoDelete = useCallback(async (records: Record<string, any>[]) => {
+    if (!liquidacionActual) return
+
+    const recordsToInsert = records.map(r => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { id, created_at, updated_at, ...rest } = r
+      return rest
+    })
+
+    // @ts-ignore - dynamic record types from undo
+    const { error } = await (supabase.from('detalle_guardia') as any)
+      .insert(recordsToInsert)
+
+    if (error) {
+      console.error('[Undo] Error re-inserting records:', error)
+      throw error
+    }
+
+    // Reload Excel data
+    const excelDataRecargado = await cargarExcelDataDesdeBD(liquidacionActual.id, supabase)
+    if (excelDataRecargado) {
+      setExcelData(excelDataRecargado)
+    }
+
+    // Recalculate totals in background
+    const { data: detalles } = await supabase
+      .from('detalle_guardia')
+      .select('importe_calculado, monto_facturado')
+      .eq('liquidacion_id', liquidacionActual.id) as { data: Array<{ importe_calculado: number | null; monto_facturado: number | null }> | null }
+
+    if (detalles) {
+      await supabase
+        .from('liquidaciones_guardia')
+        // @ts-ignore
+        .update({
+          total_consultas: detalles.length,
+          total_bruto: detalles.reduce((sum, d) => sum + (d.monto_facturado || 0), 0),
+          total_neto: detalles.reduce((sum, d) => sum + (d.importe_calculado || 0), 0)
+        })
+        .eq('id', liquidacionActual.id)
+    }
+  }, [liquidacionActual])
+
   async function cargarResumenes() {
     setLoading(true)
     try {
@@ -781,6 +825,7 @@ export default function ResumenesPediatriaPage() {
                   especialidad="Pediatría"
                   onCellUpdate={handleCellUpdate}
                   onDeleteRow={handleDeleteRow}
+                  onUndoDelete={handleUndoDelete}
                   liquidacionId={liquidacionActual.id}
                   mes={mes}
                   anio={anio}

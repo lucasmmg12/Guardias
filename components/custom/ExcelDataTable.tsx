@@ -8,6 +8,8 @@ import { CheckCircle2, AlertCircle, Trash2, Clock, UserX, FileText, AlertTriangl
 import { esParticular, tieneHorario, obtenerIndicesDuplicados, esResidenteHorarioFormativo } from '@/lib/utils'
 import { supabase } from '@/lib/supabase/client'
 import { Medico, ValorConsultaObraSocial, ConfiguracionAdicional } from '@/lib/types'
+import { useUndoStack, UndoAction } from '@/hooks/useUndoStack'
+import { UndoToast, UndoButton } from './UndoToast'
 
 interface ExcelDataTableProps {
   data: ExcelData
@@ -15,12 +17,14 @@ interface ExcelDataTableProps {
   onCellUpdate?: (rowIndex: number, column: string, newValue: any) => Promise<void>
   onDeleteRow?: (rowIndex: number) => Promise<void>
   onDeleteRows?: (indices: number[]) => Promise<void>
+  /** Callback to re-insert deleted record(s) on undo */
+  onUndoDelete?: (records: Record<string, any>[]) => Promise<void>
   liquidacionId?: string
   mes?: number
   anio?: number
 }
 
-export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, onDeleteRows, liquidacionId, mes, anio }: ExcelDataTableProps) {
+export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, onDeleteRows, onUndoDelete, liquidacionId, mes, anio }: ExcelDataTableProps) {
   const [rows, setRows] = useState<ExcelRow[]>(data.rows)
   const [saving, setSaving] = useState<{ [key: string]: boolean }>({})
   const [medicos, setMedicos] = useState<Medico[]>([])
@@ -29,6 +33,53 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
   const [valoresLoading, setValoresLoading] = useState(false)
   const [adicionales, setAdicionales] = useState<Map<string, number>>(new Map())
   const [adicionalesLoading, setAdicionalesLoading] = useState(false)
+
+  // ─── Undo System ────────────────────────────────────────────────
+  const handleUndoAction = useCallback(async (action: UndoAction) => {
+    if (action.type === 'delete_single' || action.type === 'delete_multiple') {
+      const records = action.type === 'delete_single'
+        ? (action.dbRecord ? [action.dbRecord] : [])
+        : action.dbRecords
+
+      if (records.length === 0) {
+        console.warn('[Undo] No DB records to restore')
+        return
+      }
+
+      if (onUndoDelete) {
+        await onUndoDelete(records)
+      } else {
+        // Fallback: direct re-insert into detalle_guardia
+        const recordsToInsert = records.map(r => {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { id, created_at, updated_at, ...rest } = r
+          return rest
+        })
+        // @ts-ignore - dynamic record types from undo stack
+        const { error } = await (supabase.from('detalle_guardia') as any)
+          .insert(recordsToInsert)
+        if (error) {
+          console.error('[Undo] Error re-inserting records:', error)
+          throw error
+        }
+      }
+    } else if (action.type === 'cell_edit') {
+      // Revert cell edit
+      if (onCellUpdate) {
+        await onCellUpdate(action.rowIndex, action.column, action.previousValue)
+      }
+    }
+  }, [onUndoDelete, onCellUpdate])
+
+  const {
+    undoStack,
+    activeToast,
+    toastRemainingMs,
+    pushAction,
+    undoLast,
+    dismissToast,
+    undoing,
+  } = useUndoStack(handleUndoAction)
 
   // Sincronizar rows cuando data cambia - MEJORADO para detectar cambios en el contenido
   useEffect(() => {
@@ -432,47 +483,108 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
   const cantidadDuplicados = filasDuplicadas.size
   const cantidadResidenteHorarioFormativo = filasResidenteHorarioFormativo.size
 
+  // ─── Helper: fetch full DB record before deleting (for undo) ───
+  const fetchDbRecord = useCallback(async (filaExcel: number): Promise<Record<string, any> | null> => {
+    if (!liquidacionId) return null
+    try {
+      const { data: record } = await supabase
+        .from('detalle_guardia')
+        .select('*')
+        .eq('liquidacion_id', liquidacionId)
+        .eq('fila_excel', filaExcel)
+        .maybeSingle()
+      return record as Record<string, any> | null
+    } catch {
+      return null
+    }
+  }, [liquidacionId])
+
+  const fetchDbRecords = useCallback(async (filasExcel: number[]): Promise<Record<string, any>[]> => {
+    if (!liquidacionId || filasExcel.length === 0) return []
+    try {
+      const { data: records } = await supabase
+        .from('detalle_guardia')
+        .select('*')
+        .eq('liquidacion_id', liquidacionId)
+        .in('fila_excel', filasExcel)
+      return (records || []) as Record<string, any>[]
+    } catch {
+      return []
+    }
+  }, [liquidacionId])
+
   // Función para eliminar una fila (usa callback del padre si está disponible)
   // NOTA: La confirmación se maneja en ExpandableSection con el modal personalizado
   const handleDeleteRowLocal = useCallback(async (rowIndex: number) => {
+    // Capture data for undo BEFORE deleting
+    const deletedRow = { ...rows[rowIndex] }
+    const filaExcel = (deletedRow as any).__fila_excel ?? (rowIndex + 1)
+    const dbRecord = await fetchDbRecord(filaExcel)
+
     if (onDeleteRow) {
-      // Usar callback del padre (elimina de BD y actualiza ExcelData)
-      // La confirmación ya se hizo en ExpandableSection
       await onDeleteRow(rowIndex)
-      // El padre actualizará excelData, pero también actualizamos local para UI inmediata
       const updatedRows = rows.filter((_, index) => index !== rowIndex)
       setRows(updatedRows)
       data.rows = updatedRows
     } else {
-      // Fallback: solo actualizar local (modo legacy, sin confirmación porque no hay modal)
       const updatedRows = rows.filter((_, index) => index !== rowIndex)
       setRows(updatedRows)
       data.rows = updatedRows
     }
-  }, [rows, data, onDeleteRow])
+
+    // Push to undo stack
+    if (liquidacionId) {
+      const paciente = deletedRow['Paciente'] || deletedRow['paciente'] || ''
+      pushAction({
+        type: 'delete_single',
+        description: paciente ? `Paciente: ${String(paciente).substring(0, 40)}` : `Fila ${filaExcel}`,
+        deletedRow,
+        rowIndex,
+        filaExcel,
+        liquidacionId,
+        dbRecord,
+        timestamp: Date.now(),
+      })
+    }
+  }, [rows, data, onDeleteRow, fetchDbRecord, liquidacionId, pushAction])
 
   const handleDeleteRows = useCallback(async (indicesInput: Set<number> | number[]) => {
     const indices = indicesInput instanceof Set ? indicesInput : new Set(indicesInput)
+    const indicesArray = Array.from(indices).sort((a, b) => b - a)
+
+    // Capture data for undo BEFORE deleting
+    const deletedRows = indicesArray.map(idx => ({ ...rows[idx] }))
+    const filasExcel = indicesArray.map(idx => (rows[idx] as any)?.__fila_excel ?? (idx + 1)).filter(Boolean)
+    const dbRecords = await fetchDbRecords(filasExcel)
 
     if (onDeleteRow) {
-      const indicesArray = Array.from(indices).sort((a, b) => b - a)
-
       if (onDeleteRows) {
-        // Usar eliminación por lotes si está disponible
         await onDeleteRows(indicesArray)
       } else {
-        // Fallback: eliminar uno por uno
         for (const index of indicesArray) {
           await onDeleteRow(index)
         }
       }
     } else {
-      // Fallback: solo actualizar local
       const updatedRows = rows.filter((_, index) => !indices.has(index))
       setRows(updatedRows)
       data.rows = updatedRows
     }
-  }, [rows, data, onDeleteRow, onDeleteRows])
+
+    // Push to undo stack
+    if (liquidacionId && deletedRows.length > 0) {
+      pushAction({
+        type: 'delete_multiple',
+        description: `${deletedRows.length} registros eliminados`,
+        deletedRows,
+        indices: indicesArray,
+        filasExcel,
+        liquidacionId,
+        dbRecords,
+        timestamp: Date.now(),
+      })
+    }
+  }, [rows, data, onDeleteRow, onDeleteRows, fetchDbRecords, liquidacionId, pushAction])
 
   // Obtener filas filtradas por tipo
   const filasParticularesList = useMemo(() => {
@@ -700,35 +812,53 @@ export function ExcelDataTable({ data, especialidad, onCellUpdate, onDeleteRow, 
         valoresConsultas={valoresConsultas}
         adicionales={adicionales}
       />
-      <div className="text-sm text-gray-400">
-        Total de filas: <span className="text-green-400 font-semibold">{rows.length}</span>
-        {' • '}
-        Columnas: <span className="text-green-400 font-semibold">{data.headers.length}</span>
-        {especialidad !== 'Admisiones Clínicas' && cantidadParticulares > 0 && (
-          <>
-            {' • '}
-            Sin obra social: <span className="text-yellow-400 font-semibold">{cantidadParticulares}</span>
-          </>
-        )}
-        {especialidad !== 'Admisiones Clínicas' && cantidadSinHorario > 0 && (
-          <>
-            {' • '}
-            Sin horario: <span className="text-red-400 font-semibold">{cantidadSinHorario}</span>
-          </>
-        )}
-        {cantidadDuplicados > 0 && (
-          <>
-            {' • '}
-            Duplicados: <span className={especialidad === 'Admisiones Clínicas' ? 'text-cyan-400' : 'text-purple-400'} style={{ fontWeight: '600' }}>{cantidadDuplicados}</span>
-          </>
-        )}
-        {especialidad !== 'Admisiones Clínicas' && cantidadResidenteHorarioFormativo > 0 && (
-          <>
-            {' • '}
-            Residente formativo: <span className="text-blue-400 font-semibold">{cantidadResidenteHorarioFormativo}</span>
-          </>
-        )}
+      <div className="flex items-center justify-between gap-4">
+        <div className="text-sm text-gray-400">
+          Total de filas: <span className="text-green-400 font-semibold">{rows.length}</span>
+          {' • '}
+          Columnas: <span className="text-green-400 font-semibold">{data.headers.length}</span>
+          {especialidad !== 'Admisiones Clínicas' && cantidadParticulares > 0 && (
+            <>
+              {' • '}
+              Sin obra social: <span className="text-yellow-400 font-semibold">{cantidadParticulares}</span>
+            </>
+          )}
+          {especialidad !== 'Admisiones Clínicas' && cantidadSinHorario > 0 && (
+            <>
+              {' • '}
+              Sin horario: <span className="text-red-400 font-semibold">{cantidadSinHorario}</span>
+            </>
+          )}
+          {cantidadDuplicados > 0 && (
+            <>
+              {' • '}
+              Duplicados: <span className={especialidad === 'Admisiones Clínicas' ? 'text-cyan-400' : 'text-purple-400'} style={{ fontWeight: '600' }}>{cantidadDuplicados}</span>
+            </>
+          )}
+          {especialidad !== 'Admisiones Clínicas' && cantidadResidenteHorarioFormativo > 0 && (
+            <>
+              {' • '}
+              Residente formativo: <span className="text-blue-400 font-semibold">{cantidadResidenteHorarioFormativo}</span>
+            </>
+          )}
+        </div>
+
+        {/* Permanent Undo Button */}
+        <UndoButton
+          stackSize={undoStack.length}
+          onUndo={undoLast}
+          undoing={undoing}
+        />
       </div>
+
+      {/* Undo Toast */}
+      <UndoToast
+        action={activeToast}
+        remainingMs={toastRemainingMs}
+        onUndo={undoLast}
+        onDismiss={dismissToast}
+        undoing={undoing}
+      />
     </div>
   )
 }
