@@ -1,5 +1,5 @@
 import { supabase } from './supabase/client'
-import { DetalleGuardia, DetalleHorasGuardia, Medico, ClinicalGroupsConfig, ClinicalValuesConfig } from './types'
+import { DetalleGuardia, Medico, ClinicalGroupsConfig } from './types'
 
 export interface ResumenPorMedico {
   medico_id: string | null
@@ -16,7 +16,6 @@ export interface ResumenPorPrestador {
   cantidad: number
   total_bruto: number
   total_neto_consultas: number
-  total_horas: number
   total_final: number
   grupo_tipo?: 'GRUPO_70' | 'GRUPO_50'
 }
@@ -126,7 +125,7 @@ export async function calcularResumenPorMedico(
 }
 
 /**
- * Calcula el resumen por prestador (médico) incluyendo consultas y horas
+ * Calcula el resumen por prestador (médico) - solo consultas
  */
 export async function calcularResumenPorPrestador(
   mes: number,
@@ -186,39 +185,7 @@ export async function calcularResumenPorPrestador(
     }
   }
 
-  // Obtener detalles de horas
-  let todosLosDetallesHoras: DetalleHorasGuardia[] = []
-  from = 0
-  hasMore = true
-
-  while (hasMore) {
-    const { data: detallesHorasPagina, error } = await supabase
-      .from('detalle_horas_guardia')
-      .select('*')
-      .eq('liquidacion_id', liquidacionIdFinal)
-      .order('id', { ascending: true })
-      .range(from, from + pageSize - 1)
-
-    if (error) {
-      console.error('[Guardias Clínicas Resúmenes] Error obteniendo detalles de horas:', error)
-      break
-    }
-
-    if (!detallesHorasPagina || detallesHorasPagina.length === 0) {
-      hasMore = false
-      break
-    }
-
-    todosLosDetallesHoras = [...todosLosDetallesHoras, ...detallesHorasPagina]
-
-    if (detallesHorasPagina.length < pageSize) {
-      hasMore = false
-    } else {
-      from += pageSize
-    }
-  }
-
-  // Obtener configuración de grupos para calcular neto de consultas usando paginación
+  // Obtener configuración de grupos
   let todosLosGrupos: ClinicalGroupsConfig[] = []
   from = 0
   hasMore = true
@@ -257,18 +224,6 @@ export async function calcularResumenPorPrestador(
     gruposPorMedico.set(grupo.doctor_id, grupo.group_type as 'GRUPO_70' | 'GRUPO_50')
   }
 
-  // Obtener configuración de valores (horas) para recalcular total_horas correctamente
-  const { data: valoresData } = await supabase
-    .from('clinical_values_config')
-    .select('*')
-    .eq('mes', mes)
-    .eq('anio', anio)
-    .single() as { data: ClinicalValuesConfig | null }
-
-  if (!valoresData) {
-    console.error('[Guardias Clínicas Resúmenes] No se encontró configuración de valores para recalcular horas')
-  }
-
   // Agrupar por médico
   const resumenMap = new Map<string, ResumenPorPrestador>()
 
@@ -285,7 +240,6 @@ export async function calcularResumenPorPrestador(
       cantidad: 0,
       total_bruto: 0,
       total_neto_consultas: 0,
-      total_horas: 0,
       total_final: 0,
       grupo_tipo: gruposPorMedico.get(detalle.medico_id) || undefined
     }
@@ -299,52 +253,17 @@ export async function calcularResumenPorPrestador(
   // Calcular neto de consultas por grupo
   for (const [medicoId, resumen] of resumenMap.entries()) {
     const grupo = gruposPorMedico.get(medicoId)
-    if (grupo === 'GRUPO_70') {
-      resumen.total_neto_consultas = resumen.total_bruto * 0.70
-    } else if (grupo === 'GRUPO_50' || (grupo as unknown as string) === 'GRUPO_40') {
+    if (grupo === 'GRUPO_50') {
       resumen.total_neto_consultas = resumen.total_bruto * 0.50
-    }
-  }
-
-  // Procesar horas - RECALCULAR total_horas usando valores de configuración actuales
-  // Esto asegura que el cálculo sea correcto incluso si los valores guardados en BD están mal
-  for (const detalleHora of todosLosDetallesHoras) {
-    if (!detalleHora.medico_id) continue
-
-    const clave = detalleHora.medico_id
-
-    // Recalcular total_horas usando valores de configuración actuales
-    let totalHorasRecalculado = 0
-    if (valoresData) {
-      // Todas son horas trabajadas, se multiplican por valor por hora
-      const valorHoras816 = (detalleHora.franjas_8_16 || 0) * valoresData.value_hour_weekly_8_16
-      const valorHoras168 = (detalleHora.franjas_16_8 || 0) * valoresData.value_hour_weekly_16_8
-      const valorHorasWeekend = (detalleHora.horas_weekend || 0) * valoresData.value_hour_weekend
-      const valorHorasWeekendNight = (detalleHora.horas_weekend_night || 0) * valoresData.value_hour_weekend_night
-      totalHorasRecalculado = valorHoras816 + valorHoras168 + valorHorasWeekend + valorHorasWeekendNight
     } else {
-      // Si no hay configuración, usar el valor guardado como fallback
-      totalHorasRecalculado = detalleHora.total_horas || 0
+      // Default 70%
+      resumen.total_neto_consultas = resumen.total_bruto * 0.70
     }
-
-    const resumen = resumenMap.get(clave) || {
-      medico_id: detalleHora.medico_id,
-      medico_nombre: detalleHora.medico_nombre,
-      cantidad: 0,
-      total_bruto: 0,
-      total_neto_consultas: 0,
-      total_horas: 0,
-      total_final: 0,
-      grupo_tipo: gruposPorMedico.get(detalleHora.medico_id) || undefined
-    }
-
-    resumen.total_horas += totalHorasRecalculado
-    resumenMap.set(clave, resumen)
   }
 
-  // Calcular total final
+  // Calcular total final (solo consultas ahora)
   for (const resumen of resumenMap.values()) {
-    resumen.total_final = resumen.total_neto_consultas + resumen.total_horas
+    resumen.total_final = resumen.total_neto_consultas
   }
 
   return Array.from(resumenMap.values()).sort((a, b) =>
@@ -363,7 +282,6 @@ export async function calcularTotalGeneral(
   totalConsultas: number
   totalBruto: number
   totalNetoConsultas: number
-  totalHoras: number
   totalFinal: number
 }> {
   const resumenes = await calcularResumenPorPrestador(mes, anio, liquidacionId)
@@ -372,8 +290,6 @@ export async function calcularTotalGeneral(
     totalConsultas: resumenes.reduce((sum, r) => sum + r.cantidad, 0),
     totalBruto: resumenes.reduce((sum, r) => sum + r.total_bruto, 0),
     totalNetoConsultas: resumenes.reduce((sum, r) => sum + r.total_neto_consultas, 0),
-    totalHoras: resumenes.reduce((sum, r) => sum + r.total_horas, 0),
     totalFinal: resumenes.reduce((sum, r) => sum + r.total_final, 0)
   }
 }
-

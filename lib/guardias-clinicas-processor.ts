@@ -1,6 +1,6 @@
 import { supabase } from './supabase/client'
 import { ExcelData, ExcelRow } from './excel-reader'
-import { Medico, DetalleGuardiaInsert, LiquidacionGuardiaInsert, DetalleHorasGuardiaInsert, ValorConsultaObraSocial } from './types'
+import { Medico, DetalleGuardiaInsert, LiquidacionGuardiaInsert, ValorConsultaObraSocial } from './types'
 import { calcularNumeroLiquidacion, esParticular, extraerCodigoObraSocial, coincidenObrasSociales } from './utils'
 
 interface FilaExcluida {
@@ -23,22 +23,6 @@ interface ConfiguracionGrupo {
   group_type: 'GRUPO_70' | 'GRUPO_50'
 }
 
-interface ConfiguracionValores {
-  value_hour_weekly_8_16: number      // Valor por hora 8-16 días semana
-  value_hour_weekly_16_8: number      // Valor por hora 16-8 días semana
-  value_hour_weekend: number          // Valor por hora fines de semana/feriados
-  value_hour_weekend_night: number    // Valor por hora nocturna fines de semana/feriados
-  value_guaranteed_min: number       // Valor mínimo POR HORA trabajada
-}
-
-interface HorasMedico {
-  medico_id: string
-  franjas_8_16: number                // Cantidad de franjas 8-16
-  franjas_16_8: number                // Cantidad de franjas 16-8
-  horas_weekend: number               // Horas fines de semana/feriados
-  horas_weekend_night: number         // Horas nocturnas fines de semana/feriados
-}
-
 /**
  * Normaliza el nombre de una columna para búsqueda flexible
  */
@@ -58,47 +42,58 @@ function buscarValor(row: ExcelRow, variaciones: string[]): any {
 
   if (keys.length === 0) return null
 
-  // Buscar coincidencia exacta (case-insensitive)
-  for (const variacion of variaciones) {
-    for (const key of keys) {
-      if (key.toLowerCase().trim() === variacion.toLowerCase().trim()) {
-        const valor = row[key]
-        if (valor !== undefined && valor !== null) {
-          if (typeof valor === 'string' && valor.trim() !== '') return valor.trim()
-          if (typeof valor !== 'string') return valor
-        }
-      }
-    }
-  }
-
-  // Buscar coincidencia normalizada (sin acentos, espacios)
-  const normalizadas = variaciones.map(normalizarColumna)
+  // Crear mapa de claves normalizadas
+  const keyMap = new Map<string, string>()
   for (const key of keys) {
-    const keyNormalizada = normalizarColumna(key)
-    if (normalizadas.includes(keyNormalizada)) {
-      const valor = row[key]
-      if (valor !== undefined && valor !== null) {
-        if (typeof valor === 'string' && valor.trim() !== '') return valor.trim()
-        if (typeof valor !== 'string') return valor
+    keyMap.set(normalizarColumna(key), key)
+  }
+
+  // Buscar por variaciones normalizadas
+  for (const variacion of variaciones) {
+    const variacionNorm = normalizarColumna(variacion)
+
+    // Coincidencia exacta normalizada
+    if (keyMap.has(variacionNorm)) {
+      return row[keyMap.get(variacionNorm)!]
+    }
+  }
+
+  // Buscar por coincidencia parcial (contiene)
+  for (const variacion of variaciones) {
+    const variacionNorm = normalizarColumna(variacion)
+
+    for (const [keyNorm, originalKey] of keyMap.entries()) {
+      if (keyNorm.includes(variacionNorm) || variacionNorm.includes(keyNorm)) {
+        return row[originalKey]
       }
     }
   }
 
-  // Buscar coincidencia parcial (contiene palabras clave)
+  // Buscar por palabras clave principales
   for (const variacion of variaciones) {
-    // IMPORTANTE: No filtrar por longitud >= 2 para no perder números (8, 16, etc)
-    const palabras = normalizarColumna(variacion).split(/\s+/).filter(p => p.length >= 1)
-    if (palabras.length === 0) continue
+    const palabrasClave = normalizarColumna(variacion).split(/\s+/)
 
-    for (const key of keys) {
-      const keyNormalizada = normalizarColumna(key)
-      const todasPalabrasPresentes = palabras.every(p => keyNormalizada.includes(p))
-      if (todasPalabrasPresentes) {
-        const valor = row[key]
-        if (valor !== undefined && valor !== null) {
-          if (typeof valor === 'string' && valor.trim() !== '') return valor.trim()
-          if (typeof valor !== 'string') return valor
-        }
+    for (const [keyNorm, originalKey] of keyMap.entries()) {
+      // Si todas las palabras de la variación están en la key
+      const todasPresentes = palabrasClave
+        .filter(p => p.length > 2) // Solo palabras de más de 2 caracteres
+        .every(palabra => keyNorm.includes(palabra))
+
+      if (todasPresentes && palabrasClave.filter(p => p.length > 2).length > 0) {
+        return row[originalKey]
+      }
+    }
+  }
+
+  // Último recurso: coincidencia por posición (para columnas sin nombre)
+  // Buscar por índice numérico si las columnas son numéricas
+  for (const key of keys) {
+    const keyNorm = normalizarColumna(key)
+    for (const variacion of variaciones) {
+      const variacionNorm = normalizarColumna(variacion)
+      // Si la key es un número y la variación contiene ese número
+      if (/^\d+$/.test(key) && variacionNorm.includes(key)) {
+        return row[key]
       }
     }
   }
@@ -123,120 +118,70 @@ function normalizarNombre(nombre: string): string {
  * Búsqueda muy flexible con múltiples estrategias
  */
 function buscarMedico(nombre: string | null, medicos: Medico[]): Medico | null {
-  if (!nombre || typeof nombre !== 'string') return null
+  if (!nombre || nombre.trim() === '') return null
 
-  const nombreTrimmed = nombre.trim()
-  if (nombreTrimmed === '') return null
+  const nombreBusqueda = normalizarNombre(nombre)
 
-  // ESTRATEGIA 0: Coincidencia exacta SIN normalizar (prioridad máxima)
-  for (const medico of medicos) {
-    if (medico.nombre.trim() === nombreTrimmed) {
-      return medico
+  // 1. Coincidencia exacta
+  const exacto = medicos.find(m => normalizarNombre(m.nombre) === nombreBusqueda)
+  if (exacto) return exacto
+
+  // 2. Coincidencia parcial fuerte (contiene en ambas direcciones)
+  const parcial = medicos.find(m => {
+    const mNorm = normalizarNombre(m.nombre)
+    return mNorm.includes(nombreBusqueda) || nombreBusqueda.includes(mNorm)
+  })
+  if (parcial) return parcial
+
+  // 3. Buscar por "Apellido, Nombre" → "Nombre Apellido"
+  if (nombre.includes(',')) {
+    const partes = nombre.split(',').map(p => p.trim())
+    const invertido = `${partes[1]} ${partes[0]}`
+    const invertidoNorm = normalizarNombre(invertido)
+    const porInversion = medicos.find(m => {
+      const mNorm = normalizarNombre(m.nombre)
+      return mNorm.includes(invertidoNorm) || invertidoNorm.includes(mNorm)
+    })
+    if (porInversion) return porInversion
+  }
+
+  // 4. Buscar por apellido (primera parte antes de la coma o espacio)
+  const partes = nombreBusqueda.split(/[,\s]+/).filter(p => p.length > 2)
+
+  if (partes.length > 0) {
+    const apellido = partes[0]
+
+    // Buscar médicos que tengan el mismo apellido
+    const candidatos = medicos.filter(m => {
+      const partesM = normalizarNombre(m.nombre).split(/[,\s]+/).filter(p => p.length > 2)
+      return partesM.some(pm => pm === apellido)
+    })
+
+    if (candidatos.length === 1) {
+      return candidatos[0]
+    }
+
+    // Si hay múltiples con el mismo apellido, buscar por segunda palabra
+    if (candidatos.length > 1 && partes.length > 1) {
+      const segundaPalabra = partes[1]
+      const mejorCandidato = candidatos.find(m => {
+        const partesM = normalizarNombre(m.nombre).split(/[,\s]+/).filter(p => p.length > 2)
+        return partesM.some(pm => pm === segundaPalabra || pm.includes(segundaPalabra) || segundaPalabra.includes(pm))
+      })
+      if (mejorCandidato) return mejorCandidato
     }
   }
 
-  const nombreNormalizado = normalizarNombre(nombre)
-  if (nombreNormalizado === '') return null
-
-  // Estrategia 1: Coincidencia exacta (después de normalizar)
-  for (const medico of medicos) {
-    const medicoNombreNormalizado = normalizarNombre(medico.nombre)
-    if (medicoNombreNormalizado === nombreNormalizado) {
-      return medico
-    }
-  }
-
-  // Estrategia 2: Coincidencia exacta sin considerar orden
-  const partesNombre = nombreNormalizado.split(',').map(p => p.trim())
-  const palabrasNombre = nombreNormalizado.split(/\s+/).filter(p => p.length > 2)
-
-  for (const medico of medicos) {
-    const medicoNombreNormalizado = normalizarNombre(medico.nombre)
-    const partesMedico = medicoNombreNormalizado.split(',').map(p => p.trim())
-    const palabrasMedico = medicoNombreNormalizado.split(/\s+/).filter(p => p.length > 2)
-
-    if (palabrasNombre.length > 0 && palabrasMedico.length > 0) {
-      const palabrasNombreSet = new Set(palabrasNombre)
-      const palabrasMedicoSet = new Set(palabrasMedico)
-
-      if (palabrasNombreSet.size === palabrasMedicoSet.size &&
-        Array.from(palabrasNombreSet).every(p => palabrasMedicoSet.has(p))) {
-        return medico
-      }
-    }
-  }
-
-  // Estrategia 3: Buscar por apellido
-  const apellidoNombre = partesNombre.length > 1
-    ? partesNombre[0].trim()
-    : (palabrasNombre.length > 0 ? palabrasNombre[0] : nombreNormalizado)
-
-  let mejorCoincidenciaApellido: Medico | null = null
-  let mejorPuntuacionApellido = 0
-
-  for (const medico of medicos) {
-    const medicoNombreNormalizado = normalizarNombre(medico.nombre)
-    const partesMedico = medicoNombreNormalizado.split(',').map(p => p.trim())
-    const palabrasMedico = medicoNombreNormalizado.split(/\s+/).filter(p => p.length > 2)
-
-    const apellidoMedico = partesMedico.length > 1
-      ? partesMedico[0].trim()
-      : (palabrasMedico.length > 0 ? palabrasMedico[0] : medicoNombreNormalizado)
-
-    if (apellidoNombre === apellidoMedico && apellidoNombre.length > 2) {
-      const palabrasCoincidentes = palabrasNombre.filter(p =>
-        palabrasMedico.some(m => m === p || m.includes(p) || p.includes(m))
-      ).length
-
-      if (palabrasCoincidentes > mejorPuntuacionApellido) {
-        mejorPuntuacionApellido = palabrasCoincidentes
-        mejorCoincidenciaApellido = medico
-      }
-    }
-  }
-
-  if (mejorCoincidenciaApellido && mejorPuntuacionApellido > 0) {
-    return mejorCoincidenciaApellido
-  }
-
-  // Estrategia 4: Buscar por todas las palabras importantes
-  if (palabrasNombre.length > 0) {
-    for (const medico of medicos) {
-      const medicoNombreNormalizado = normalizarNombre(medico.nombre)
-      const palabrasMedico = medicoNombreNormalizado.split(/\s+/).filter(p => p.length > 2)
-
-      if (palabrasNombre.every(p => medicoNombreNormalizado.includes(p))) {
-        return medico
-      }
-
-      if (palabrasMedico.length > 0 && palabrasMedico.every(p => nombreNormalizado.includes(p))) {
-        return medico
-      }
-    }
-  }
-
-  // Estrategia 5: Búsqueda por similitud (al menos 2 palabras coinciden)
-  if (palabrasNombre.length >= 2) {
-    let mejorCoincidencia: Medico | null = null
-    let mejorPuntuacion = 0
-
-    for (const medico of medicos) {
-      const medicoNombreNormalizado = normalizarNombre(medico.nombre)
-      const palabrasMedico = medicoNombreNormalizado.split(/\s+/).filter(p => p.length > 2)
-
-      const palabrasCoincidentes = palabrasNombre.filter(p =>
-        palabrasMedico.some(m => m.includes(p) || p.includes(m))
-      ).length
-
-      if (palabrasCoincidentes >= 2 && palabrasCoincidentes > mejorPuntuacion) {
-        mejorPuntuacion = palabrasCoincidentes
-        mejorCoincidencia = medico
-      }
-    }
-
-    if (mejorCoincidencia) {
-      return mejorCoincidencia
-    }
+  // 5. Coincidencia por todas las palabras significativas presentes
+  if (partes.length >= 2) {
+    const candidatosPalabras = medicos.find(m => {
+      const partesM = normalizarNombre(m.nombre).split(/[,\s]+/).filter(p => p.length > 2)
+      const coincidencias = partes.filter(pb =>
+        partesM.some(pm => pm === pb || pm.includes(pb) || pb.includes(pm))
+      )
+      return coincidencias.length >= 2
+    })
+    if (candidatosPalabras) return candidatosPalabras
   }
 
   return null
@@ -248,38 +193,24 @@ function buscarMedico(nombre: string | null, medicos: Medico[]): Medico | null {
 function convertirFechaISO(fecha: string | null | undefined): string | null {
   if (!fecha) return null
 
-  const fechaStr = String(fecha).trim()
-  if (fechaStr === '') return null
+  // Si ya es formato ISO (YYYY-MM-DD)
+  const isoMatch = String(fecha).match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`
 
-  // Intentar formato DD/MM/YYYY
-  const matchDDMMYYYY = fechaStr.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/)
-  if (matchDDMMYYYY) {
-    const dia = matchDDMMYYYY[1].padStart(2, '0')
-    const mes = matchDDMMYYYY[2].padStart(2, '0')
-    const anio = matchDDMMYYYY[3]
-    return `${anio}-${mes}-${dia}`
+  // DD/MM/YYYY
+  const dmy = String(fecha).match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/)
+  if (dmy) {
+    return `${dmy[3]}-${String(dmy[2]).padStart(2, '0')}-${String(dmy[1]).padStart(2, '0')}`
   }
 
-  // Intentar formato YYYY-MM-DD (ya está en ISO)
-  const matchISO = fechaStr.match(/(\d{4})-(\d{1,2})-(\d{1,2})/)
-  if (matchISO) {
-    const anio = matchISO[1]
-    const mes = matchISO[2].padStart(2, '0')
-    const dia = matchISO[3].padStart(2, '0')
-    return `${anio}-${mes}-${dia}`
-  }
-
-  // Intentar parsear como Date object
-  try {
-    const dateObj = new Date(fechaStr)
-    if (!isNaN(dateObj.getTime())) {
-      const year = dateObj.getFullYear()
-      const month = String(dateObj.getMonth() + 1).padStart(2, '0')
-      const day = String(dateObj.getDate()).padStart(2, '0')
-      return `${year}-${month}-${day}`
-    }
-  } catch {
-    // Ignorar error
+  // Intentar fecha tipo Excel (número de serie)
+  const num = Number(fecha)
+  if (!isNaN(num) && num > 40000 && num < 60000) {
+    const date = new Date((num - 25569) * 86400 * 1000)
+    const y = date.getFullYear()
+    const m = String(date.getMonth() + 1).padStart(2, '0')
+    const d = String(date.getDate()).padStart(2, '0')
+    return `${y}-${m}-${d}`
   }
 
   return null
@@ -291,35 +222,34 @@ function convertirFechaISO(fecha: string | null | undefined): string | null {
 function convertirHora(hora: any): string | null {
   if (!hora) return null
 
-  if (typeof hora === 'string') {
-    const match = hora.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/)
-    if (match) {
-      const h = match[1].padStart(2, '0')
-      const m = match[2].padStart(2, '0')
-      const s = match[3] || '00'
-      return `${h}:${m}:${s}`
-    }
-  } else if (typeof hora === 'number') {
-    const totalSegundos = Math.round(hora * 86400)
-    const horas = Math.floor(totalSegundos / 3600)
-    const minutos = Math.floor((totalSegundos % 3600) / 60)
-    const segundos = totalSegundos % 60
-    return `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`
+  const horaStr = String(hora).trim()
+
+  // HH:MM o HH:MM:SS
+  const match = horaStr.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?/)
+  if (match) {
+    return `${String(match[1]).padStart(2, '0')}:${match[2]}:${match[3] || '00'}`
+  }
+
+  // Hora decimal (fracción del día, tipo Excel: 0.5 = 12:00)
+  const num = parseFloat(horaStr)
+  if (!isNaN(num) && num >= 0 && num < 1) {
+    const totalMinutos = Math.round(num * 24 * 60)
+    const h = Math.floor(totalMinutos / 60)
+    const m = totalMinutos % 60
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`
   }
 
   return null
 }
 
 /**
- * Procesa los archivos de Guardias Clínicas (consultas + horas) y los guarda en la base de datos
+ * Procesa el archivo de Guardias Clínicas (solo consultas) y lo guarda en la base de datos
  */
 export async function procesarExcelGuardiasClinicas(
   excelDataConsultas: ExcelData,
-  excelDataHoras: ExcelData,
   mes: number,
   anio: number,
-  archivoNombreConsultas: string,
-  archivoNombreHoras: string
+  archivoNombreConsultas: string
 ): Promise<ProcesamientoResult> {
   const resultado: ProcesamientoResult = {
     liquidacionId: '',
@@ -380,22 +310,7 @@ export async function procesarExcelGuardiasClinicas(
       })
     }
 
-    // 3. Cargar configuración de valores (horas)
-    const { data: valoresData } = await supabase
-      .from('clinical_values_config')
-      .select('*')
-      .eq('mes', mes)
-      .eq('anio', anio)
-      .single() as { data: ConfiguracionValores | null }
-
-    if (!valoresData) {
-      resultado.errores.push(`No se encontró configuración de valores para ${mes}/${anio}. Configure los valores antes de procesar.`)
-      return resultado
-    }
-
-    const valores: ConfiguracionValores = valoresData
-
-    // 3.5. Cargar valores de consultas de guardia clínica usando paginación
+    // 3. Cargar valores de consultas de guardia clínica usando paginación
     let todosLosValoresConsultas: ValorConsultaObraSocial[] = []
     from = 0
     hasMore = true
@@ -483,13 +398,13 @@ export async function procesarExcelGuardiasClinicas(
         total_retenciones: 0,
         total_adicionales: 0,
         total_neto: 0,
-        archivo_nombre: `${archivoNombreConsultas} + ${archivoNombreHoras}`,
+        archivo_nombre: archivoNombreConsultas,
         numero_liquidacion: numeroLiquidacion
       }
 
       const { data: liquidacionCreada, error: errorLiquidacion } = await supabase
         .from('liquidaciones_guardia')
-        // @ts-ignore - La tabla no está en los tipos generados de Supabase aún
+        // @ts-ignore
         .insert([nuevaLiquidacion])
         .select('id')
         .single()
@@ -509,9 +424,8 @@ export async function procesarExcelGuardiasClinicas(
 
     resultado.liquidacionId = liquidacionId
 
-    // 5. Mapeo de nombres de médicos (COMBINADO: consultas + horas)
-    // Esto asegura que los médicos se mapeen correctamente en ambos archivos
-    console.log(`Extrayendo nombres únicos de consultas y horas`)
+    // 5. Mapeo de nombres de médicos
+    console.log(`Extrayendo nombres únicos de consultas`)
 
     const nombresUnicos = new Set<string>()
     const nombresOriginales = new Map<string, string>()
@@ -521,23 +435,6 @@ export async function procesarExcelGuardiasClinicas(
       const medicoNombre = buscarValor(row, [
         'Responsable', 'Médico', 'Medico', 'Profesional',
         'Médico responsable', 'Médico Responsable'
-      ])
-
-      if (medicoNombre && typeof medicoNombre === 'string' && medicoNombre.trim() !== '') {
-        const nombreNormalizado = normalizarNombre(medicoNombre.trim())
-        if (nombreNormalizado !== '') {
-          nombresUnicos.add(nombreNormalizado)
-          if (!nombresOriginales.has(nombreNormalizado)) {
-            nombresOriginales.set(nombreNormalizado, medicoNombre.trim())
-          }
-        }
-      }
-    }
-
-    // Extraer nombres de HORAS (importante para mapear correctamente)
-    for (const row of excelDataHoras.rows) {
-      const medicoNombre = buscarValor(row, [
-        'Médico', 'Medico', 'Responsable', 'Profesional'
       ])
 
       if (medicoNombre && typeof medicoNombre === 'string' && medicoNombre.trim() !== '') {
@@ -569,7 +466,6 @@ export async function procesarExcelGuardiasClinicas(
     // 6. Procesar archivo de CONSULTAS
     console.log(`Procesando ${excelDataConsultas.rows.length} filas de consultas`)
 
-    // Procesar consultas
     const detallesConsultas: DetalleGuardiaInsert[] = []
     const totalBrutoPorMedico = new Map<string, number>()
 
@@ -599,154 +495,171 @@ export async function procesarExcelGuardiasClinicas(
           'Duración', 'Duracion', 'Tiempo', 'Minutos'
         ])
         const medicoNombre = buscarValor(row, [
-          'Responsable', 'Médico', 'Medico', 'Profesional'
+          'Responsable', 'Médico', 'Medico', 'Profesional',
+          'Médico responsable', 'Médico Responsable'
         ])
 
-        // Validaciones pre-liquidación - NO EXCLUIR, SOLO INFORMAR
-        let fecha: string | null = null
-        if (fechaStr) {
-          fecha = convertirFechaISO(fechaStr)
-        }
-
-        // Si no hay fecha válida, usar fecha por defecto del mes/año seleccionado
-        if (!fecha) {
+        // --- Filtros de exclusión ---
+        // Filtro: sin fecha
+        if (!fechaStr) {
           resultado.filasExcluidas.push({
             numeroFila: i + 1,
             razon: 'sin_fecha',
             datos: row
           })
-          resultado.advertencias.push(`Fila ${i + 1}: Sin fecha válida - se usará fecha por defecto del período`)
-          // Usar primer día del mes como fecha por defecto
-          fecha = `${anio}-${String(mes).padStart(2, '0')}-01`
+          continue
         }
 
-        const fechaAnio = parseInt(fecha.split('-')[0])
-        if (fechaAnio < 2020 || fechaAnio > 2100) {
+        // Convertir fecha
+        const fecha = convertirFechaISO(String(fechaStr))
+        if (!fecha) {
           resultado.filasExcluidas.push({
             numeroFila: i + 1,
             razon: 'fecha_invalida',
             datos: row
           })
-          resultado.advertencias.push(`Fila ${i + 1}: Fecha fuera de rango (${fechaAnio}) - se usará fecha por defecto del período`)
-          // Usar primer día del mes como fecha por defecto
-          fecha = `${anio}-${String(mes).padStart(2, '0')}-01`
+          continue
         }
 
-        // Validar duración = 0 o sin hora - PROCESAR IGUAL
-        const duracionNum = duracion ? (typeof duracion === 'number' ? duracion : parseFloat(String(duracion))) : null
-        const horaFormato = convertirHora(hora)
-
-        if (duracionNum === 0 || !horaFormato) {
+        // Verificar que la fecha corresponde al mes/año
+        const [anioFecha, mesFecha] = fecha.split('-').map(Number)
+        if (mesFecha !== mes || anioFecha !== anio) {
           resultado.filasExcluidas.push({
             numeroFila: i + 1,
-            razon: duracionNum === 0 ? 'duracion_cero' : 'sin_hora',
+            razon: 'fecha_invalida',
             datos: row
           })
-          resultado.advertencias.push(`Fila ${i + 1}: ${duracionNum === 0 ? 'Duración = 0' : 'Sin hora'} - se procesará igual`)
-          // Continuar con hora null si no hay hora
+          continue
         }
 
-        // Normalizar obra social y obtener valor de consulta
-        let obraSocialFinal: string
-        if (!obraSocial || obraSocial.trim() === '') {
-          // Si está vacío, asignar '042 - PARTICULARES' o 'PARTICULARES' según lo que esté en el mapa
-          if (valoresPorObraSocial.has('042 - PARTICULARES')) {
-            obraSocialFinal = '042 - PARTICULARES'
-          } else if (valoresPorObraSocial.has('PARTICULARES')) {
-            obraSocialFinal = 'PARTICULARES'
-          } else {
-            obraSocialFinal = '042 - PARTICULARES' // Por defecto
-          }
-        } else if (esParticular(obraSocial.trim()) || obraSocial.trim().toUpperCase().includes('SIN COBERTURA')) {
-          // Si es un nombre de persona o SIN COBERTURA, asignar '042 - PARTICULARES' o 'PARTICULARES'
+        // Filtro: duración cero
+        const duracionNum = duracion ? parseFloat(String(duracion).replace(',', '.')) : null
+        if (duracionNum !== null && duracionNum <= 0) {
+          resultado.filasExcluidas.push({
+            numeroFila: i + 1,
+            razon: 'duracion_cero',
+            datos: row
+          })
+          continue
+        }
+
+        // Filtro: sin hora
+        const horaFormato = convertirHora(hora)
+
+        // Filtro: particular
+        const obraSocialStr = obraSocial ? String(obraSocial).trim() : ''
+        if (esParticular(obraSocialStr)) {
           resultado.filasExcluidas.push({
             numeroFila: i + 1,
             razon: 'particular',
             datos: row
           })
-          resultado.advertencias.push(`Fila ${i + 1}: Obra social "${obraSocial.trim()}" marcada como PARTICULAR/SIN COBERTURA - se procesará igual`)
-          if (valoresPorObraSocial.has('042 - PARTICULARES')) {
-            obraSocialFinal = '042 - PARTICULARES'
-          } else if (valoresPorObraSocial.has('PARTICULARES')) {
-            obraSocialFinal = 'PARTICULARES'
-          } else {
-            obraSocialFinal = '042 - PARTICULARES' // Por defecto
-          }
-        } else {
-          obraSocialFinal = obraSocial.trim()
+          continue
         }
 
-        // Buscar médico
-        let medico: Medico | null = null
-        if (medicoNombre && typeof medicoNombre === 'string' && medicoNombre.trim() !== '') {
-          const nombreNormalizado = normalizarNombre(medicoNombre.trim())
-          medico = mapaNombresMedicos.get(nombreNormalizado) || null
-        }
-
-        if (!medico) {
-          resultado.advertencias.push(`Fila ${i + 1}: Médico no encontrado: ${medicoNombre} - se procesará sin médico asignado`)
-          // NO hacer continue, procesar con médico null
-        }
-
-        // Detectar duplicados - PROCESAR IGUAL PERO INFORMAR
-        const claveDuplicado = `${medico?.id || 'sin-medico'}|${fecha}|${horaFormato || 'sin-hora'}|${paciente || ''}`
-        if (duplicados.has(claveDuplicado)) {
+        // Filtro: duplicado
+        const fingerprint = `${fecha}_${medicoNombre}_${paciente}_${horaFormato}`
+        if (duplicados.has(fingerprint)) {
           resultado.filasExcluidas.push({
             numeroFila: i + 1,
             razon: 'duplicado',
             datos: row
           })
-          resultado.advertencias.push(`Fila ${i + 1}: Duplicado detectado - se procesará igual`)
-          // NO hacer continue, procesar igual (permitir duplicados)
-          // NO agregar a duplicados para permitir múltiples registros iguales
-        } else {
-          duplicados.add(claveDuplicado)
+          continue
         }
+        duplicados.add(fingerprint)
 
-        // Obtener valor unitario de consulta desde la base de datos
-        // Usar la nueva lógica de códigos y coincidencia flexible
-        let valorUnitario = 0
-        const codigoExcel = extraerCodigoObraSocial(obraSocialFinal)
+        // --- Procesamiento ---
+        // Buscar médico usando el mapa de nombres
+        let medico: Medico | null = null
+        if (medicoNombre && typeof medicoNombre === 'string' && medicoNombre.trim() !== '') {
+          const nombreNormalizado = normalizarNombre(medicoNombre.trim())
+          medico = mapaNombresMedicos.get(nombreNormalizado) || null
 
-        // 1. Intentar por código numérico exacto
-        if (codigoExcel) {
-          for (const v of valoresConsultas) {
-            if (extraerCodigoObraSocial(v.obra_social) === codigoExcel) {
-              valorUnitario = v.valor
-              break
+          if (!medico) {
+            medico = buscarMedico(medicoNombre.trim(), medicos)
+            if (medico) {
+              mapaNombresMedicos.set(nombreNormalizado, medico)
             }
           }
         }
 
-        // 2. Si no se encontró por código, intentar por coincidencia de nombre flexible
-        if (valorUnitario === 0) {
-          for (const v of valoresConsultas) {
-            if (coincidenObrasSociales(obraSocialFinal, v.obra_social)) {
-              valorUnitario = v.valor
-              break
+        // Calcular monto facturado
+        let montoFacturado = 0
+
+        // Determinar la obra social final para buscar el valor
+        let obraSocialFinal = obraSocialStr
+
+        // Buscar valor por obra social
+        if (obraSocialStr) {
+          const codigoOS = extraerCodigoObraSocial(obraSocialStr)
+
+          // Estrategia de búsqueda progresiva
+          let valorEncontrado = false
+
+          // 1. Buscar coincidencia exacta por código
+          if (codigoOS) {
+            for (const [osKey, valor] of valoresPorObraSocial.entries()) {
+              if (coincidenObrasSociales(codigoOS, osKey)) {
+                montoFacturado = valor
+                obraSocialFinal = osKey
+                valorEncontrado = true
+                break
+              }
+            }
+          }
+
+          // 2. Buscar por nombre normalizado
+          if (!valorEncontrado) {
+            const osNorm = normalizarNombre(obraSocialStr)
+            for (const [osKey, valor] of valoresPorObraSocial.entries()) {
+              if (normalizarNombre(osKey) === osNorm) {
+                montoFacturado = valor
+                obraSocialFinal = osKey
+                valorEncontrado = true
+                break
+              }
+            }
+          }
+
+          // 3. Buscar por coincidencia parcial
+          if (!valorEncontrado) {
+            const osNorm = normalizarNombre(obraSocialStr)
+            for (const [osKey, valor] of valoresPorObraSocial.entries()) {
+              const keyNorm = normalizarNombre(osKey)
+              if (keyNorm.includes(osNorm) || osNorm.includes(keyNorm)) {
+                montoFacturado = valor
+                obraSocialFinal = osKey
+                valorEncontrado = true
+                break
+              }
+            }
+          }
+
+          // 4. Si todavía no encontró, intentar con el código extraído
+          if (!valorEncontrado && codigoOS) {
+            for (const [osKey, valor] of valoresPorObraSocial.entries()) {
+              if (normalizarNombre(osKey).includes(normalizarNombre(codigoOS))) {
+                montoFacturado = valor
+                obraSocialFinal = osKey
+                valorEncontrado = true
+                break
+              }
+            }
+          }
+
+          // 5. Si no se encontró valor, usar el valor del Excel como fallback
+          if (!valorEncontrado) {
+            const totalBrutoNum = totalBruto ? parseFloat(String(totalBruto).replace(',', '.')) : 0
+            montoFacturado = isNaN(totalBrutoNum) ? 0 : totalBrutoNum
+
+            if (montoFacturado > 0) {
+              resultado.advertencias.push(`Fila ${i + 1}: OS "${obraSocialStr}" sin valor configurado. Usando valor del Excel: $${montoFacturado}`)
+            } else {
+              resultado.advertencias.push(`Fila ${i + 1}: OS "${obraSocialStr}" sin valor configurado y sin valor en Excel.`)
             }
           }
         }
-
-        // 3. Fallback especial para PARTICULARES si sigue siendo 0
-        if (valorUnitario === 0 && (obraSocialFinal.includes('PARTICULAR') || obraSocialFinal.includes('042'))) {
-          // Buscar explícitamente cualquier valor que sea de particulares
-          const vParticular = valoresConsultas.find(v =>
-            v.obra_social.includes('PARTICULAR') || extraerCodigoObraSocial(v.obra_social) === '042'
-          )
-          if (vParticular) {
-            valorUnitario = vParticular.valor
-          }
-        }
-
-        // Solo registrar advertencia si NO es PARTICULARES y no tiene valor
-        if (valorUnitario === 0 && !esParticular(obraSocialFinal)) {
-          resultado.advertencias.push(`Fila ${i + 1}: No hay valor configurado para obra social: ${obraSocialFinal}`)
-        }
-
-        // Calcular monto facturado usando el valor unitario de la base de datos
-        // Cada fila representa una consulta, así que el valor unitario es el monto facturado
-        const montoFacturado = valorUnitario
 
         // Si hay médico, acumular total bruto por médico (ahora usando montoFacturado)
         if (medico) {
@@ -754,18 +667,18 @@ export async function procesarExcelGuardiasClinicas(
           totalBrutoPorMedico.set(medico.id, brutoActual + montoFacturado)
         }
 
-        // Crear detalle (se calculará el neto después)
+        // Crear detalle
         const detalle: DetalleGuardiaInsert = {
           liquidacion_id: liquidacionId,
           medico_id: medico?.id || null,
-          fecha: fecha || `${anio}-${String(mes).padStart(2, '0')}-01`, // Fecha por defecto si no hay
+          fecha: fecha || `${anio}-${String(mes).padStart(2, '0')}-01`,
           hora: horaFormato || null,
           paciente: paciente || null,
           obra_social: obraSocialFinal || null,
           medico_nombre: medico?.nombre || medicoNombre || 'Sin médico asignado',
           medico_matricula: medico?.matricula_provincial || null,
           medico_es_residente: medico?.es_residente || false,
-          monto_facturado: montoFacturado, // Usar valor de la BD, no del Excel
+          monto_facturado: montoFacturado,
           porcentaje_retencion: null,
           monto_retencion: null,
           monto_adicional: 0,
@@ -784,218 +697,10 @@ export async function procesarExcelGuardiasClinicas(
       }
     }
 
-    // 7. Procesar archivo de HORAS y guardar en BD
-    console.log(`Procesando ${excelDataHoras.rows.length} filas de horas`)
-
-    const detallesHoras: DetalleHorasGuardiaInsert[] = []
-    const horasPorMedico = new Map<string, HorasMedico>()
-
-    for (let i = 0; i < excelDataHoras.rows.length; i++) {
-      const row = excelDataHoras.rows[i]
-
-      try {
-        const medicoNombre = buscarValor(row, [
-          'Médico', 'Medico', 'Responsable', 'Profesional'
-        ])
-
-        // Buscar columnas de horas con variaciones: incluir nombres exactos del archivo
-        const franjas816 = buscarValor(row, [
-          'Horas semanales de 8 a 16 hs', 'Horas semanales de 8 a 16',
-          '8 a 16', '8-16', '8a16', '8 a 12', '8-12',
-          'Semanal 8 a 16', 'Semanal 8-16', 'Horas Semanal 8-16',
-          '8a12/16a8', '8a12', '16a8'
-        ])
-        const franjas168 = buscarValor(row, [
-          'Horas semanales de 16 a 8 hs', 'Horas semanales de 16 a 8',
-          '16 a 8', '16-8', '16a8', '16 a 8',
-          'Semanal 16 a 8', 'Semanal 16-8', 'Horas Semanal 16-8'
-        ])
-        const horasWeekend = buscarValor(row, [
-          'Horas fin de semana / feriados', 'Horas fin de semana /',
-          'Horas fin de semana', 'Fin de semana', 'Fin de Semana',
-          'Weekend', 'Finde', 'Horas Weekend'
-        ])
-        const horasWeekendNight = buscarValor(row, [
-          'Horas nocturnas fin de semana /', 'Horas nocturnas fin de semana',
-          'Noche finde', 'Noche Finde', 'Weekend Night', 'Finde Noche',
-          'Horas noche finde', 'Horas nocturnas finde'
-        ])
-
-        if (!medicoNombre) {
-          resultado.advertencias.push(`Fila ${i + 1} (horas): Sin nombre de médico`)
-          continue
-        }
-
-        // Buscar médico usando el mapa de nombres normalizados (igual que consultas)
-        let medico: Medico | null = null
-        if (typeof medicoNombre === 'string' && medicoNombre.trim() !== '') {
-          const nombreNormalizado = normalizarNombre(medicoNombre.trim())
-          medico = mapaNombresMedicos.get(nombreNormalizado) || null
-
-          // Si no está en el mapa, intentar búsqueda directa como fallback
-          if (!medico) {
-            medico = buscarMedico(medicoNombre.trim(), medicos)
-            if (medico) {
-              // Agregar al mapa para futuras búsquedas
-              mapaNombresMedicos.set(nombreNormalizado, medico)
-              console.log(`[Mapeo Horas] Médico encontrado por búsqueda directa: "${medicoNombre}" -> "${medico.nombre}"`)
-            }
-          }
-
-          // Si aún no se encuentra, intentar búsqueda más flexible por apellido
-          if (!medico) {
-            const nombreLower = medicoNombre.trim().toLowerCase()
-            const partesNombre = nombreLower.split(/[\s,]+/).filter(p => p.length > 2)
-
-            if (partesNombre.length > 0) {
-              // Buscar por apellido (primera parte del nombre)
-              const apellidoBuscado = partesNombre[0]
-
-              for (const m of medicos) {
-                const medicoNombreLower = m.nombre.toLowerCase()
-                const partesMedico = medicoNombreLower.split(/[\s,]+/).filter(p => p.length > 2)
-
-                // Si el apellido (primera parte) coincide y tiene más de 3 caracteres
-                if (partesMedico.length > 0 &&
-                  partesMedico[0] === apellidoBuscado &&
-                  apellidoBuscado.length > 3) {
-                  // Verificar que haya al menos otra coincidencia (nombre o segundo apellido)
-                  const coincidencias = partesNombre.filter(pn =>
-                    partesMedico.some(pm => pm === pn || pm.includes(pn) || pn.includes(pm))
-                  )
-
-                  if (coincidencias.length >= 2 || (coincidencias.length === 1 && apellidoBuscado.length > 5)) {
-                    medico = m
-                    mapaNombresMedicos.set(nombreNormalizado, medico)
-                    resultado.advertencias.push(`Fila ${i + 1} (horas): Médico encontrado por apellido: "${medicoNombre}" -> "${m.nombre}"`)
-                    break
-                  }
-                }
-              }
-            }
-          }
-        }
-
-        if (!medico) {
-          resultado.advertencias.push(`Fila ${i + 1} (horas): Médico no encontrado: ${medicoNombre} - SE OMITEN LAS HORAS`)
-          continue
-        }
-
-        // Función auxiliar para convertir valores a número (maneja diferentes formatos)
-        const convertirANumero = (valor: any): number => {
-          if (typeof valor === 'number') {
-            return isNaN(valor) ? 0 : valor
-          }
-          if (!valor || valor === null || valor === undefined) {
-            return 0
-          }
-          // Convertir a string, limpiar y reemplazar coma por punto
-          const str = String(valor).trim().replace(/[^\d,.-]/g, '').replace(',', '.')
-          const num = parseFloat(str)
-          return isNaN(num) ? 0 : num
-        }
-
-        // Obtener valores (convertir a número) - MEJORADO para manejar diferentes formatos
-        const f816 = convertirANumero(franjas816)
-        const f168 = convertirANumero(franjas168)
-        const hWeekend = convertirANumero(horasWeekend)
-        const hWeekendNight = convertirANumero(horasWeekendNight)
-
-        // Validar y loggear si hay valores que no se pudieron convertir correctamente
-        if (franjas816 && f816 === 0 && String(franjas816).trim() !== '0' && String(franjas816).trim() !== '') {
-          resultado.advertencias.push(`Fila ${i + 1} (horas): Valor "8-16" no se pudo convertir a número: ${franjas816} (usando 0)`)
-        }
-        if (franjas168 && f168 === 0 && String(franjas168).trim() !== '0' && String(franjas168).trim() !== '') {
-          resultado.advertencias.push(`Fila ${i + 1} (horas): Valor "16-8" no se pudo convertir a número: ${franjas168} (usando 0)`)
-        }
-        if (horasWeekend && hWeekend === 0 && String(horasWeekend).trim() !== '0' && String(horasWeekend).trim() !== '') {
-          resultado.advertencias.push(`Fila ${i + 1} (horas): Valor "weekend" no se pudo convertir a número: ${horasWeekend} (usando 0)`)
-        }
-        if (horasWeekendNight && hWeekendNight === 0 && String(horasWeekendNight).trim() !== '0' && String(horasWeekendNight).trim() !== '') {
-          resultado.advertencias.push(`Fila ${i + 1} (horas): Valor "weekend night" no se pudo convertir a número: ${horasWeekendNight} (usando 0)`)
-        }
-
-        // Calcular valores (todas son horas trabajadas, se multiplican por valor por hora)
-        // IMPORTANTE: 1 hora = valor_hour_xxx (multiplicación directa: horas × valor_por_hora)
-        const valorHoras816 = f816 * valores.value_hour_weekly_8_16
-        const valorHoras168 = f168 * valores.value_hour_weekly_16_8
-        const valorHorasWeekend = hWeekend * valores.value_hour_weekend
-        const valorHorasWeekendNight = hWeekendNight * valores.value_hour_weekend_night
-
-        // Total de horas: suma simple de los 4 valores (SIN aplicar garantía mínima aquí)
-        // La garantía mínima solo se usa para calcular el mínimo acordado al final
-        const totalHoras = valorHoras816 + valorHoras168 + valorHorasWeekend + valorHorasWeekendNight
-
-        // Crear detalle de horas
-        const detalleHora: DetalleHorasGuardiaInsert = {
-          liquidacion_id: liquidacionId,
-          medico_id: medico.id,
-          medico_nombre: medico.nombre,
-          medico_matricula: medico.matricula_provincial || null,
-          medico_es_residente: medico.es_residente,
-          franjas_8_16: f816,
-          franjas_16_8: f168,
-          horas_weekend: hWeekend,
-          horas_weekend_night: hWeekendNight,
-          valor_franjas_8_16: valorHoras816,  // Nota: aunque el campo se llama "franjas", en realidad son horas
-          valor_franjas_16_8: valorHoras168,  // Nota: aunque el campo se llama "franjas", en realidad son horas
-          valor_horas_weekend: valorHorasWeekend,
-          valor_horas_weekend_night: valorHorasWeekendNight,
-          total_horas: totalHoras,
-          fila_excel: i + 1,
-          estado_revision: 'pendiente'
-        }
-
-        detallesHoras.push(detalleHora)
-
-        // Acumular horas por médico (para cálculo de totales)
-        const horasActuales = horasPorMedico.get(medico.id) || {
-          medico_id: medico.id,
-          franjas_8_16: 0,
-          franjas_16_8: 0,
-          horas_weekend: 0,
-          horas_weekend_night: 0
-        }
-
-        horasPorMedico.set(medico.id, {
-          medico_id: medico.id,
-          franjas_8_16: horasActuales.franjas_8_16 + f816,
-          franjas_16_8: horasActuales.franjas_16_8 + f168,
-          horas_weekend: horasActuales.horas_weekend + hWeekend,
-          horas_weekend_night: horasActuales.horas_weekend_night + hWeekendNight
-        })
-
-        resultado.procesadas++
-
-      } catch (error: any) {
-        resultado.errores.push(`Fila ${i + 1} (horas): ${error.message}`)
-      }
-    }
-
-    // Guardar detalles de horas en BD (batch insert)
-    if (detallesHoras.length > 0) {
-      const batchSize = 500
-      for (let i = 0; i < detallesHoras.length; i += batchSize) {
-        const batch = detallesHoras.slice(i, i + batchSize)
-        const { error: errorHoras } = await supabase
-          .from('detalle_horas_guardia')
-          // @ts-ignore
-          .insert(batch)
-
-        if (errorHoras) {
-          resultado.errores.push(`Error guardando horas (batch ${Math.floor(i / batchSize) + 1}): ${errorHoras.message}`)
-        }
-      }
-    }
-
-    // 7. Calcular importes finales por médico
+    // 7. Calcular importes finales por médico (solo consultas)
     const totalesPorMedico = new Map<string, {
       netoConsultas: number
-      totalHoras: number
       totalFinal: number
-      totalHorasTrabajadas: number  // Para calcular mínimo acordado
-      minimoAcordado: number        // Mínimo acordado = value_guaranteed_min × total_horas_trabajadas
-      diferenciaSanatorio: number   // Diferencia pagada por sanatorio si aplica
     }>()
 
     // Calcular neto de consultas por médico
@@ -1012,75 +717,12 @@ export async function procesarExcelGuardiasClinicas(
 
       totalesPorMedico.set(medicoId, {
         netoConsultas,
-        totalHoras: 0,
-        totalFinal: netoConsultas,
-        totalHorasTrabajadas: 0,
-        minimoAcordado: 0,
-        diferenciaSanatorio: 0
+        totalFinal: netoConsultas
       })
-    }
-
-    // Calcular total de horas por médico
-    for (const [medicoId, horas] of horasPorMedico.entries()) {
-      // Calcular valor de horas (todas son horas trabajadas, se multiplican por valor por hora)
-      const valorHoras816 = horas.franjas_8_16 * valores.value_hour_weekly_8_16
-      const valorHoras168 = horas.franjas_16_8 * valores.value_hour_weekly_16_8
-      const valorHorasWeekend = horas.horas_weekend * valores.value_hour_weekend
-      const valorHorasWeekendNight = horas.horas_weekend_night * valores.value_hour_weekend_night
-
-      // Total de horas trabajadas (solo weekend + weekend_night, para calcular mínimo acordado)
-      const totalHorasTrabajadas = horas.horas_weekend + horas.horas_weekend_night
-
-      // Total de horas: suma simple (SIN aplicar garantía mínima aquí)
-      // La garantía mínima solo se usa para calcular el mínimo acordado al final
-      const totalHoras = valorHoras816 + valorHoras168 + valorHorasWeekend + valorHorasWeekendNight
-
-      const totales = totalesPorMedico.get(medicoId) || {
-        netoConsultas: 0,
-        totalHoras: 0,
-        totalFinal: 0,
-        totalHorasTrabajadas: 0,
-        minimoAcordado: 0,
-        diferenciaSanatorio: 0
-      }
-
-      totales.totalHoras = totalHoras
-      totales.totalHorasTrabajadas = totalHorasTrabajadas
-
-      // Calcular mínimo acordado = value_guaranteed_min × total_horas_trabajadas
-      const minimoAcordado = totalHorasTrabajadas * valores.value_guaranteed_min
-      totales.minimoAcordado = minimoAcordado
-
-      // Calcular total sin mínimo (consultas + horas)
-      const totalSinMinimo = totales.netoConsultas + totalHoras
-
-      // Aplicar regla del mínimo acordado
-      // Si (total_horas + total_consultas) < mínimo_acordado, el sanatorio paga la diferencia
-      if (minimoAcordado > 0 && totalSinMinimo < minimoAcordado) {
-        const diferencia = minimoAcordado - totalSinMinimo
-        totales.diferenciaSanatorio = diferencia
-        totales.totalFinal = minimoAcordado
-
-        // Buscar nombre del médico para el mensaje
-        const medico = medicos.find(m => m.id === medicoId)
-        const nombreMedico = medico?.nombre || medicoId
-        resultado.advertencias.push(
-          `⚠️ MÉDICO: ${nombreMedico} - El total (consultas + horas) es menor al mínimo acordado. ` +
-          `Total calculado: $${totalSinMinimo.toFixed(2)}, Mínimo acordado: $${minimoAcordado.toFixed(2)} ` +
-          `(${valores.value_guaranteed_min.toFixed(2)} × ${totalHorasTrabajadas} horas). ` +
-          `El sanatorio pagará la diferencia de $${diferencia.toFixed(2)}.`
-        )
-      } else {
-        totales.totalFinal = totalSinMinimo
-        totales.diferenciaSanatorio = 0
-      }
-
-      totalesPorMedico.set(medicoId, totales)
     }
 
     // 8. Actualizar detalles de consultas con importes calculados
     for (const detalle of detallesConsultas) {
-      // Si no hay médico, dejar importe_calculado en null y continuar
       if (!detalle.medico_id) {
         detalle.importe_calculado = null
         continue
@@ -1090,7 +732,6 @@ export async function procesarExcelGuardiasClinicas(
       const totalBruto = totalBrutoPorMedico.get(detalle.medico_id) || 0
       const totales = totalesPorMedico.get(detalle.medico_id)
 
-      // Si no hay totales calculados, dejar importe_calculado en null
       if (!totales) {
         detalle.importe_calculado = null
         continue
@@ -1128,7 +769,7 @@ export async function procesarExcelGuardiasClinicas(
       const batch = detallesConsultas.slice(i, i + batchSize)
       const { error: errorDetalles } = await supabase
         .from('detalle_guardia')
-        // @ts-ignore - La tabla no está en los tipos generados de Supabase aún
+        // @ts-ignore
         .insert(batch)
 
       if (errorDetalles) {
@@ -1139,16 +780,16 @@ export async function procesarExcelGuardiasClinicas(
 
     // 10. Actualizar totales de la liquidación
     const totalConsultas = detallesConsultas.length
-    const totalBruto = Array.from(totalBrutoPorMedico.values()).reduce((sum, v) => sum + v, 0)
+    const totalBrutoFinal = Array.from(totalBrutoPorMedico.values()).reduce((sum, v) => sum + v, 0)
     const totalNeto = Array.from(totalesPorMedico.values()).reduce((sum, v) => sum + v.totalFinal, 0)
-    const totalRetenciones = totalBruto - Array.from(totalesPorMedico.values()).reduce((sum, v) => sum + v.netoConsultas, 0)
+    const totalRetenciones = totalBrutoFinal - Array.from(totalesPorMedico.values()).reduce((sum, v) => sum + v.netoConsultas, 0)
 
     const { error: errorUpdate } = await supabase
       .from('liquidaciones_guardia')
-      // @ts-ignore - La tabla no está en los tipos generados de Supabase aún
+      // @ts-ignore
       .update({
         total_consultas: totalConsultas,
-        total_bruto: totalBruto,
+        total_bruto: totalBrutoFinal,
         total_retenciones: totalRetenciones,
         total_neto: totalNeto,
         estado: 'finalizada'
@@ -1159,7 +800,7 @@ export async function procesarExcelGuardiasClinicas(
       resultado.errores.push(`Error actualizando totales: ${errorUpdate.message}`)
     }
 
-    resultado.totalFilas = excelDataConsultas.rows.length + excelDataHoras.rows.length
+    resultado.totalFilas = excelDataConsultas.rows.length
 
   } catch (error: any) {
     resultado.errores.push(`Error general: ${error.message || 'Error desconocido'}`)
@@ -1167,4 +808,3 @@ export async function procesarExcelGuardiasClinicas(
 
   return resultado
 }
-

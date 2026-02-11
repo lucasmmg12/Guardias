@@ -4,12 +4,12 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { calcularResumenPorMedico, calcularResumenPorPrestador, calcularTotalGeneral, ResumenPorMedico, ResumenPorPrestador } from '@/lib/guardias-clinicas-resumenes'
-import { LiquidacionGuardia, DetalleHorasGuardia, ClinicalValuesConfig } from '@/lib/types'
+import { LiquidacionGuardia } from '@/lib/types'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, FileDown, Download, History, Eye, FileSpreadsheet, Clock, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
+import { ArrowLeft, FileDown, Download, History, Eye, FileSpreadsheet, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
 import { ConfirmModal } from '@/components/custom/ConfirmModal'
 import { ExcelDataTable } from '@/components/custom/ExcelDataTable'
-import { cargarExcelDataDesdeBD, cargarExcelDataHorasDesdeBD } from '@/lib/excel-reconstructor'
+import { cargarExcelDataDesdeBD } from '@/lib/excel-reconstructor'
 import { ExcelData } from '@/lib/excel-reader'
 
 const MESES = [
@@ -51,13 +51,13 @@ export default function ResumenesGuardiasClinicasPage() {
   const [historial, setHistorial] = useState<LiquidacionGuardia[]>([])
   const [loading, setLoading] = useState(false)
   const [loadingHistorial, setLoadingHistorial] = useState(false)
-  const [tabActiva, setTabActiva] = useState<'medicos' | 'prestadores' | 'historial' | 'excel' | 'excelHoras'>('medicos')
+  const [tabActiva, setTabActiva] = useState<'medicos' | 'prestadores' | 'historial' | 'excel'>('medicos')
   const [liquidacionExpandida, setLiquidacionExpandida] = useState<string | null>(null)
   const [excelData, setExcelData] = useState<ExcelData | null>(null)
-  const [excelDataHoras, setExcelDataHoras] = useState<ExcelData | null>(null)
+
   const [liquidacionActual, setLiquidacionActual] = useState<LiquidacionGuardia | null>(null)
   const [loadingExcel, setLoadingExcel] = useState(false)
-  const [loadingExcelHoras, setLoadingExcelHoras] = useState(false)
+
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -74,8 +74,6 @@ export default function ResumenesGuardiasClinicasPage() {
       cargarHistorial()
     } else if (tabActiva === 'excel') {
       cargarExcelData()
-    } else if (tabActiva === 'excelHoras') {
-      cargarExcelDataHoras()
     } else {
       cargarResumenes()
     }
@@ -125,49 +123,7 @@ export default function ResumenesGuardiasClinicasPage() {
     }
   }
 
-  // Cargar ExcelData de horas desde la liquidación del mes seleccionado
-  async function cargarExcelDataHoras() {
-    setLoadingExcelHoras(true)
-    try {
-      // Buscar liquidación del mes/año seleccionado
-      const { data: liquidacion, error } = await supabase
-        .from('liquidaciones_guardia')
-        .select('*')
-        .eq('especialidad', 'Guardias Clínicas')
-        .eq('mes', mes)
-        .eq('anio', anio)
-        .single()
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error cargando liquidación:', error)
-        setExcelDataHoras(null)
-        setLiquidacionActual(null)
-        return
-      }
-
-      if (liquidacion) {
-        const liq = liquidacion as LiquidacionGuardia
-        setLiquidacionActual(liq)
-
-        // Cargar ExcelData de horas desde BD
-        const excelDataCargado = await cargarExcelDataHorasDesdeBD(liq.id, supabase)
-        if (excelDataCargado) {
-          setExcelDataHoras(excelDataCargado)
-        } else {
-          setExcelDataHoras(null)
-        }
-      } else {
-        setLiquidacionActual(null)
-        setExcelDataHoras(null)
-      }
-    } catch (error) {
-      console.error('Error cargando ExcelData de horas:', error)
-      setExcelDataHoras(null)
-      setLiquidacionActual(null)
-    } finally {
-      setLoadingExcelHoras(false)
-    }
-  }
 
   // Función para actualizar celda de consultas
   const cambiosPendientesRef = useRef<Map<string, { liquidacionId: string; filaExcel: number; columna: string; valor: any }>>(new Map())
@@ -255,155 +211,7 @@ export default function ResumenesGuardiasClinicasPage() {
     }
   }
 
-  // Función para actualizar celda de horas
-  const cambiosPendientesHorasRef = useRef<Map<string, { liquidacionId: string; filaExcel: number; columna: string; valor: any }>>(new Map())
-  const saveTimerHorasRef = useRef<NodeJS.Timeout | null>(null)
 
-  const handleCellUpdateHoras = useCallback(async (rowIndex: number, column: string, newValue: any) => {
-    if (!liquidacionActual || !excelDataHoras) return
-
-    const filaExcel = (excelDataHoras.rows[rowIndex] as any).__fila_excel ?? (rowIndex + 1)
-
-    // Actualizar ExcelData local inmediatamente (optimista)
-    if (excelDataHoras.rows[rowIndex]) {
-      excelDataHoras.rows[rowIndex][column] = newValue
-      setExcelDataHoras({ ...excelDataHoras })
-    }
-
-    // Guardar cambio pendiente
-    const key = `${liquidacionActual.id}-${filaExcel}-${column}`
-    cambiosPendientesHorasRef.current.set(key, {
-      liquidacionId: liquidacionActual.id,
-      filaExcel,
-      columna: column,
-      valor: newValue
-    })
-
-    // Cancelar timer anterior
-    if (saveTimerHorasRef.current) {
-      clearTimeout(saveTimerHorasRef.current)
-    }
-
-    // Programar guardado automático (500ms de debounce)
-    saveTimerHorasRef.current = setTimeout(async () => {
-      await guardarCambiosPendientesHoras()
-    }, 500)
-  }, [liquidacionActual, excelDataHoras])
-
-  const guardarCambiosPendientesHoras = async () => {
-    if (cambiosPendientesHorasRef.current.size === 0 || !liquidacionActual) return
-
-    const cambios = Array.from(cambiosPendientesHorasRef.current.values())
-
-    try {
-      // Obtener configuración de valores para recalcular
-      const { data: valoresConfigData, error: errorValores } = await supabase
-        .from('clinical_values_config')
-        .select('*')
-        .eq('mes', mes)
-        .eq('anio', anio)
-        .single()
-
-      if (errorValores || !valoresConfigData) {
-        console.error('No se encontró configuración de valores')
-        return
-      }
-
-      const valoresConfig = valoresConfigData as ClinicalValuesConfig
-
-      // Agrupar cambios por fila
-      const cambiosPorFila = new Map<number, Map<string, any>>()
-      cambios.forEach(cambio => {
-        if (!cambiosPorFila.has(cambio.filaExcel)) {
-          cambiosPorFila.set(cambio.filaExcel, new Map())
-        }
-        const filaCambios = cambiosPorFila.get(cambio.filaExcel)!
-
-        // Mapear nombre de columna del Excel a campo de BD
-        const columnaLower = cambio.columna.toLowerCase()
-        if (columnaLower.includes('8 a 16') || columnaLower.includes('8-16')) {
-          filaCambios.set('franjas_8_16', parseFloat(cambio.valor) || 0)
-        } else if (columnaLower.includes('16 a 8') || columnaLower.includes('16-8')) {
-          filaCambios.set('franjas_16_8', parseFloat(cambio.valor) || 0)
-        } else if (columnaLower.includes('fin de semana') && !columnaLower.includes('nocturn')) {
-          filaCambios.set('horas_weekend', parseFloat(cambio.valor) || 0)
-        } else if (columnaLower.includes('nocturn') || columnaLower.includes('noche')) {
-          filaCambios.set('horas_weekend_night', parseFloat(cambio.valor) || 0)
-        } else if (columnaLower.includes('responsable') || columnaLower.includes('medico')) {
-          filaCambios.set('medico_nombre', cambio.valor)
-        }
-      })
-
-      // Guardar cada fila y recalcular valores
-      const promesas = Array.from(cambiosPorFila.entries()).map(async ([filaExcel, campos]) => {
-        // Obtener detalle actual para recalcular
-        const { data: detalleActualData, error: errorDetalle } = await supabase
-          .from('detalle_horas_guardia')
-          .select('*')
-          .eq('liquidacion_id', liquidacionActual.id)
-          .eq('fila_excel', filaExcel)
-          .single()
-
-        if (errorDetalle || !detalleActualData) return
-
-        const detalleActual = detalleActualData as DetalleHorasGuardia
-
-        // Calcular nuevos valores
-        const f816 = campos.get('franjas_8_16') ?? detalleActual.franjas_8_16 ?? 0
-        const f168 = campos.get('franjas_16_8') ?? detalleActual.franjas_16_8 ?? 0
-        const hWeekend = campos.get('horas_weekend') ?? detalleActual.horas_weekend ?? 0
-        const hWeekendNight = campos.get('horas_weekend_night') ?? detalleActual.horas_weekend_night ?? 0
-
-        const valorFranjas816 = f816 * valoresConfig.value_hour_weekly_8_16
-        const valorFranjas168 = f168 * valoresConfig.value_hour_weekly_16_8
-        const valorHorasWeekend = hWeekend * valoresConfig.value_hour_weekend
-        const valorHorasWeekendNight = hWeekendNight * valoresConfig.value_hour_weekend_night
-
-        const totalHorasTrabajadas = hWeekend + hWeekendNight
-        let totalHoras = valorFranjas816 + valorFranjas168 + valorHorasWeekend + valorHorasWeekendNight
-
-        // Aplicar garantía mínima
-        if (totalHorasTrabajadas > 0) {
-          const valorPorHora = totalHoras / totalHorasTrabajadas
-          if (valorPorHora < valoresConfig.value_guaranteed_min) {
-            totalHoras = totalHorasTrabajadas * valoresConfig.value_guaranteed_min
-          }
-        }
-
-        const updateData: any = {}
-        campos.forEach((valor, campo) => {
-          updateData[campo] = valor
-        })
-
-        // Actualizar valores calculados
-        updateData.valor_franjas_8_16 = valorFranjas816
-        updateData.valor_franjas_16_8 = valorFranjas168
-        updateData.valor_horas_weekend = valorHorasWeekend
-        updateData.valor_horas_weekend_night = valorHorasWeekendNight
-        updateData.total_horas = totalHoras
-        updateData.updated_at = new Date().toISOString()
-
-        const { error } = await supabase
-          .from('detalle_horas_guardia')
-          // @ts-ignore
-          .update(updateData)
-          .eq('liquidacion_id', liquidacionActual.id)
-          .eq('fila_excel', filaExcel)
-
-        if (error) throw error
-      })
-
-      await Promise.all(promesas)
-
-      // Recargar ExcelData de horas
-      await cargarExcelDataHoras()
-
-      // Limpiar cambios pendientes
-      cambiosPendientesHorasRef.current.clear()
-    } catch (error) {
-      console.error('Error guardando cambios de horas:', error)
-    }
-  }
 
   // Función para eliminar fila de consultas
   const handleDeleteRow = useCallback(async (rowIndex: number) => {
@@ -466,36 +274,7 @@ export default function ResumenesGuardiasClinicasPage() {
     }
   }, [liquidacionActual, excelData])
 
-  // Función para eliminar fila de horas
-  const handleDeleteRowHoras = useCallback(async (rowIndex: number) => {
-    if (!liquidacionActual || !excelDataHoras) return
 
-    const row = excelDataHoras.rows[rowIndex]
-    if (!row) return
-
-    const filaExcel = (row as any).__fila_excel ?? (rowIndex + 1)
-
-    try {
-      const { error } = await supabase
-        .from('detalle_horas_guardia')
-        .delete()
-        .eq('liquidacion_id', liquidacionActual.id)
-        .eq('fila_excel', filaExcel)
-
-      if (error) {
-        console.error('Error eliminando fila de horas:', error)
-        return
-      }
-
-      // Recargar ExcelData desde BD
-      const excelDataRecargado = await cargarExcelDataHorasDesdeBD(liquidacionActual.id, supabase)
-      if (excelDataRecargado) {
-        setExcelDataHoras(excelDataRecargado)
-      }
-    } catch (error: any) {
-      console.error('Error eliminando fila de horas:', error)
-    }
-  }, [liquidacionActual, excelDataHoras])
 
   const handleDeleteAllHistory = async () => {
     setIsDeleting(true)
@@ -532,7 +311,6 @@ export default function ResumenesGuardiasClinicasPage() {
       setResumenesPorPrestador([])
       setLiquidacionActual(null)
       setExcelData(null)
-      setExcelDataHoras(null)
 
       // Forzar recarga de historial
       await cargarHistorial()
@@ -649,7 +427,7 @@ export default function ResumenesGuardiasClinicasPage() {
               <span className="text-pink-500 italic">GUARDIAS CLÍNICAS</span>
             </h1>
             <p className="text-gray-400 text-lg max-w-md font-medium leading-relaxed">
-              Analítica consolidada de producción asistencial y horas formativas.
+              Analítica consolidada de producción asistencial.
             </p>
           </div>
 
@@ -721,16 +499,7 @@ export default function ResumenesGuardiasClinicasPage() {
             <FileSpreadsheet className="h-4 w-4" />
             CONSULTAS
           </button>
-          <button
-            onClick={() => setTabActiva('excelHoras')}
-            className={`px-8 py-3 rounded-full font-black text-xs tracking-tighter transition-all flex items-center gap-2 ${tabActiva === 'excelHoras'
-              ? 'bg-pink-600 text-white shadow-[0_0_20px_rgba(236,72,153,0.3)]'
-              : 'text-gray-400 hover:text-white hover:bg-white/5'
-              }`}
-          >
-            <Clock className="h-4 w-4" />
-            HORAS
-          </button>
+
         </div>
 
         {/* Contenido de Tabs */}
@@ -937,62 +706,6 @@ export default function ResumenesGuardiasClinicasPage() {
               </div>
             )}
           </div>
-        ) : tabActiva === 'excelHoras' ? (
-          /* Tab: Excel Horas */
-          <div className="space-y-6">
-            {loadingExcelHoras ? (
-              <div className="text-center py-12 text-gray-400">Cargando Excel de Horas...</div>
-            ) : !liquidacionActual ? (
-              <div
-                className="rounded-xl p-8 text-center"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  backdropFilter: 'blur(20px)',
-                  border: '1px solid rgba(255, 193, 7, 0.3)',
-                }}
-              >
-                <div className="text-yellow-400 text-xl font-bold mb-4">
-                  No hay liquidación para este período
-                </div>
-                <div className="text-gray-400 mb-6">
-                  No se ha procesado ningún archivo Excel para {MESES.find(m => m.value === mes)?.label || `Mes ${mes}`} {anio}.
-                </div>
-                <Button
-                  onClick={() => router.push('/guardias-clinicas')}
-                  className="bg-pink-600 hover:bg-pink-500 text-white"
-                >
-                  Ir a Guardias Clínicas para procesar archivo
-                </Button>
-              </div>
-            ) : !excelDataHoras ? (
-              <div className="text-center py-12 text-gray-400">No se pudo cargar el Excel de Horas</div>
-            ) : (
-              <div
-                className="rounded-xl p-6"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  backdropFilter: 'blur(20px)',
-                  border: '1px solid rgba(236, 72, 153, 0.3)',
-                }}
-              >
-                <h2 className="text-2xl font-bold text-pink-400 mb-4">
-                  Excel Horas - {MESES.find(m => m.value === mes)?.label || `Mes ${mes}`} {anio}
-                </h2>
-                <p className="text-gray-400 mb-4 text-sm">
-                  Los cambios se guardan automáticamente. Puedes editar, filtrar y eliminar filas. Los valores se recalculan automáticamente.
-                </p>
-                <ExcelDataTable
-                  data={excelDataHoras}
-                  especialidad="Guardias Clínicas"
-                  onCellUpdate={handleCellUpdateHoras}
-                  onDeleteRow={handleDeleteRowHoras}
-                  liquidacionId={liquidacionActual.id}
-                  mes={mes}
-                  anio={anio}
-                />
-              </div>
-            )}
-          </div>
         ) : loading ? (
           <div className="text-center py-12 text-gray-400">Cargando resúmenes...</div>
         ) : resumenesPorMedico.size === 0 && resumenesPorPrestador.length === 0 ? (
@@ -1077,7 +790,6 @@ export default function ResumenesGuardiasClinicasPage() {
                             <th className="px-4 py-3 text-right text-sm font-semibold text-pink-400">Cantidad</th>
                             <th className="px-4 py-3 text-right text-sm font-semibold text-pink-400">Total Bruto</th>
                             <th className="px-4 py-3 text-right text-sm font-semibold text-pink-400">Neto Consultas</th>
-                            <th className="px-4 py-3 text-right text-sm font-semibold text-pink-400">Total Horas</th>
                             <th className="px-4 py-3 text-right text-sm font-semibold text-pink-400">Total Final</th>
                           </tr>
                         </thead>
@@ -1090,7 +802,6 @@ export default function ResumenesGuardiasClinicasPage() {
                                 <td className="px-4 py-3 text-sm text-gray-300 text-right">{resumen.cantidad}</td>
                                 <td className="px-4 py-3 text-sm text-gray-300 text-right">{formatearMoneda(resumen.total_bruto)}</td>
                                 <td className="px-4 py-3 text-sm text-gray-300 text-right">{formatearMoneda(resumen.total_neto_consultas)}</td>
-                                <td className="px-4 py-3 text-sm text-gray-300 text-right">{formatearMoneda(resumen.total_horas)}</td>
                                 <td className="px-4 py-3 text-sm text-gray-300 text-right font-semibold">{formatearMoneda(resumen.total_final)}</td>
                               </tr>
                             ))}
@@ -1120,7 +831,6 @@ export default function ResumenesGuardiasClinicasPage() {
                             <th className="px-4 py-3 text-right text-sm font-semibold text-pink-400">Cantidad</th>
                             <th className="px-4 py-3 text-right text-sm font-semibold text-pink-400">Total Bruto</th>
                             <th className="px-4 py-3 text-right text-sm font-semibold text-pink-400">Neto Consultas</th>
-                            <th className="px-4 py-3 text-right text-sm font-semibold text-pink-400">Total Horas</th>
                             <th className="px-4 py-3 text-right text-sm font-semibold text-pink-400">Total Final</th>
                           </tr>
                         </thead>
@@ -1133,7 +843,6 @@ export default function ResumenesGuardiasClinicasPage() {
                                 <td className="px-4 py-3 text-sm text-gray-300 text-right">{resumen.cantidad}</td>
                                 <td className="px-4 py-3 text-sm text-gray-300 text-right">{formatearMoneda(resumen.total_bruto)}</td>
                                 <td className="px-4 py-3 text-sm text-gray-300 text-right">{formatearMoneda(resumen.total_neto_consultas)}</td>
-                                <td className="px-4 py-3 text-sm text-gray-300 text-right">{formatearMoneda(resumen.total_horas)}</td>
                                 <td className="px-4 py-3 text-sm text-gray-300 text-right font-semibold">{formatearMoneda(resumen.total_final)}</td>
                               </tr>
                             ))}
@@ -1169,7 +878,6 @@ export default function ResumenesGuardiasClinicasPage() {
                             <th className="px-4 py-3 text-right text-sm font-semibold text-yellow-500">Cantidad</th>
                             <th className="px-4 py-3 text-right text-sm font-semibold text-yellow-500">Total Bruto</th>
                             <th className="px-4 py-3 text-right text-sm font-semibold text-yellow-500">Neto Consultas</th>
-                            <th className="px-4 py-3 text-right text-sm font-semibold text-yellow-500">Total Horas</th>
                             <th className="px-4 py-3 text-right text-sm font-semibold text-yellow-500">Total Final</th>
                           </tr>
                         </thead>
@@ -1182,7 +890,6 @@ export default function ResumenesGuardiasClinicasPage() {
                                 <td className="px-4 py-3 text-sm text-gray-300 text-right">{resumen.cantidad}</td>
                                 <td className="px-4 py-3 text-sm text-gray-300 text-right">{formatearMoneda(resumen.total_bruto)}</td>
                                 <td className="px-4 py-3 text-sm text-gray-300 text-right">{formatearMoneda(resumen.total_neto_consultas)}</td>
-                                <td className="px-4 py-3 text-sm text-gray-300 text-right">{formatearMoneda(resumen.total_horas)}</td>
                                 <td className="px-4 py-3 text-sm text-gray-300 text-right font-semibold">{formatearMoneda(resumen.total_final)}</td>
                               </tr>
                             ))}
@@ -1209,7 +916,6 @@ export default function ResumenesGuardiasClinicasPage() {
                           <th className="px-4 py-3 text-right text-sm font-semibold text-pink-400">Cantidad</th>
                           <th className="px-4 py-3 text-right text-sm font-semibold text-pink-400">Total Bruto</th>
                           <th className="px-4 py-3 text-right text-sm font-semibold text-pink-400">Neto Consultas</th>
-                          <th className="px-4 py-3 text-right text-sm font-semibold text-pink-400">Total Horas</th>
                           <th className="px-4 py-3 text-right text-sm font-semibold text-pink-400">Total Final</th>
                         </tr>
                       </thead>
@@ -1224,9 +930,6 @@ export default function ResumenesGuardiasClinicasPage() {
                           </td>
                           <td className="px-4 py-3 text-sm text-white text-right">
                             {formatearMoneda(resumenesPorPrestador.reduce((sum, r) => sum + r.total_neto_consultas, 0))}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-white text-right">
-                            {formatearMoneda(resumenesPorPrestador.reduce((sum, r) => sum + r.total_horas, 0))}
                           </td>
                           <td className="px-4 py-3 text-sm text-white text-right text-xl text-pink-400 font-black">
                             {formatearMoneda(resumenesPorPrestador.reduce((sum, r) => sum + r.total_final, 0))}

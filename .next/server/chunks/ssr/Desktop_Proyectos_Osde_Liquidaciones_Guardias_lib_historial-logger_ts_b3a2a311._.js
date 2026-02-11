@@ -1,3 +1,0 @@
-module.exports=[84639,a=>{"use strict";var b=a.i(98926);async function c(a,c,d,e){try{let f={liquidacion_id:e||null,tipo_evento:"procesamiento_finalizado",mensaje:`Archivo procesado - ${a} ${c}/${d}`,detalle:{especialidad:a,mes:c,anio:d,hora_procesamiento:new Date().toISOString()},created_at:new Date().toISOString()},{error:g}=await b.supabase.from("logs_procesamiento").insert([f]);g&&console.error("Error guardando log en historial:",g)}catch(a){console.error("Error guardando log en historial:",a)}}a.s(["guardarLogProcesamiento",()=>c])}];
-
-//# sourceMappingURL=Desktop_Proyectos_Osde_Liquidaciones_Guardias_lib_historial-logger_ts_b3a2a311._.js.map

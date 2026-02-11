@@ -6,13 +6,11 @@ import { supabase } from '@/lib/supabase/client'
 import { UploadExcel } from '@/components/custom/UploadExcel'
 import { MesSelectorModal } from '@/components/custom/MesSelectorModal'
 import { NotificationModal, NotificationType } from '@/components/custom/NotificationModal'
-import { readExcelFileGinecologia, readExcelFileHorasGuardiasClinicas, ExcelData } from '@/lib/excel-reader'
+import { readExcelFileGinecologia, ExcelData } from '@/lib/excel-reader'
 import { procesarExcelGuardiasClinicas } from '@/lib/guardias-clinicas-processor'
 import {
     ClinicalGroupsConfig,
     ClinicalGroupsConfigInsert,
-    ClinicalValuesConfig,
-    ClinicalValuesConfigInsert,
     Medico
 } from '@/lib/types'
 import { AlertTriangle, XCircle, AlertCircle, Sparkles, ArrowLeft, X, Upload, FileText, Clock, FileSpreadsheet, Settings, Users, DollarSign, Copy, Search, Plus, Trash2, ShieldCheck, Zap, Info } from 'lucide-react'
@@ -45,18 +43,15 @@ export default function GuardiasClinicasPage() {
     const [mesConfig, setMesConfig] = useState(new Date().getMonth() + 1)
     const [anioConfig, setAnioConfig] = useState(new Date().getFullYear())
     const [grupos50, setGrupos50] = useState<ClinicalGroupsConfig[]>([])
-    const [valoresConfig, setValoresConfig] = useState<ClinicalValuesConfig | null>(null)
     const [medicos, setMedicos] = useState<Medico[]>([])
     const [loadingConfig, setLoadingConfig] = useState(false)
     const [showMedicoSelector, setShowMedicoSelector] = useState(false)
-    const [grupoSeleccionado, setGrupoSeleccionado] = useState<'GRUPO_70' | 'GRUPO_50' | null>(null)
+    const [grupoSeleccionado, setGrupoSeleccionado] = useState<'GRUPO_50' | null>(null)
     const [searchMedico, setSearchMedico] = useState('')
 
     // Estados de procesamiento
     const [isProcessingConsultas, setIsProcessingConsultas] = useState(false)
-    const [isProcessingHoras, setIsProcessingHoras] = useState(false)
     const [excelDataConsultas, setExcelDataConsultas] = useState<ExcelData | null>(null)
-    const [excelDataHoras, setExcelDataHoras] = useState<ExcelData | null>(null)
     const [error, setError] = useState<string | null>(null)
     const [showMesSelector, setShowMesSelector] = useState(false)
     const [mesDetectado, setMesDetectado] = useState<number | null>(null)
@@ -64,7 +59,6 @@ export default function GuardiasClinicasPage() {
     const [mesSeleccionado, setMesSeleccionado] = useState(new Date().getMonth() + 1)
     const [anioSeleccionado, setAnioSeleccionado] = useState(new Date().getFullYear())
     const [archivoConsultas, setArchivoConsultas] = useState<File | null>(null)
-    const [archivoHoras, setArchivoHoras] = useState<File | null>(null)
     const [isGuardando, setIsGuardando] = useState(false)
     const [resultadoProcesamiento, setResultadoProcesamiento] = useState<any>(null)
     const [notification, setNotification] = useState<{
@@ -132,20 +126,6 @@ export default function GuardiasClinicasPage() {
 
             const grupos = (gruposData || []) as ClinicalGroupsConfig[]
             setGrupos50(grupos.filter(g => g.group_type === 'GRUPO_50'))
-
-            // Cargar valores
-            const { data: valoresData, error: valoresError } = await supabase
-                .from('clinical_values_config')
-                .select('*')
-                .eq('mes', mesConfig)
-                .eq('anio', anioConfig)
-                .single()
-
-            if (valoresError && valoresError.code !== 'PGRST116') {
-                throw valoresError
-            }
-
-            setValoresConfig(valoresData as ClinicalValuesConfig | null)
         } catch (error) {
             console.error('Error cargando configuración:', error)
             showNotification('error', 'Error al cargar configuración: ' + (error instanceof Error ? error.message : 'Error desconocido'), 'Error')
@@ -291,110 +271,6 @@ export default function GuardiasClinicasPage() {
         }
     }
 
-    async function handleGuardarValores() {
-        try {
-            setLoadingConfig(true)
-
-            if (!valoresConfig) {
-                showNotification('error', 'Debe completar todos los valores', 'Error')
-                return
-            }
-
-            const valoresData: ClinicalValuesConfigInsert = {
-                mes: mesConfig,
-                anio: anioConfig,
-                value_hour_weekly_8_16: valoresConfig.value_hour_weekly_8_16,
-                value_hour_weekly_16_8: valoresConfig.value_hour_weekly_16_8,
-                value_hour_weekend: valoresConfig.value_hour_weekend,
-                value_hour_weekend_night: valoresConfig.value_hour_weekend_night,
-                value_guaranteed_min: valoresConfig.value_guaranteed_min
-            }
-
-            // Verificar si existe
-            const { data: existente, error: errorExistente } = await supabase
-                .from('clinical_values_config')
-                .select('*')
-                .eq('mes', mesConfig)
-                .eq('anio', anioConfig)
-                .single()
-
-            if (existente && !errorExistente) {
-                // Actualizar
-                const valoresExistente = existente as ClinicalValuesConfig
-                const { error } = await supabase
-                    .from('clinical_values_config')
-                    // @ts-ignore
-                    .update(valoresData)
-                    .eq('id', valoresExistente.id)
-
-                if (error) throw error
-            } else {
-                // Crear
-                const { error } = await supabase
-                    .from('clinical_values_config')
-                    // @ts-ignore
-                    .insert([valoresData])
-
-                if (error) throw error
-            }
-
-            await cargarConfiguracion()
-            showNotification('success', 'Valores guardados correctamente', 'Éxito')
-        } catch (error) {
-            console.error('Error guardando valores:', error)
-            showNotification('error', 'Error al guardar valores: ' + (error instanceof Error ? error.message : 'Error desconocido'), 'Error')
-        } finally {
-            setLoadingConfig(false)
-        }
-    }
-
-    async function handleCopiarValoresMesAnterior() {
-        try {
-            setLoadingConfig(true)
-
-            // Calcular mes anterior
-            let mesAnterior = mesConfig - 1
-            let anioAnterior = anioConfig
-            if (mesAnterior === 0) {
-                mesAnterior = 12
-                anioAnterior = anioConfig - 1
-            }
-
-            // Obtener valores del mes anterior
-            const { data: valoresAnteriores, error } = await supabase
-                .from('clinical_values_config')
-                .select('*')
-                .eq('mes', mesAnterior)
-                .eq('anio', anioAnterior)
-                .single()
-
-            if (error && error.code !== 'PGRST116') {
-                throw error
-            }
-
-            if (!valoresAnteriores) {
-                showNotification('warning', 'No hay valores en el mes anterior para copiar', 'Sin datos')
-                return
-            }
-
-            const valoresAnterioresData = valoresAnteriores as ClinicalValuesConfig
-
-            // Actualizar estado
-            setValoresConfig({
-                ...valoresAnterioresData,
-                mes: mesConfig,
-                anio: anioConfig
-            })
-
-            showNotification('success', `Valores copiados desde ${MESES[mesAnterior - 1].label} ${anioAnterior}`, 'Copia exitosa')
-        } catch (error) {
-            console.error('Error copiando valores:', error)
-            showNotification('error', 'Error al copiar valores: ' + (error instanceof Error ? error.message : 'Error desconocido'), 'Error')
-        } finally {
-            setLoadingConfig(false)
-        }
-    }
-
     // Función para detectar mes y año desde las fechas del Excel
     const detectarMesAnio = (data: ExcelData): { mes: number | null; anio: number | null } => {
         // Primero intentar desde el período
@@ -420,7 +296,6 @@ export default function GuardiasClinicasPage() {
             data.rows.forEach(row => {
                 const fechaStr = row[fechaColumn]
                 if (fechaStr) {
-                    // Intentar parsear fecha en formato DD/MM/YYYY
                     if (typeof fechaStr === 'string') {
                         const match = fechaStr.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/)
                         if (match) {
@@ -434,12 +309,10 @@ export default function GuardiasClinicasPage() {
                 }
             })
 
-            // Si todas las fechas son del mismo mes, usar ese mes
             if (fechas.length > 0) {
                 const mesComun = fechas[0]
                 const todasIguales = fechas.every(m => m === mesComun)
                 if (todasIguales) {
-                    // Obtener año de la primera fecha
                     const primeraFecha = data.rows[0][fechaColumn]
                     if (typeof primeraFecha === 'string') {
                         const match = primeraFecha.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/)
@@ -479,47 +352,26 @@ export default function GuardiasClinicasPage() {
         }
     }
 
-    const handleUploadHoras = async (file: File) => {
-        setIsProcessingHoras(true)
-        setError(null)
-        setArchivoHoras(file)
-
-        try {
-            const data = await readExcelFileHorasGuardiasClinicas(file)
-            setExcelDataHoras(data)
-        } catch (err: any) {
-            console.error('Error processing file:', err)
-            setError(err.message || 'Ocurrió un error inesperado al procesar el archivo de horas.')
-        } finally {
-            setIsProcessingHoras(false)
-        }
-    }
-
     const handleMesConfirmado = async (mes: number, anio: number) => {
         setMesSeleccionado(mes)
         setAnioSeleccionado(anio)
         setShowMesSelector(false)
 
-        // Si hay datos de ambos archivos, procesar y guardar
-        if (excelDataConsultas && excelDataHoras && archivoConsultas && archivoHoras) {
+        if (excelDataConsultas && archivoConsultas) {
             setIsGuardando(true)
             try {
                 const resultado = await procesarExcelGuardiasClinicas(
                     excelDataConsultas,
-                    excelDataHoras,
                     mes,
                     anio,
-                    archivoConsultas.name,
-                    archivoHoras.name
+                    archivoConsultas.name
                 )
 
                 // Guardar resultado del procesamiento
                 setResultadoProcesamiento(resultado)
 
                 if (resultado.errores.length > 0) {
-                    const mensajeError = resultado.errores.length > 0
-                        ? `Se procesaron ${resultado.procesadas} filas. Errores: ${resultado.errores.slice(0, 3).join('; ')}${resultado.errores.length > 3 ? '...' : ''}`
-                        : `Se procesaron ${resultado.procesadas} filas. Errores: ${resultado.errores.length}`
+                    const mensajeError = `Se procesaron ${resultado.procesadas} filas. Errores: ${resultado.errores.slice(0, 3).join('; ')}${resultado.errores.length > 3 ? '...' : ''}`
                     showNotification(
                         'error',
                         mensajeError,
@@ -529,9 +381,7 @@ export default function GuardiasClinicasPage() {
                 } else {
                     // Limpiar datos después de procesar exitosamente
                     setExcelDataConsultas(null)
-                    setExcelDataHoras(null)
                     setArchivoConsultas(null)
-                    setArchivoHoras(null)
 
                     // Obtener nombre del mes para el mensaje
                     const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
@@ -564,13 +414,13 @@ export default function GuardiasClinicasPage() {
         } else {
             showNotification(
                 'warning',
-                'Debes subir ambos archivos (consultas y horas) antes de procesar.',
-                'Archivos incompletos'
+                'Debes subir el archivo de consultas antes de procesar.',
+                'Archivo requerido'
             )
         }
     }
 
-    const puedeProcesar = excelDataConsultas && excelDataHoras && archivoConsultas && archivoHoras
+    const puedeProcesar = excelDataConsultas && archivoConsultas
 
     // Filtrar médicos para el selector
     const medicosFiltrados = medicos.filter(m =>
@@ -683,9 +533,9 @@ export default function GuardiasClinicasPage() {
                         </div>
 
                         {/* Grid de Configuración Estructural */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="grid grid-cols-1 gap-8">
                             {/* Card Grupo 50% (Default everyone is 70% except this group) */}
-                            <div className="md:col-span-2 rounded-[40px] overflow-hidden bg-white/[0.02] border border-white/10 backdrop-blur-3xl group transition-all hover:bg-white/[0.04]">
+                            <div className="rounded-[40px] overflow-hidden bg-white/[0.02] border border-white/10 backdrop-blur-3xl group transition-all hover:bg-white/[0.04]">
                                 <div className="p-8 border-b border-white/5 flex items-center justify-between bg-white/[0.01]">
                                     <div className="flex items-center gap-4">
                                         <div className="w-1.5 h-8 bg-[#00D1FF] rounded-full"></div>
@@ -747,116 +597,28 @@ export default function GuardiasClinicasPage() {
                                 Replicar Archivo Maestro Mes Anterior
                             </button>
                         </div>
-
-                        {/* Valuación Maestra Section */}
-                        <div className="rounded-[40px] overflow-hidden bg-white/[0.02] border border-white/10 backdrop-blur-3xl">
-                            <div className="p-8 border-b border-white/5 flex items-center justify-between bg-white/[0.01]">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-1.5 h-8 bg-[#00FF88] rounded-full"></div>
-                                    <h2 className="text-3xl font-black text-white tracking-tighter italic uppercase underline decoration-[#00FF88] decoration-4 underline-offset-8">Matriz de Valores</h2>
-                                </div>
-                                <div className="flex gap-4">
-                                    <button
-                                        onClick={handleCopiarValoresMesAnterior}
-                                        disabled={loadingConfig}
-                                        className="flex items-center gap-2 px-6 py-3 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all font-bold text-[10px] tracking-widest uppercase italic text-gray-400 hover:text-[#00FF88]"
-                                    >
-                                        <Copy className="h-4 w-4" />
-                                        REPLICAR MES ANTERIOR
-                                    </button>
-                                    <button
-                                        onClick={handleGuardarValores}
-                                        disabled={loadingConfig}
-                                        className="px-8 py-3 rounded-full bg-[#00FF88] text-black font-black text-xs tracking-widest hover:scale-105 transition-all shadow-[0_0_20px_rgba(0,255,136,0.2)] uppercase"
-                                    >
-                                        Sincronizar Matriz
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-8">
-                                {[
-                                    { label: 'Valor Hora 8-16 (Día)', key: 'value_hour_weekly_8_16' },
-                                    { label: 'Valor Hora 16-8 (Noche)', key: 'value_hour_weekly_16_8' },
-                                    { label: 'Valor Hora Fines/Feriados', key: 'value_hour_weekend' },
-                                    { label: 'Valor Hora Nocturna F/F', key: 'value_hour_weekend_night' },
-                                    { label: 'Valor Mínimo Garantizado', key: 'value_guaranteed_min' },
-                                ].map((item) => (
-                                    <div key={item.key} className="space-y-3">
-                                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2 italic">{item.label}</label>
-                                        <div className="relative group">
-                                            <div className="absolute inset-y-0 left-4 flex items-center text-gray-500 font-mono text-sm group-focus-within:text-[#00FF88] transition-colors">$</div>
-                                            <input
-                                                type="number"
-                                                step="0.01"
-                                                // @ts-ignore
-                                                value={valoresConfig?.[item.key] || 0}
-                                                onChange={(e) => setValoresConfig({
-                                                    ...(valoresConfig || {
-                                                        id: '',
-                                                        mes: mesConfig,
-                                                        anio: anioConfig,
-                                                        value_hour_weekly_8_16: 0,
-                                                        value_hour_weekly_16_8: 0,
-                                                        value_hour_weekend: 0,
-                                                        value_hour_weekend_night: 0,
-                                                        value_guaranteed_min: 0,
-                                                        created_at: '',
-                                                        updated_at: ''
-                                                    }),
-                                                    [item.key]: parseFloat(e.target.value) || 0
-                                                })}
-                                                className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-4 pl-8 pr-4 text-white font-mono font-bold focus:border-[#00FF88]/50 focus:bg-[#00FF88]/5 outline-none transition-all placeholder:text-gray-700"
-                                                placeholder="0.00"
-                                            />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
                     </div>
                 )}
 
                 {/* Processing Intelligence Hub */}
                 {activeTab === 'procesamiento' && (
                     <div className="space-y-12 animate-in fade-in duration-1000">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            {/* Input: Registro Consultas */}
-                            <div className="rounded-[40px] overflow-hidden bg-white/[0.02] border border-white/10 backdrop-blur-3xl group transition-all hover:bg-white/[0.04]">
-                                <div className="p-8 border-b border-white/5 flex items-center justify-between bg-white/[0.01]">
-                                    <div className="flex items-center gap-4">
-                                        <div className="p-3 bg-[#00FF88]/10 rounded-2xl">
-                                            <FileSpreadsheet className="h-6 w-6 text-[#00FF88]" />
-                                        </div>
-                                        <h2 className="text-3xl font-black text-white tracking-tighter italic uppercase text-shadow-sm shadow-[#00FF88]/20">Consultas</h2>
+                        {/* Input: Registro Consultas - Full Width */}
+                        <div className="rounded-[40px] overflow-hidden bg-white/[0.02] border border-white/10 backdrop-blur-3xl group transition-all hover:bg-white/[0.04]">
+                            <div className="p-8 border-b border-white/5 flex items-center justify-between bg-white/[0.01]">
+                                <div className="flex items-center gap-4">
+                                    <div className="p-3 bg-[#00FF88]/10 rounded-2xl">
+                                        <FileSpreadsheet className="h-6 w-6 text-[#00FF88]" />
                                     </div>
-                                    {excelDataConsultas && <div className="w-2 h-2 rounded-full bg-[#00FF88] animate-pulse"></div>}
+                                    <h2 className="text-3xl font-black text-white tracking-tighter italic uppercase text-shadow-sm shadow-[#00FF88]/20">Consultas</h2>
                                 </div>
-                                <div className="p-8">
-                                    <UploadExcel
-                                        onUpload={handleUploadConsultas}
-                                        isProcessing={isProcessingConsultas}
-                                    />
-                                </div>
+                                {excelDataConsultas && <div className="w-2 h-2 rounded-full bg-[#00FF88] animate-pulse"></div>}
                             </div>
-
-                            {/* Input: Registro Horas */}
-                            <div className="rounded-[40px] overflow-hidden bg-white/[0.02] border border-white/10 backdrop-blur-3xl group transition-all hover:bg-white/[0.04]">
-                                <div className="p-8 border-b border-white/5 flex items-center justify-between bg-white/[0.01]">
-                                    <div className="flex items-center gap-4">
-                                        <div className="p-3 bg-[#00D1FF]/10 rounded-2xl">
-                                            <Clock className="h-6 w-6 text-[#00D1FF]" />
-                                        </div>
-                                        <h2 className="text-3xl font-black text-white tracking-tighter italic uppercase text-shadow-sm shadow-[#00D1FF]/20">Horas G.</h2>
-                                    </div>
-                                    {excelDataHoras && <div className="w-2 h-2 rounded-full bg-[#00D1FF] animate-pulse"></div>}
-                                </div>
-                                <div className="p-8">
-                                    <UploadExcel
-                                        onUpload={handleUploadHoras}
-                                        isProcessing={isProcessingHoras}
-                                    />
-                                </div>
+                            <div className="p-8">
+                                <UploadExcel
+                                    onUpload={handleUploadConsultas}
+                                    isProcessing={isProcessingConsultas}
+                                />
                             </div>
                         </div>
 
@@ -913,7 +675,7 @@ export default function GuardiasClinicasPage() {
                                         )}
                                     </div>
                                     {!puedeProcesar && !isGuardando && (
-                                        <p className="absolute inset-x-0 bottom-2 text-center text-[8px] font-black text-gray-500 uppercase tracking-widest opacity-50">Faltan Datos Base</p>
+                                        <p className="absolute inset-x-0 bottom-2 text-center text-[8px] font-black text-gray-500 uppercase tracking-widest opacity-50">Sube el archivo de consultas</p>
                                     )}
                                 </button>
                             </div>
@@ -1022,7 +784,7 @@ export default function GuardiasClinicasPage() {
                         <div className="flex items-center justify-between mb-8 relative z-10">
                             <div>
                                 <h2 className="text-3xl font-black text-white tracking-tighter italic uppercase underline decoration-[#00FF88] decoration-4 underline-offset-8">Desplegar Médico</h2>
-                                <p className="text-[#00FF88] font-black text-[10px] tracking-[0.3em] uppercase mt-2">Asignando a {grupoSeleccionado === 'GRUPO_50' ? 'Sector 50% (8-16hs)' : 'Grupo'}</p>
+                                <p className="text-[#00FF88] font-black text-[10px] tracking-[0.3em] uppercase mt-2">Asignando a Sector 50% (8-16hs)</p>
                             </div>
                             <button
                                 onClick={() => {

@@ -6,6 +6,7 @@
   "/admin/valores-consultas/page": "/admin/valores-consultas",
   "/admisiones/page": "/admisiones",
   "/admisiones/resumenes/page": "/admisiones/resumenes",
+  "/changelog/page": "/changelog",
   "/ginecologia/page": "/ginecologia",
   "/ginecologia/resumenes/page": "/ginecologia/resumenes",
   "/guardias-clinicas/page": "/guardias-clinicas",

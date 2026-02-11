@@ -71,6 +71,12 @@
       "namedRegex": "^/admisiones/resumenes(?:/)?$"
     },
     {
+      "page": "/changelog",
+      "regex": "^/changelog(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/changelog(?:/)?$"
+    },
+    {
       "page": "/ginecologia",
       "regex": "^/ginecologia(?:/)?$",
       "routeKeys": {},

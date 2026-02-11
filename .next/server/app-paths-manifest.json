@@ -6,6 +6,7 @@
   "/admin/valores-consultas/page": "app/admin/valores-consultas/page.js",
   "/admisiones/page": "app/admisiones/page.js",
   "/admisiones/resumenes/page": "app/admisiones/resumenes/page.js",
+  "/changelog/page": "app/changelog/page.js",
   "/ginecologia/page": "app/ginecologia/page.js",
   "/ginecologia/resumenes/page": "app/ginecologia/resumenes/page.js",
   "/guardias-clinicas/page": "app/guardias-clinicas/page.js",

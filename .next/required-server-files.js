@@ -140,8 +140,8 @@ self.__SERVER_FILES_MANIFEST={
       "isExperimentalCompile": false
     }
   },
-  "appDir": "C:\\Users\\lucas\\Desktop\\Proyectos\\Osde\\Liquidaciones\\Guardias",
-  "relativeAppDir": "Desktop\\Proyectos\\Osde\\Liquidaciones\\Guardias",
+  "appDir": "C:\\Users\\Sanatorio Argentino\\Desktop\\Proyectos\\Liquidaciones\\Guardias-main",
+  "relativeAppDir": "",
   "files": [
     ".next\\routes-manifest.json",
     ".next\\server\\pages-manifest.json",
