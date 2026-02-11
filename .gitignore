@@ -35,3 +35,6 @@ next-env.d.ts
 
 # supabase
 supabase/.temp/
+
+# skills
+antigravity-awesome-skills/
