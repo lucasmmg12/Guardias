@@ -1,23 +1,37 @@
+-- Drop existing policies if they exist (prevent conflicts)
+DROP POLICY IF EXISTS "Enable read access for all users" ON admission_values_config;
+DROP POLICY IF EXISTS "Enable insert access for all users" ON admission_values_config;
+DROP POLICY IF EXISTS "Enable update access for all users" ON admission_values_config;
+DROP POLICY IF EXISTS "Enable delete access for all users" ON admission_values_config;
 
-create table if not exists admission_values_config (
+-- Create table
+CREATE TABLE IF NOT EXISTS admission_values_config (
   id uuid default gen_random_uuid() primary key,
   mes integer not null,
   anio integer not null,
   valor_admision numeric not null default 12000,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  unique(mes, anio)
+  UNIQUE(mes, anio)
 );
 
-alter table admission_values_config enable row level security;
+-- Enable RLS
+ALTER TABLE admission_values_config ENABLE ROW LEVEL SECURITY;
 
-create policy "Enable read access for all users" on admission_values_config
-  for select using (true);
+-- Recreate policies
+CREATE POLICY "Enable read access for all users" ON admission_values_config
+  FOR SELECT USING (true);
 
-create policy "Enable insert access for all users" on admission_values_config
-  for insert with check (true);
+CREATE POLICY "Enable insert access for all users" ON admission_values_config
+  FOR INSERT WITH CHECK (true);
 
-create policy "Enable update access for all users" on admission_values_config
-  for update using (true);
+CREATE POLICY "Enable update access for all users" ON admission_values_config
+  FOR UPDATE USING (true) WITH CHECK (true);
 
-create policy "Enable delete access for all users" on admission_values_config
-  for delete using (true);
+CREATE POLICY "Enable delete access for all users" ON admission_values_config
+  FOR DELETE USING (true);
+
+-- Grant access to anon and authenticated roles
+GRANT ALL ON admission_values_config TO anon;
+GRANT ALL ON admission_values_config TO authenticated;
+GRANT USAGE ON SCHEMA public TO anon;
+GRANT USAGE ON SCHEMA public TO authenticated;
