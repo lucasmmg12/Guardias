@@ -56,7 +56,7 @@ export default function AdmisionesPage() {
 
             if (error && error.code !== 'PGRST116') throw error
 
-            const val = data?.valor_admision || 12000
+            const val = (data as any)?.valor_admision || 12000
             setValorAdmision(val)
             setTempValor(val.toString())
         } catch (error) {
