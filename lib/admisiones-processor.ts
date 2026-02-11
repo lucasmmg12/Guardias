@@ -18,8 +18,8 @@ interface ProcesamientoResult {
   filasExcluidas: FilaExcluida[]
 }
 
-// Valor fijo por admisión (según el prompt)
-const ADMISSION_VALUE = 12000
+// Valor fijo por admisión (eliminado, usar DB)
+// const ADMISSION_VALUE = 12000
 
 /**
  * Normaliza el nombre de una columna para búsqueda flexible
@@ -315,6 +315,22 @@ export async function procesarExcelAdmisiones(
 
     console.log(`[Admisiones] Médicos cargados: ${medicos.length}`)
 
+
+    // 2. Cargar valor de admisión para el mes/año
+    const { data: valorData } = await supabase
+      .from('admission_values_config')
+      .select('valor_admision')
+      .eq('mes', mes)
+      .eq('anio', anio)
+      .single()
+
+    const valorAdmision = (valorData as any)?.valor_admision || 12000 // Fallback si no hay config
+    if (!valorData) {
+      resultado.advertencias.push(`No se encontró configuración de valor para ${mes}/${anio}, usando valor por defecto: $12.000`)
+    } else {
+      console.log(`[Admisiones] Usando valor configurado: $${valorAdmision}`)
+    }
+
     // 2. Crear o obtener liquidación
     const numeroLiquidacion = calcularNumeroLiquidacion(mes, anio)
 
@@ -516,9 +532,10 @@ export async function procesarExcelAdmisiones(
 
         const esResidente = medico ? medico.es_residente : false
 
-        // Valor fijo por admisión
-        const montoFacturado = ADMISSION_VALUE
-        const importeCalculado = ADMISSION_VALUE
+
+        // Valor dinámico por admisión
+        const montoFacturado = valorAdmision
+        const importeCalculado = valorAdmision
 
         // Crear detalle
         const detalle: DetalleGuardiaInsert = {

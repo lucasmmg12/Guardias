@@ -44,7 +44,6 @@ export default function GuardiasClinicasPage() {
     // Estados de configuración
     const [mesConfig, setMesConfig] = useState(new Date().getMonth() + 1)
     const [anioConfig, setAnioConfig] = useState(new Date().getFullYear())
-    const [grupos70, setGrupos70] = useState<ClinicalGroupsConfig[]>([])
     const [grupos50, setGrupos50] = useState<ClinicalGroupsConfig[]>([])
     const [valoresConfig, setValoresConfig] = useState<ClinicalValuesConfig | null>(null)
     const [medicos, setMedicos] = useState<Medico[]>([])
@@ -132,7 +131,6 @@ export default function GuardiasClinicasPage() {
             if (gruposError) throw gruposError
 
             const grupos = (gruposData || []) as ClinicalGroupsConfig[]
-            setGrupos70(grupos.filter(g => g.group_type === 'GRUPO_70'))
             setGrupos50(grupos.filter(g => g.group_type === 'GRUPO_50'))
 
             // Cargar valores
@@ -686,59 +684,15 @@ export default function GuardiasClinicasPage() {
 
                         {/* Grid de Configuración Estructural */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            {/* Card Grupo 70% */}
-                            <div className="rounded-[40px] overflow-hidden bg-white/[0.02] border border-white/10 backdrop-blur-3xl group transition-all hover:bg-white/[0.04]">
-                                <div className="p-8 border-b border-white/5 flex items-center justify-between bg-white/[0.01]">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-1.5 h-8 bg-[#00FF88] rounded-full"></div>
-                                        <h2 className="text-3xl font-black text-white tracking-tighter italic uppercase text-shadow-sm shadow-[#00FF88]/20">Grupo 70%</h2>
-                                    </div>
-                                    <button
-                                        onClick={() => {
-                                            setGrupoSeleccionado('GRUPO_70')
-                                            setShowMedicoSelector(true)
-                                        }}
-                                        className="p-3 bg-white/5 rounded-full border border-white/10 hover:bg-[#00FF88] hover:text-black transition-all group-hover:scale-110 active:scale-95"
-                                    >
-                                        <Plus className="h-5 w-5" />
-                                    </button>
-                                </div>
-                                <div className="p-8">
-                                    <div className="space-y-2 max-h-[400px] overflow-y-auto no-scrollbar pr-2">
-                                        {grupos70.length === 0 ? (
-                                            <div className="text-center py-12">
-                                                <Users className="h-12 w-12 text-gray-700 mx-auto mb-4 opacity-20" />
-                                                <p className="text-gray-500 font-bold text-xs uppercase tracking-widest italic">Sin profesionales asignados</p>
-                                            </div>
-                                        ) : (
-                                            grupos70.map(grupo => {
-                                                const medico = medicos.find(m => m.id === grupo.doctor_id)
-                                                return (
-                                                    <div
-                                                        key={grupo.id}
-                                                        className="flex items-center justify-between p-4 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-[#00FF88]/30 transition-all group/item"
-                                                    >
-                                                        <span className="text-sm font-bold text-gray-300 uppercase tracking-tight">{medico?.nombre || 'Desconocido'}</span>
-                                                        <button
-                                                            onClick={() => handleEliminarMedicoDeGrupo(grupo.id)}
-                                                            className="p-2 text-gray-600 hover:text-[#FF3131] transition-colors lg:opacity-0 group-hover/item:opacity-100"
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </button>
-                                                    </div>
-                                                )
-                                            })
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Card Grupo 50% */}
-                            <div className="rounded-[40px] overflow-hidden bg-white/[0.02] border border-white/10 backdrop-blur-3xl group transition-all hover:bg-white/[0.04]">
+                            {/* Card Grupo 50% (Default everyone is 70% except this group) */}
+                            <div className="md:col-span-2 rounded-[40px] overflow-hidden bg-white/[0.02] border border-white/10 backdrop-blur-3xl group transition-all hover:bg-white/[0.04]">
                                 <div className="p-8 border-b border-white/5 flex items-center justify-between bg-white/[0.01]">
                                     <div className="flex items-center gap-4">
                                         <div className="w-1.5 h-8 bg-[#00D1FF] rounded-full"></div>
-                                        <h2 className="text-3xl font-black text-white tracking-tighter italic uppercase text-shadow-sm shadow-[#00D1FF]/20">Grupo 50%</h2>
+                                        <div>
+                                            <h2 className="text-2xl font-black text-white tracking-tighter italic uppercase text-shadow-sm shadow-[#00D1FF]/20">Grupo 50%</h2>
+                                            <p className="text-gray-400 text-xs font-medium uppercase tracking-widest mt-1">Excepción: Guardias de 8 a 16hs</p>
+                                        </div>
                                     </div>
                                     <button
                                         onClick={() => {
@@ -751,11 +705,12 @@ export default function GuardiasClinicasPage() {
                                     </button>
                                 </div>
                                 <div className="p-8">
-                                    <div className="space-y-2 max-h-[400px] overflow-y-auto no-scrollbar pr-2">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[400px] overflow-y-auto no-scrollbar pr-2">
                                         {grupos50.length === 0 ? (
-                                            <div className="text-center py-12">
+                                            <div className="col-span-full text-center py-12">
                                                 <Users className="h-12 w-12 text-gray-700 mx-auto mb-4 opacity-20" />
                                                 <p className="text-gray-500 font-bold text-xs uppercase tracking-widest italic">Sin profesionales asignados</p>
+                                                <p className="text-gray-600 text-[10px] mt-2">Todos los demás profesionales se liquidarán al 70% por defecto.</p>
                                             </div>
                                         ) : (
                                             grupos50.map(grupo => {
@@ -765,10 +720,10 @@ export default function GuardiasClinicasPage() {
                                                         key={grupo.id}
                                                         className="flex items-center justify-between p-4 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-[#00D1FF]/30 transition-all group/item"
                                                     >
-                                                        <span className="text-sm font-bold text-gray-300 uppercase tracking-tight">{medico?.nombre || 'Desconocido'}</span>
+                                                        <span className="text-sm font-bold text-gray-300 uppercase tracking-tight truncate mr-2">{medico?.nombre || 'Desconocido'}</span>
                                                         <button
                                                             onClick={() => handleEliminarMedicoDeGrupo(grupo.id)}
-                                                            className="p-2 text-gray-600 hover:text-[#FF3131] transition-colors lg:opacity-0 group-hover/item:opacity-100"
+                                                            className="p-2 text-gray-600 hover:text-[#FF3131] transition-colors lg:opacity-0 group-hover/item:opacity-100 shrink-0"
                                                         >
                                                             <Trash2 className="h-4 w-4" />
                                                         </button>
@@ -1067,7 +1022,7 @@ export default function GuardiasClinicasPage() {
                         <div className="flex items-center justify-between mb-8 relative z-10">
                             <div>
                                 <h2 className="text-3xl font-black text-white tracking-tighter italic uppercase underline decoration-[#00FF88] decoration-4 underline-offset-8">Desplegar Médico</h2>
-                                <p className="text-[#00FF88] font-black text-[10px] tracking-[0.3em] uppercase mt-2">Asignando a {grupoSeleccionado === 'GRUPO_70' ? 'Sector 70%' : 'Sector 50%'}</p>
+                                <p className="text-[#00FF88] font-black text-[10px] tracking-[0.3em] uppercase mt-2">Asignando a {grupoSeleccionado === 'GRUPO_50' ? 'Sector 50% (8-16hs)' : 'Grupo'}</p>
                             </div>
                             <button
                                 onClick={() => {
@@ -1102,9 +1057,8 @@ export default function GuardiasClinicasPage() {
                                 </div>
                             ) : (
                                 medicosFiltrados.map(medico => {
-                                    const yaEnGrupo70 = grupos70.some(g => g.doctor_id === medico.id)
                                     const yaEnGrupo50 = grupos50.some(g => g.doctor_id === medico.id)
-                                    const puedeAgregar = grupoSeleccionado === 'GRUPO_70' ? !yaEnGrupo70 : !yaEnGrupo50
+                                    const puedeAgregar = !yaEnGrupo50
 
                                     return (
                                         <button

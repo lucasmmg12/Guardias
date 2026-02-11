@@ -69,6 +69,11 @@ export interface Database {
         Insert: PediatricGroupsConfigInsert
         Update: PediatricGroupsConfigUpdate
       }
+      admission_values_config: {
+        Row: AdmissionValuesConfig
+        Insert: AdmissionValuesConfigInsert
+        Update: AdmissionValuesConfigUpdate
+      }
     }
     Views: {
       v_resumen_liquidaciones_guardia: {
@@ -607,6 +612,31 @@ export interface PediatricGroupsConfigUpdate {
   group_type?: 'GUARDIA_ESTANDAR' | 'ESPECIALISTA'
   created_at?: string
   updated_at?: string
+}
+
+// Interfaces para Admisiones
+export interface AdmissionValuesConfig {
+  id: string
+  mes: number
+  anio: number
+  valor_admision: number
+  created_at: string
+}
+
+export interface AdmissionValuesConfigInsert {
+  id?: string
+  mes: number
+  anio: number
+  valor_admision: number
+  created_at?: string
+}
+
+export interface AdmissionValuesConfigUpdate {
+  id?: string
+  mes?: number
+  anio?: number
+  valor_admision?: number
+  created_at?: string
 }
 
 // Interfaces de Vistas

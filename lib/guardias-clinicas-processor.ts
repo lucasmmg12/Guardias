@@ -1003,12 +1003,11 @@ export async function procesarExcelGuardiasClinicas(
       const grupo = gruposPorMedico.get(medicoId)
       let netoConsultas = 0
 
-      if (grupo === 'GRUPO_70') {
-        netoConsultas = totalBruto * 0.70
-      } else if (grupo === 'GRUPO_50' || (grupo as unknown as string) === 'GRUPO_40') {
+      if (grupo === 'GRUPO_50') {
         netoConsultas = totalBruto * 0.50
       } else {
-        resultado.advertencias.push(`Médico ${medicoId} no tiene grupo asignado, se asume 0%`)
+        // Por defecto todos son 70% (menos los del grupo 50%)
+        netoConsultas = totalBruto * 0.70
       }
 
       totalesPorMedico.set(medicoId, {
@@ -1098,16 +1097,17 @@ export async function procesarExcelGuardiasClinicas(
       }
 
       // Calcular porcentaje y monto según grupo
-      if (grupo === 'GRUPO_70') {
-        detalle.porcentaje_retencion = 30
-        detalle.monto_retencion = detalle.monto_facturado ? detalle.monto_facturado * 0.30 : 0
+      if (grupo === 'GRUPO_50') {
+        detalle.porcentaje_retencion = 50
+        detalle.monto_retencion = detalle.monto_facturado ? detalle.monto_facturado * 0.50 : 0
         const proporcion = detalle.monto_facturado && totalBruto > 0
           ? detalle.monto_facturado / totalBruto
           : 0
         detalle.importe_calculado = totales.netoConsultas * proporcion
-      } else if (grupo === 'GRUPO_50' || (grupo as unknown as string) === 'GRUPO_40') {
-        detalle.porcentaje_retencion = 50
-        detalle.monto_retencion = detalle.monto_facturado ? detalle.monto_facturado * 0.50 : 0
+      } else {
+        // Default 70%
+        detalle.porcentaje_retencion = 30
+        detalle.monto_retencion = detalle.monto_facturado ? detalle.monto_facturado * 0.30 : 0
         const proporcion = detalle.monto_facturado && totalBruto > 0
           ? detalle.monto_facturado / totalBruto
           : 0

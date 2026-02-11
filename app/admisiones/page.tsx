@@ -1,15 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { UploadExcel } from '@/components/custom/UploadExcel'
 import { MesSelectorModal } from '@/components/custom/MesSelectorModal'
 import { NotificationModal, NotificationType } from '@/components/custom/NotificationModal'
 import { readExcelFileAdmisiones, ExcelData } from '@/lib/excel-reader'
 import { procesarExcelAdmisiones } from '@/lib/admisiones-processor'
-import { AlertTriangle, XCircle, AlertCircle, Sparkles, ArrowLeft, X, Upload, FileText, Coins } from 'lucide-react'
+import { supabase } from '@/lib/supabase/client'
+import { AlertTriangle, XCircle, AlertCircle, Sparkles, ArrowLeft, X, Upload, FileText, Coins, Save, Edit2, Check } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 export default function AdmisionesPage() {
     const router = useRouter()
@@ -24,6 +26,9 @@ export default function AdmisionesPage() {
     const [archivoActual, setArchivoActual] = useState<File | null>(null)
     const [isGuardando, setIsGuardando] = useState(false)
     const [resultadoProcesamiento, setResultadoProcesamiento] = useState<any>(null)
+    const [valorAdmision, setValorAdmision] = useState<number>(12000)
+    const [isEditingValor, setIsEditingValor] = useState(false)
+    const [tempValor, setTempValor] = useState<string>('12000')
     const [notification, setNotification] = useState<{
         isOpen: boolean
         type: NotificationType
@@ -34,6 +39,59 @@ export default function AdmisionesPage() {
         type: 'info',
         message: ''
     })
+
+    // Cargar valor al iniciar o cambiar mes
+    useEffect(() => {
+        cargarValorAdmision()
+    }, [mesSeleccionado, anioSeleccionado])
+
+    async function cargarValorAdmision() {
+        try {
+            const { data, error } = await supabase
+                .from('admission_values_config')
+                .select('valor_admision')
+                .eq('mes', mesSeleccionado)
+                .eq('anio', anioSeleccionado)
+                .single()
+
+            if (error && error.code !== 'PGRST116') throw error
+
+            const val = data?.valor_admision || 12000
+            setValorAdmision(val)
+            setTempValor(val.toString())
+        } catch (error) {
+            console.error('Error cargando valor:', error)
+        }
+    }
+
+    async function guardarValorAdmision() {
+        try {
+            const val = parseFloat(tempValor)
+            if (isNaN(val) || val < 0) {
+                showNotification('error', 'El valor debe ser un número válido')
+                return
+            }
+
+            // Upsert
+            const { error } = await supabase
+                .from('admission_values_config')
+                // @ts-ignore
+                .upsert({
+                    mes: mesSeleccionado,
+                    anio: anioSeleccionado,
+                    valor_admision: val
+                }, { onConflict: 'mes,anio' })
+
+            if (error) throw error
+
+            setValorAdmision(val)
+            setIsEditingValor(false)
+            showNotification('success', 'Valor actualizado correctamente')
+        } catch (error) {
+            console.error('Error guardando valor:', error)
+            showNotification('error', 'Error al guardar el valor')
+        }
+    }
 
     function showNotification(type: NotificationType, message: string, title?: string) {
         setNotification({
@@ -231,21 +289,41 @@ export default function AdmisionesPage() {
                         </p>
                     </div>
 
-                    <div className="flex flex-wrap gap-4">
-                        <button
-                            onClick={() => router.push('/')}
-                            className="group flex items-center gap-3 px-6 py-3 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all font-bold text-sm tracking-tight"
-                        >
-                            <ArrowLeft className="h-4 w-4 text-gray-400 group-hover:text-white group-hover:-translate-x-1 transition-all" />
-                            VOLVER
-                        </button>
-                        <button
-                            onClick={() => router.push('/admisiones/resumenes')}
-                            className="flex items-center gap-3 px-8 py-4 rounded-full bg-[#00FF88] text-black font-black text-sm tracking-tighter hover:scale-105 transition-all shadow-[0_0_30px_rgba(0,255,136,0.3)]"
-                        >
-                            <FileText className="h-5 w-5" />
-                            VER RESÚMENES
-                        </button>
+                    <div className="flex flex-col items-end gap-6 text-right">
+                        <div className="flex gap-3 items-center bg-white/5 p-2 rounded-full border border-white/10">
+                            <select
+                                value={mesSeleccionado}
+                                onChange={(e) => setMesSeleccionado(Number(e.target.value))}
+                                className="bg-transparent border-none text-white font-bold text-sm px-4 focus:outline-none cursor-pointer uppercase tracking-widest [&>option]:bg-black"
+                            >
+                                {['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'].map((m, i) => (
+                                    <option key={i} value={i + 1}>{m}</option>
+                                ))}
+                            </select>
+                            <input
+                                type="number"
+                                value={anioSeleccionado}
+                                onChange={(e) => setAnioSeleccionado(Number(e.target.value))}
+                                className="bg-black border border-white/10 rounded-full w-20 py-1 px-3 text-sm font-bold text-white focus:border-[#00FF88]/50 outline-none text-center"
+                            />
+                        </div>
+
+                        <div className="flex flex-wrap gap-4 justify-end">
+                            <button
+                                onClick={() => router.push('/')}
+                                className="group flex items-center gap-3 px-6 py-3 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all font-bold text-sm tracking-tight"
+                            >
+                                <ArrowLeft className="h-4 w-4 text-gray-400 group-hover:text-white group-hover:-translate-x-1 transition-all" />
+                                VOLVER
+                            </button>
+                            <button
+                                onClick={() => router.push('/admisiones/resumenes')}
+                                className="flex items-center gap-3 px-8 py-4 rounded-full bg-[#00FF88] text-black font-black text-sm tracking-tighter hover:scale-105 transition-all shadow-[0_0_30px_rgba(0,255,136,0.3)]"
+                            >
+                                <FileText className="h-5 w-5" />
+                                VER RESÚMENES
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -350,10 +428,42 @@ export default function AdmisionesPage() {
                         >
                             <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/20 rounded-full blur-3xl group-hover:translate-x-10 group-hover:-translate-y-10 transition-transform duration-700"></div>
                             <div className="relative z-10 space-y-1">
-                                <p className="text-xs font-black uppercase tracking-[0.2em] opacity-80">Tarifa Mensual Vigente</p>
-                                <div className="flex items-baseline gap-2">
-                                    <span className="text-6xl font-black tracking-tighter">$12.000</span>
-                                    <span className="text-xs font-bold bg-[#000000] text-[#00FF88] px-2 py-1 rounded-full">v2.1</span>
+                                <div className="flex justify-between items-start">
+                                    <p className="text-xs font-black uppercase tracking-[0.2em] opacity-80">Tarifa Mensual Vigente</p>
+                                    <button
+                                        onClick={() => {
+                                            setTempValor(valorAdmision.toString())
+                                            setIsEditingValor(!isEditingValor)
+                                        }}
+                                        className="p-2 hover:bg-black/10 rounded-full transition-colors"
+                                    >
+                                        <Edit2 className="h-4 w-4" />
+                                    </button>
+                                </div>
+
+                                <div className="flex items-baseline gap-2 min-h-[4rem]">
+                                    {isEditingValor ? (
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-4xl font-black">$</span>
+                                            <Input
+                                                autoFocus
+                                                value={tempValor}
+                                                onChange={(e) => setTempValor(e.target.value)}
+                                                className="text-4xl font-black bg-black/10 border-none h-14 w-48 focus:ring-0 text-black placeholder-black/30"
+                                            />
+                                            <button
+                                                onClick={guardarValorAdmision}
+                                                className="p-2 bg-black/20 rounded-full hover:bg-black/30 transition-colors"
+                                            >
+                                                <Check className="h-6 w-6" />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <span className="text-6xl font-black tracking-tighter">${valorAdmision.toLocaleString()}</span>
+                                            <span className="text-xs font-bold bg-[#000000] text-[#00FF88] px-2 py-1 rounded-full">v2.1</span>
+                                        </>
+                                    )}
                                 </div>
                                 <p className="text-sm font-medium pt-4 border-t border-black/10 mt-4 leading-snug">
                                     Valor neto consolidado por cada admisión procesada y aprobada.
