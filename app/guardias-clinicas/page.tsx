@@ -633,7 +633,7 @@ export default function GuardiasClinicasPage() {
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     {[
                                         { title: 'Purga de Tiempo', desc: 'Exclusión de registros con duración cero.' },
-                                        { title: 'Filtro de Entidad', desc: 'Bloqueo de particulares y sin cobertura.' },
+                                        { title: 'Normalización 042', desc: 'Reclasificación de particulares como 042 - PARTICULARES.' },
                                         { title: 'Limpieza de Colisiones', desc: 'Detección de duplicados técnicos.' },
                                         { title: 'Validación de Grupo', desc: 'Asignación de porcentajes (70%/50%).' },
                                     ].map((rule, i) => (

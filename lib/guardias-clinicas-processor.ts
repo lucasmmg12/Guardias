@@ -352,7 +352,8 @@ export async function procesarExcelGuardiasClinicas(
       valoresPorObraSocial.set(v.obra_social, v.valor)
     })
 
-    // Cargar valores de PARTICULARES al inicio
+    // Cargar valores de PARTICULARES al inicio (buscar por múltiples variantes)
+    // 1. Buscar por nombre exacto 'PARTICULARES'
     if (!valoresPorObraSocial.has('PARTICULARES')) {
       const { data: valorParticularData } = await supabase
         .from('valores_consultas_obra_social')
@@ -367,6 +368,53 @@ export async function procesarExcelGuardiasClinicas(
         valoresPorObraSocial.set('PARTICULARES', (valorParticularData as any).valor)
       }
     }
+
+    // 2. Buscar por '042 - PARTICULARES'
+    if (!valoresPorObraSocial.has('042 - PARTICULARES')) {
+      const { data: valorParticular042Data } = await supabase
+        .from('valores_consultas_obra_social')
+        .select('valor')
+        .eq('obra_social', '042 - PARTICULARES')
+        .eq('tipo_consulta', 'CONSULTA DE GUARDIA CLINICA')
+        .eq('mes', mes)
+        .eq('anio', anio)
+        .maybeSingle()
+
+      if (valorParticular042Data) {
+        valoresPorObraSocial.set('042 - PARTICULARES', (valorParticular042Data as any).valor)
+      }
+    }
+
+    // 3. Buscar por código '042' en cualquier variante de nombre
+    if (!valoresPorObraSocial.has('PARTICULARES') && !valoresPorObraSocial.has('042 - PARTICULARES')) {
+      // Buscar por ilike para capturar cualquier variante
+      const { data: valorParticular042Any } = await supabase
+        .from('valores_consultas_obra_social')
+        .select('valor, obra_social')
+        .eq('tipo_consulta', 'CONSULTA DE GUARDIA CLINICA')
+        .eq('mes', mes)
+        .eq('anio', anio)
+        .ilike('obra_social', '%042%PARTICULAR%')
+        .maybeSingle()
+
+      if (valorParticular042Any) {
+        valoresPorObraSocial.set((valorParticular042Any as any).obra_social, (valorParticular042Any as any).valor)
+        // También setear en las variantes comunes para facilitar búsquedas
+        valoresPorObraSocial.set('PARTICULARES', (valorParticular042Any as any).valor)
+        valoresPorObraSocial.set('042 - PARTICULARES', (valorParticular042Any as any).valor)
+      }
+    }
+
+    // 4. Sincronizar ambas claves si solo una existe
+    if (valoresPorObraSocial.has('PARTICULARES') && !valoresPorObraSocial.has('042 - PARTICULARES')) {
+      valoresPorObraSocial.set('042 - PARTICULARES', valoresPorObraSocial.get('PARTICULARES')!)
+    }
+    if (valoresPorObraSocial.has('042 - PARTICULARES') && !valoresPorObraSocial.has('PARTICULARES')) {
+      valoresPorObraSocial.set('PARTICULARES', valoresPorObraSocial.get('042 - PARTICULARES')!)
+    }
+
+    console.log(`[Guardias Clínicas] Valor PARTICULARES cargado: $${valoresPorObraSocial.get('042 - PARTICULARES') || valoresPorObraSocial.get('PARTICULARES') || 'NO ENCONTRADO'}`)
+    console.log(`[Guardias Clínicas] Total valores por obra social cargados: ${valoresPorObraSocial.size}`)
 
     // 4. Crear o obtener liquidación
     const numeroLiquidacion = calcularNumeroLiquidacion(mes, anio)
@@ -546,19 +594,16 @@ export async function procesarExcelGuardiasClinicas(
         // Filtro: sin hora
         const horaFormato = convertirHora(hora)
 
-        // Filtro: particular
-        const obraSocialStr = obraSocial ? String(obraSocial).trim() : ''
+        // Reclasificar particulares como '042 - PARTICULARES' en vez de excluirlos
+        let obraSocialStr = obraSocial ? String(obraSocial).trim() : ''
         if (esParticular(obraSocialStr)) {
-          resultado.filasExcluidas.push({
-            numeroFila: i + 1,
-            razon: 'particular',
-            datos: row
-          })
-          continue
+          obraSocialStr = '042 - PARTICULARES'
         }
 
-        // Filtro: duplicado
-        const fingerprint = `${fecha}_${medicoNombre}_${paciente}_${horaFormato}`
+        // Filtro: duplicado (con nombres normalizados para detección robusta)
+        const pacienteNorm = paciente && typeof paciente === 'string' ? normalizarNombre(paciente) : (paciente || '')
+        const medicoNorm = medicoNombre && typeof medicoNombre === 'string' ? normalizarNombre(medicoNombre) : (medicoNombre || '')
+        const fingerprint = `${pacienteNorm}|${fecha}|${horaFormato || ''}|${medicoNorm}`
         if (duplicados.has(fingerprint)) {
           resultado.filasExcluidas.push({
             numeroFila: i + 1,
@@ -648,7 +693,17 @@ export async function procesarExcelGuardiasClinicas(
             }
           }
 
-          // 5. Si no se encontró valor, usar el valor del Excel como fallback
+          // 5. Para PARTICULARES: buscar explícitamente el valor de 042
+          if (!valorEncontrado && (obraSocialStr.includes('PARTICULAR') || obraSocialStr.includes('042'))) {
+            const valorParticular = valoresPorObraSocial.get('042 - PARTICULARES') || valoresPorObraSocial.get('PARTICULARES') || 0
+            if (valorParticular > 0) {
+              montoFacturado = valorParticular
+              obraSocialFinal = '042 - PARTICULARES'
+              valorEncontrado = true
+            }
+          }
+
+          // 6. Si no se encontró valor, usar el valor del Excel como fallback
           if (!valorEncontrado) {
             const totalBrutoNum = totalBruto ? parseFloat(String(totalBruto).replace(',', '.')) : 0
             montoFacturado = isNaN(totalBrutoNum) ? 0 : totalBrutoNum
