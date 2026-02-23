@@ -547,9 +547,19 @@ export async function procesarExcelGuardiasClinicas(
           'Médico responsable', 'Médico Responsable'
         ])
 
+        // DEBUG: Log de filas con 042 o PARTICULAR en cualquier campo
+        const rowStr = JSON.stringify(row).toLowerCase()
+        const es042 = rowStr.includes('042') || rowStr.includes('particular')
+        if (es042) {
+          console.log(`[DEBUG FILA ${i + 1}] ObraSocial cruda: "${obraSocial}", Paciente: "${paciente}", Medico: "${medicoNombre}", Fecha: "${fechaStr}", Hora: "${hora}", Duración: "${duracion}"`)
+          console.log(`[DEBUG FILA ${i + 1}] Row keys:`, Object.keys(row))
+          console.log(`[DEBUG FILA ${i + 1}] Row values:`, Object.values(row))
+        }
+
         // --- Filtros de exclusión ---
         // Filtro: sin fecha
         if (!fechaStr) {
+          if (es042) console.log(`[DEBUG FILA ${i + 1}] ❌ EXCLUIDA por sin_fecha`)
           resultado.filasExcluidas.push({
             numeroFila: i + 1,
             razon: 'sin_fecha',
@@ -561,6 +571,7 @@ export async function procesarExcelGuardiasClinicas(
         // Convertir fecha
         const fecha = convertirFechaISO(String(fechaStr))
         if (!fecha) {
+          if (es042) console.log(`[DEBUG FILA ${i + 1}] ❌ EXCLUIDA por fecha_invalida (no se pudo convertir "${fechaStr}")`)
           resultado.filasExcluidas.push({
             numeroFila: i + 1,
             razon: 'fecha_invalida',
@@ -572,6 +583,7 @@ export async function procesarExcelGuardiasClinicas(
         // Verificar que la fecha corresponde al mes/año
         const [anioFecha, mesFecha] = fecha.split('-').map(Number)
         if (mesFecha !== mes || anioFecha !== anio) {
+          if (es042) console.log(`[DEBUG FILA ${i + 1}] ❌ EXCLUIDA por fecha fuera de rango (fecha: ${fecha}, esperado: ${mes}/${anio})`)
           resultado.filasExcluidas.push({
             numeroFila: i + 1,
             razon: 'fecha_invalida',
@@ -583,6 +595,7 @@ export async function procesarExcelGuardiasClinicas(
         // Filtro: duración cero
         const duracionNum = duracion ? parseFloat(String(duracion).replace(',', '.')) : null
         if (duracionNum !== null && duracionNum <= 0) {
+          if (es042) console.log(`[DEBUG FILA ${i + 1}] ❌ EXCLUIDA por duracion_cero (duración: ${duracionNum})`)
           resultado.filasExcluidas.push({
             numeroFila: i + 1,
             razon: 'duracion_cero',
@@ -596,9 +609,12 @@ export async function procesarExcelGuardiasClinicas(
 
         // Reclasificar particulares como '042 - PARTICULARES' en vez de excluirlos
         let obraSocialStr = obraSocial ? String(obraSocial).trim() : ''
-        if (esParticular(obraSocialStr)) {
+        const eraParticular = esParticular(obraSocialStr)
+        if (eraParticular) {
+          if (es042) console.log(`[DEBUG FILA ${i + 1}] 🔄 Reclasificando "${obraSocialStr}" → "042 - PARTICULARES"`)
           obraSocialStr = '042 - PARTICULARES'
         }
+        if (es042) console.log(`[DEBUG FILA ${i + 1}] ✅ PASA FILTROS. ObraSocial final: "${obraSocialStr}", esParticular: ${eraParticular}`)
 
         // Filtro: duplicado (con nombres normalizados para detección robusta)
         const pacienteNorm = paciente && typeof paciente === 'string' ? normalizarNombre(paciente) : (paciente || '')
